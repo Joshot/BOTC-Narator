@@ -1,0 +1,6 @@
+{
+  "name": "Grimoire Trouble Brewing - Narator BOTC Indonesia",
+  "description": "Aplikasi web Digital Grimoire dan Narator Storyteller interaktif berbahasa Indonesia untuk Blood on the Clocktower skrip Trouble Brewing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
