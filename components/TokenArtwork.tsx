@@ -130,6 +130,7 @@ export function CharacterToken({
   roleId,
   size = 'md',
   isDead = false,
+  deathCause,
   isDrunkSecret = false,
   isPoisoned = false,
   showIndonesianSubtitle = false,
@@ -137,6 +138,7 @@ export function CharacterToken({
   roleId: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   isDead?: boolean;
+  deathCause?: 'demon' | 'execution' | 'slayer';
   isDrunkSecret?: boolean;
   isPoisoned?: boolean;
   showIndonesianSubtitle?: boolean;
@@ -199,27 +201,46 @@ export function CharacterToken({
         sizeMap.circle
       } ${styles.bgGradient} ${
         isDead
-          ? 'border-[3.5px] border-[#52525B] ring-2 ring-[#71717A]/40 opacity-75 grayscale-[45%]'
+          ? 'border-[3.5px] border-[#52525B] ring-2 ring-[#71717A]/40 opacity-80 grayscale-[40%]'
           : styles.ring
       }`}
     >
       {/* Crisp inner brass ring */}
       <div className="absolute inset-[3px] sm:inset-[4px] rounded-full border border-[#D4AF37]/45 pointer-events-none" />
 
-      {/* Death Shroud Ribbon */}
+      {/* Differentiated Death Shroud Ribbon: Demon Kill vs Execution */}
       {isDead && (
-        <div
-          className="absolute -top-2 left-1/2 -translate-x-1/2 z-20 bg-[#09090B] border-2 border-[#E4E4E7] rounded-b-md px-2 py-0.5 flex items-center justify-center shadow-md"
-          title="Pemain Telah Mati"
-        >
-          <Skull className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
-        </div>
+        deathCause === 'demon' ? (
+          <div
+            className="absolute -top-2 left-1/2 -translate-x-1/2 z-20 bg-[#3B070B] border-2 border-[#EF4444] rounded-md px-1.5 py-0.5 flex items-center justify-center gap-1 shadow-xl whitespace-nowrap"
+            title="Mati: Dibunuh Demon Malam Hari"
+          >
+            <Swords className="w-3 h-3 text-[#FCA5A5]" />
+            <span className="text-[7.5px] sm:text-[8.5px] font-black text-[#FECACA] uppercase tracking-wider">DEMON KILL</span>
+          </div>
+        ) : deathCause === 'execution' ? (
+          <div
+            className="absolute -top-2 left-1/2 -translate-x-1/2 z-20 bg-[#291B07] border-2 border-[#D4AF37] rounded-md px-1.5 py-0.5 flex items-center justify-center gap-1 shadow-xl whitespace-nowrap"
+            title="Mati: Digantung / Eksekusi Siang Hari"
+          >
+            <Gavel className="w-3 h-3 text-[#FDE68A]" />
+            <span className="text-[7.5px] sm:text-[8.5px] font-black text-[#FDE68A] uppercase tracking-wider">GANTUNG</span>
+          </div>
+        ) : (
+          <div
+            className="absolute -top-2 left-1/2 -translate-x-1/2 z-20 bg-[#09090B] border-2 border-[#E4E4E7] rounded-md px-1.5 py-0.5 flex items-center justify-center gap-1 shadow-md whitespace-nowrap"
+            title="Pemain Telah Mati"
+          >
+            <Skull className="w-3 h-3 text-white" />
+            <span className="text-[7.5px] sm:text-[8.5px] font-black text-white uppercase tracking-wider">MATI</span>
+          </div>
+        )
       )}
 
-      {/* Secret Drunk indicator badge for Storyteller */}
+      {/* Secret Drunk indicator badge for Storyteller - Centered, sharp, high contrast */}
       {isDrunkSecret && (
         <div
-          className="absolute -bottom-1 -left-1 z-20 px-1.5 py-0.5 rounded-full bg-[#B45309] border-2 border-[#FDE68A] flex items-center justify-center gap-1 shadow-lg"
+          className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-20 px-2 py-0.5 rounded-full bg-[#78350F] border-2 border-[#FDE68A] flex items-center justify-center gap-1 shadow-xl whitespace-nowrap"
           title="Sebenarnya adalah THE DRUNK"
         >
           <Beer className="w-3.5 h-3.5 text-[#FDE68A]" />
@@ -230,7 +251,7 @@ export function CharacterToken({
       {/* Poisoned status badge for Storyteller */}
       {isPoisoned && (
         <div
-          className="absolute -top-1 -right-1 z-20 px-1.5 py-0.5 rounded-full bg-[#991B1B] border-2 border-[#FCA5A5] flex items-center justify-center gap-1 shadow-lg animate-pulse"
+          className="absolute -top-1 -right-1 z-20 px-1.5 py-0.5 rounded-full bg-[#991B1B] border-2 border-[#FCA5A5] flex items-center justify-center gap-1 shadow-lg animate-pulse whitespace-nowrap"
           title="Sedang Diracun (Poisoned)"
         >
           <FlaskConical className="w-3.5 h-3.5 text-[#FECACA]" />

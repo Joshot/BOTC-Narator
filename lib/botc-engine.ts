@@ -23,6 +23,7 @@ export interface PlayerSeat {
   isAlive: boolean;
   hasGhostVote: boolean;
   reminders: PlacedReminder[];
+  deathCause?: 'demon' | 'execution' | 'slayer';
 }
 
 export type GamePhase = 'first_night' | 'day' | 'other_night';

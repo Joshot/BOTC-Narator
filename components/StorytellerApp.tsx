@@ -375,17 +375,18 @@ export default function StorytellerApp({
     setPlayers((prev) => movePlayerSeat(prev, seatIdx, dir));
   };
 
-  const handleToggleAlive = (playerId: string) => {
+  const handleToggleAlive = (playerId: string, cause?: 'demon' | 'execution' | 'slayer') => {
     setPlayers((prev) => {
-      const next = prev.map((p) =>
-        p.id === playerId
-          ? {
-              ...p,
-              isAlive: !p.isAlive,
-              hasGhostVote: !p.isAlive ? true : p.hasGhostVote,
-            }
-          : p
-      );
+      const next = prev.map((p) => {
+        if (p.id !== playerId) return p;
+        const willBeAlive = !p.isAlive;
+        return {
+          ...p,
+          isAlive: willBeAlive,
+          deathCause: willBeAlive ? undefined : (cause ?? (p.deathCause ?? ('demon' as const))),
+          hasGhostVote: !willBeAlive ? true : p.hasGhostVote,
+        };
+      });
       evaluateWinConditions(next);
       return next;
     });
@@ -400,9 +401,34 @@ export default function StorytellerApp({
   };
 
   const handleAddReminder = (playerId: string, reminderId: string) => {
+    // Drunk reminder: strictly only 1 Drunk in the game
+    if (reminderId === 'is_the_drunk') {
+      handleSetDrunkPlayer(playerId);
+      return;
+    }
+
     setPlayers((prev) =>
       prev.map((p) => {
-        if (p.id !== playerId) return p;
+        // If moving single-target tokens (Poisoned, Protected, Die), clean up from other players
+        if (p.id !== playerId) {
+          if (reminderId === 'poisoned' || reminderId === 'protected' || reminderId === 'die_imp') {
+            return {
+              ...p,
+              reminders: p.reminders.filter((r) => r.reminderId !== reminderId),
+            };
+          }
+          return p;
+        }
+
+        // On target player: NO DUPLICATE TOKENS! Toggle off if already attached
+        const alreadyHas = p.reminders.some((r) => r.reminderId === reminderId);
+        if (alreadyHas) {
+          return {
+            ...p,
+            reminders: p.reminders.filter((r) => r.reminderId !== reminderId),
+          };
+        }
+
         return {
           ...p,
           reminders: [
@@ -603,6 +629,7 @@ export default function StorytellerApp({
         return {
           ...p,
           isAlive: diedTonight ? false : p.isAlive,
+          deathCause: diedTonight ? ('demon' as const) : p.deathCause,
           reminders: cleanedReminders,
         };
       });
@@ -647,6 +674,7 @@ export default function StorytellerApp({
           return {
             ...p,
             isAlive: false,
+            deathCause: 'execution' as const,
             reminders: [
               ...cleaned,
               { instanceId: `rem-exec-${Date.now()}`, reminderId: 'executed' },
@@ -678,6 +706,7 @@ export default function StorytellerApp({
             return {
               ...p,
               isAlive: false,
+              deathCause: 'execution' as const,
               reminders: [
                 ...cleaned,
                 { instanceId: `rem-exec-${Date.now()}`, reminderId: 'executed' },
@@ -711,6 +740,7 @@ export default function StorytellerApp({
         return {
           ...p,
           isAlive: false,
+          deathCause: 'execution' as const,
           reminders: [
             ...cleaned,
             { instanceId: `rem-exec-${Date.now()}`, reminderId: 'executed' },
@@ -759,7 +789,7 @@ export default function StorytellerApp({
 
       setPlayers((prev) => {
         const next = prev.map((p) => {
-          if (p.id === target.id) return { ...p, isAlive: false };
+          if (p.id === target.id) return { ...p, isAlive: false, deathCause: 'slayer' as const };
           if (aliveCountNow >= 5 && healthySW && p.id === healthySW.id) {
             return {
               ...p,
