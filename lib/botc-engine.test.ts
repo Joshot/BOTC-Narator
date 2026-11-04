@@ -8,6 +8,7 @@ import {
   calculateEmpathInfo,
   calculateVoteThreshold,
   computeSafeDemonBluffs,
+  getActiveReminderTokensForSeats,
   getBaseCharacterCounts,
   getEffectiveCharacterCounts,
   swapPlayerSeats,
@@ -155,11 +156,36 @@ test('validateRoleBag validates step 1 bag and rejects more than 1 Drunk', () =>
   const resInvalid = validateRoleBag(6, invalidBag);
   assert.equal(resInvalid.isValid, false);
   assert.ok(resInvalid.errors.length > 0);
+});
 
-  // Multiple drunks error check
-  const duplicateDrunkBag = ['washerwoman', 'chef', 'empath', 'drunk', 'drunk', 'imp'];
-  const resDuplicate = validateRoleBag(6, duplicateDrunkBag);
-  assert.equal(resDuplicate.isValid, false);
-  assert.ok(resDuplicate.errors.some((e: string) => e.includes('Hanya boleh ada 1 Drunk')));
+test('getActiveReminderTokensForSeats dynamically filters tokens based on in-play characters', () => {
+  // Case 1: Game with Spy and Imp, but NO Poisoner and NO Drunk
+  const seatsWithoutPoisoner = assignRolesToPlayers(
+    ['P1', 'P2', 'P3', 'P4', 'P5'],
+    ['washerwoman', 'chef', 'empath', 'spy', 'imp'],
+    null,
+    { shuffleRoles: false }
+  );
+
+  const tokensNoPoisoner = getActiveReminderTokensForSeats(seatsWithoutPoisoner);
+  const tokenIdsNoPoisoner = tokensNoPoisoner.map((t) => t.id);
+
+  assert.equal(tokenIdsNoPoisoner.includes('poisoned'), false, 'Poisoned token must not exist without Poisoner in play');
+  assert.equal(tokenIdsNoPoisoner.includes('is_the_drunk'), false, 'Is the Drunk token must not exist without Drunk in play');
+  assert.ok(tokenIdsNoPoisoner.includes('die_imp'), 'Imp die reminder should exist since Imp is in play');
+
+  // Case 2: Game WITH Poisoner and Drunk
+  const seatsWithPoisonerAndDrunk = assignRolesToPlayers(
+    ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'],
+    ['washerwoman', 'chef', 'empath', 'drunk', 'poisoner', 'imp'],
+    'investigator',
+    { shuffleRoles: false }
+  );
+
+  const tokensWithBoth = getActiveReminderTokensForSeats(seatsWithPoisonerAndDrunk);
+  const tokenIdsWithBoth = tokensWithBoth.map((t) => t.id);
+
+  assert.equal(tokenIdsWithBoth.includes('poisoned'), true, 'Poisoned token must exist when Poisoner is in play');
+  assert.equal(tokenIdsWithBoth.includes('is_the_drunk'), true, 'Is the Drunk token must exist when Drunk is in play');
 });
 

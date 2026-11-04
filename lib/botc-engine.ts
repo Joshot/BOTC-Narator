@@ -2,6 +2,8 @@ import {
   CHARACTER_COUNTS,
   CharacterCountRow,
   DEFAULT_INDONESIAN_NAMES,
+  REMINDER_TOKENS,
+  ReminderDefinition,
   ROLE_MAP,
   ROLES,
   RoleDefinition,
@@ -446,6 +448,21 @@ export function isPlayerEvil(player: PlayerSeat): boolean {
 
 export function isPlayerPoisoned(player: PlayerSeat): boolean {
   return player.reminders.some((r) => r.reminderId === 'poisoned');
+}
+
+export function getActiveReminderTokensForSeats(players: PlayerSeat[]): ReminderDefinition[] {
+  const trueRoleSet = new Set(players.map((p) => p.trueRoleId));
+  const perceivedRoleSet = new Set(players.map((p) => p.perceivedRoleId));
+  const inPlaySet = new Set([...trueRoleSet, ...perceivedRoleSet]);
+
+  return REMINDER_TOKENS.filter((rem) => {
+    // Undertaker's executed reminder is relevant if Undertaker is in play
+    if (rem.id === 'executed') {
+      return inPlaySet.has('undertaker');
+    }
+    // Only include reminder token if the owning character is actually in the game
+    return inPlaySet.has(rem.roleId);
+  });
 }
 
 export function calculateChefNumber(players: PlayerSeat[]): {

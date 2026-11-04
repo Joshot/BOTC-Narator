@@ -1059,6 +1059,7 @@ export default function StorytellerApp({
                 phase={phase}
                 dayNumber={dayNumber}
                 executedTodayPlayerId={executedTodayPlayerId}
+                demonBluffIds={demonBluffIds}
                 onSwapSeats={handleSwapSeats}
                 onMoveSeat={handleMoveSeat}
                 onToggleAlive={handleToggleAlive}

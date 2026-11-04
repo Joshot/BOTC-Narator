@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import {
   ArrowLeftRight,
+  Beer,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -21,12 +22,14 @@ import {
 } from '@/lib/botc-engine';
 import { CharacterToken, ReminderTokenChip, RoleGlyph } from './TokenArtwork';
 import { SilentCardPayload } from './FullscreenCardModal';
+import PeekCardModal from './PeekCardModal';
 
 interface GrimoireBoardProps {
   players: PlayerSeat[];
   phase: GamePhase;
   dayNumber: number;
   executedTodayPlayerId: string | null;
+  demonBluffIds?: string[];
   onSwapSeats: (fromIndex: number, toIndex: number) => void;
   onMoveSeat: (seatIndex: number, direction: 'cw' | 'ccw') => void;
   onToggleAlive: (playerId: string) => void;
@@ -43,6 +46,7 @@ export default function GrimoireBoard({
   phase,
   dayNumber,
   executedTodayPlayerId,
+  demonBluffIds = [],
   onSwapSeats,
   onMoveSeat,
   onToggleAlive,
@@ -67,6 +71,8 @@ export default function GrimoireBoard({
     | null
   >(null);
   const [dragOverSeatIdx, setDragOverSeatIdx] = useState<number | null>(null);
+  const [isPeekModalOpen, setIsPeekModalOpen] = useState(false);
+  const [peekPlayerIndex, setPeekPlayerIndex] = useState(0);
 
   const selectedPlayer =
     players.find((p) => p.id === selectedPlayerId) ?? players[0] ?? null;
@@ -85,17 +91,19 @@ export default function GrimoireBoard({
     inPlayRoleSet.add(p.perceivedRoleId);
   });
 
+  // Strict dynamic reminder filter:
+  // If Poisoner is not in play, 'poisoned' is NOT shown!
+  // If Drunk is not in play, 'is_the_drunk' is NOT shown!
+  // If Undertaker is not in play, 'executed' is NOT shown!
   const displayedReminders =
     reminderFilter === 'all'
       ? REMINDER_TOKENS
-      : REMINDER_TOKENS.filter(
-          (rem) =>
-            inPlayRoleSet.has(rem.roleId) ||
-            rem.id === 'poisoned' ||
-            rem.id === 'die_imp' ||
-            rem.id === 'executed' ||
-            rem.id === 'is_the_drunk'
-        );
+      : REMINDER_TOKENS.filter((rem) => {
+          if (rem.id === 'executed') {
+            return inPlayRoleSet.has('undertaker');
+          }
+          return inPlayRoleSet.has(rem.roleId);
+        });
 
   const phaseLabel =
     phase === 'first_night'
@@ -150,6 +158,18 @@ export default function GrimoireBoard({
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setPeekPlayerIndex(selectedPlayer ? selectedPlayer.seatIndex : 0);
+              setIsPeekModalOpen(true);
+            }}
+            className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F59E0B] hover:brightness-110 text-[#121016] text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-md transition-all whitespace-nowrap"
+          >
+            <Eye className="w-4 h-4" />
+            <span>Intip Kartu Pemain</span>
+          </button>
+
           <button
             type="button"
             onClick={() => {
@@ -319,6 +339,17 @@ export default function GrimoireBoard({
                         {index + 1}
                       </span>
 
+                      {/* Storyteller Drunk Badge: Distinct, visible, bold */}
+                      {isDrunk && !spyCleanMode && (
+                        <span
+                          title="Pemain ini sebenarnya The Drunk (Outsider)"
+                          className="absolute -bottom-1.5 -left-1.5 px-1.5 py-0.5 rounded-full bg-[#D97706] border-2 border-[#FDE68A] text-[#121016] font-black text-[8px] sm:text-[9px] uppercase tracking-wider shadow-lg flex items-center gap-0.5 z-20"
+                        >
+                          <Beer className="w-2.5 h-2.5" />
+                          <span>DRUNK</span>
+                        </span>
+                      )}
+
                       {/* Ghost Vote Pip when Dead */}
                       {!player.isAlive && player.hasGhostVote && (
                         <span
@@ -331,15 +362,22 @@ export default function GrimoireBoard({
                     </button>
 
                     {/* Player Name Label - Bolder, clearer, higher contrast */}
-                    <span
-                      className={`mt-1 px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-black tracking-wide max-w-[80px] sm:max-w-[110px] truncate text-center shadow-lg border leading-tight ${
-                        player.isAlive
-                          ? 'bg-[#15121F]/95 text-white border-[#4E4466]'
-                          : 'bg-[#100D16]/95 text-[#A1A1AA] border-[#3F3F46] line-through'
-                      }`}
-                    >
-                      {player.name}
-                    </span>
+                    <div className="flex flex-col items-center">
+                      <span
+                        className={`mt-1 px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-black tracking-wide max-w-[80px] sm:max-w-[110px] truncate text-center shadow-lg border leading-tight ${
+                          player.isAlive
+                            ? 'bg-[#15121F]/95 text-white border-[#4E4466]'
+                            : 'bg-[#100D16]/95 text-[#A1A1AA] border-[#3F3F46] line-through'
+                        }`}
+                      >
+                        {player.name}
+                      </span>
+                      {isDrunk && !spyCleanMode && (
+                        <span className="text-[9px] font-black text-[#F59E0B] leading-none mt-0.5">
+                          (Asli: Drunk)
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Placed Miniature Reminder Tokens on Inner Ring */}
@@ -449,6 +487,32 @@ export default function GrimoireBoard({
                 <p className="text-xs text-[#CEC6B8] leading-relaxed">
                   {ROLE_MAP[selectedPlayer.trueRoleId]?.ability}
                 </p>
+
+                {/* Intip Kartu Rahasia Pemain Ini */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPeekPlayerIndex(selectedPlayer.seatIndex);
+                    setIsPeekModalOpen(true);
+                  }}
+                  className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37]/25 to-[#F59E0B]/25 hover:from-[#D4AF37]/35 hover:to-[#F59E0B]/35 border border-[#D4AF37]/70 text-xs sm:text-sm font-bold text-[#FDE68A] flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-sm"
+                >
+                  <Eye className="w-4 h-4 text-[#D4AF37]" />
+                  <span>Intip Kartu Rahasia {selectedPlayer.name}</span>
+                </button>
+
+                {/* Drunk Alert Banner in Inspector */}
+                {selectedPlayer.trueRoleId === 'drunk' && (
+                  <div className="p-3 rounded-xl bg-[#281C10] border border-[#D97706]/70 text-xs text-[#FDE68A] flex items-start gap-2.5">
+                    <Beer className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="block text-[#FDE68A]">Pemain Ini Adalah THE DRUNK!</strong>
+                      <span className="leading-relaxed">
+                        Pemain mengira dirinya adalah <strong>{ROLE_MAP[selectedPlayer.perceivedRoleId]?.name}</strong>. Kemampuannya tidak berfungsi nyata atau berikan info palsu.
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Primary Status Action Buttons */}
                 <div className="grid grid-cols-2 gap-2.5">
@@ -667,32 +731,47 @@ export default function GrimoireBoard({
               </div>
 
               {selectedPlayer && (
-                <div className="pt-3 border-t border-[#292535] flex items-center justify-between gap-2 text-xs text-[#A8A092]">
+                <div className="pt-3 border-t border-[#292535] flex flex-wrap items-center justify-between gap-2 text-xs text-[#A8A092]">
                   <span>
                     Tempel cepat ke <strong>{selectedPlayer.name}</strong>:
                   </span>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => onAddReminder(selectedPlayer.id, 'poisoned')}
-                      className="min-h-[36px] px-2.5 py-1 rounded-lg bg-[#2B171B] hover:bg-[#3A1F24] text-[#FECACA] font-medium cursor-pointer"
-                    >
-                      + Poisoned
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onAddReminder(selectedPlayer.id, 'protected')}
-                      className="min-h-[36px] px-2.5 py-1 rounded-lg bg-[#162636] hover:bg-[#1E344A] text-[#BAE6FD] font-medium cursor-pointer"
-                    >
-                      + Protected
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onAddReminder(selectedPlayer.id, 'die_imp')}
-                      className="min-h-[36px] px-2.5 py-1 rounded-lg bg-[#2E1417] hover:bg-[#401B20] text-[#FCA5A5] font-medium cursor-pointer"
-                    >
-                      + Die
-                    </button>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {inPlayRoleSet.has('poisoner') && (
+                      <button
+                        type="button"
+                        onClick={() => onAddReminder(selectedPlayer.id, 'poisoned')}
+                        className="min-h-[36px] px-2.5 py-1 rounded-lg bg-[#2B171B] hover:bg-[#3A1F24] text-[#FECACA] font-medium cursor-pointer"
+                      >
+                        + Poisoned
+                      </button>
+                    )}
+                    {inPlayRoleSet.has('monk') && (
+                      <button
+                        type="button"
+                        onClick={() => onAddReminder(selectedPlayer.id, 'protected')}
+                        className="min-h-[36px] px-2.5 py-1 rounded-lg bg-[#162636] hover:bg-[#1E344A] text-[#BAE6FD] font-medium cursor-pointer"
+                      >
+                        + Protected
+                      </button>
+                    )}
+                    {inPlayRoleSet.has('imp') && (
+                      <button
+                        type="button"
+                        onClick={() => onAddReminder(selectedPlayer.id, 'die_imp')}
+                        className="min-h-[36px] px-2.5 py-1 rounded-lg bg-[#2E1417] hover:bg-[#401B20] text-[#FCA5A5] font-medium cursor-pointer"
+                      >
+                        + Die
+                      </button>
+                    )}
+                    {inPlayRoleSet.has('drunk') && (
+                      <button
+                        type="button"
+                        onClick={() => onAddReminder(selectedPlayer.id, 'is_the_drunk')}
+                        className="min-h-[36px] px-2.5 py-1 rounded-lg bg-[#2A1D11] hover:bg-[#3D2A18] text-[#FDE68A] font-medium cursor-pointer"
+                      >
+                        + Is Drunk
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -700,6 +779,15 @@ export default function GrimoireBoard({
           </div>
         )}
       </div>
+
+      {/* Secret Peek Modal for Storyteller & Private Player Show */}
+      <PeekCardModal
+        isOpen={isPeekModalOpen}
+        players={players}
+        initialPlayerIndex={peekPlayerIndex}
+        demonBluffIds={demonBluffIds}
+        onClose={() => setIsPeekModalOpen(false)}
+      />
     </div>
   );
 }
