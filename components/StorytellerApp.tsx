@@ -36,6 +36,7 @@ const GAME_STORAGE_KEY = 'botc_tb_game_session_v2';
 interface PersistedGameSession {
   hasActiveGame: boolean;
   playerCount: number;
+  isDrunkActive?: boolean;
   selectedRoleIds: string[];
   drunkFakeRoleId: string | null;
   demonBluffIds: string[];
@@ -132,6 +133,10 @@ export default function StorytellerApp({
   const [drunkFakeRoleId, setDrunkFakeRoleId] = useState<string | null>(() => {
     if (initialSaved) return initialSaved.drunkFakeRoleId;
     return initialDemo ? initialDemo.drunkFakeRoleId : null;
+  });
+  const [isDrunkActive, setIsDrunkActive] = useState<boolean>(() => {
+    if (initialSaved) return Boolean(initialSaved.isDrunkActive ?? initialSaved.players.some((p) => p.trueRoleId === 'drunk'));
+    return initialDemo ? initialDemo.players.some((p) => p.trueRoleId === 'drunk') : false;
   });
   const [demonBluffIds, setDemonBluffIds] = useState<string[]>(() => {
     if (initialSaved) return initialSaved.demonBluffIds;
@@ -234,6 +239,7 @@ export default function StorytellerApp({
       const payload: PersistedGameSession = {
         hasActiveGame,
         playerCount,
+        isDrunkActive,
         selectedRoleIds,
         drunkFakeRoleId,
         demonBluffIds,
@@ -252,6 +258,7 @@ export default function StorytellerApp({
     hydrated,
     hasActiveGame,
     playerCount,
+    isDrunkActive,
     selectedRoleIds,
     drunkFakeRoleId,
     demonBluffIds,
@@ -262,6 +269,36 @@ export default function StorytellerApp({
     lastNightDeaths,
     gameAlertBanner,
   ]);
+
+  const handleSetDrunkPlayer = (targetPlayerId: string) => {
+    setPlayers((prev) =>
+      prev.map((p) => {
+        if (p.id === targetPlayerId) {
+          const cleaned = p.reminders.filter((r) => r.reminderId !== 'is_the_drunk');
+          return {
+            ...p,
+            trueRoleId: 'drunk',
+            reminders: [
+              ...cleaned,
+              {
+                instanceId: `rem-drunk-${Date.now()}`,
+                reminderId: 'is_the_drunk',
+              },
+            ],
+          };
+        }
+        if (p.trueRoleId === 'drunk') {
+          return {
+            ...p,
+            trueRoleId: p.perceivedRoleId,
+            reminders: p.reminders.filter((r) => r.reminderId !== 'is_the_drunk'),
+          };
+        }
+        return p;
+      })
+    );
+    setGameAlertBanner(null);
+  };
 
   const startDemoGame = () => {
     const demo = createDemoSession(8);
@@ -842,6 +879,7 @@ export default function StorytellerApp({
               const fullPayload: PersistedGameSession = {
                 hasActiveGame: true,
                 playerCount: payload.playerCount,
+                isDrunkActive: payload.isDrunkActive,
                 selectedRoleIds: payload.selectedRoleIds,
                 drunkFakeRoleId: payload.drunkFakeRoleId,
                 demonBluffIds: payload.demonBluffIds,
@@ -854,6 +892,7 @@ export default function StorytellerApp({
               };
               saveSessionDirectly(fullPayload);
               setPlayerCount(payload.playerCount);
+              setIsDrunkActive(payload.isDrunkActive);
               setSelectedRoleIds(payload.selectedRoleIds);
               setDrunkFakeRoleId(payload.drunkFakeRoleId);
               setDemonBluffIds(payload.demonBluffIds);
@@ -1060,6 +1099,8 @@ export default function StorytellerApp({
                 dayNumber={dayNumber}
                 executedTodayPlayerId={executedTodayPlayerId}
                 demonBluffIds={demonBluffIds}
+                isDrunkActive={isDrunkActive}
+                onSetDrunkPlayer={handleSetDrunkPlayer}
                 onSwapSeats={handleSwapSeats}
                 onMoveSeat={handleMoveSeat}
                 onToggleAlive={handleToggleAlive}

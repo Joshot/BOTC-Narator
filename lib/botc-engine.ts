@@ -46,8 +46,11 @@ export interface NightOrderStep {
 
 export interface EffectiveCounts extends CharacterCountRow {
   hasBaronModifier: boolean;
+  hasDrunkModifier: boolean;
   baseTownsfolk: number;
   baseOutsiders: number;
+  bagTownsfolk: number;
+  bagOutsiders: number;
 }
 
 export function clampPlayerCount(count: number): number {
@@ -66,30 +69,35 @@ export function getEffectiveCharacterCounts(
 ): EffectiveCounts {
   const base = getBaseCharacterCounts(playerCount);
   const hasBaron = selectedRoleIds.includes('baron');
+  const hasDrunk = selectedRoleIds.includes('drunk');
 
-  if (!hasBaron) {
-    return {
-      ...base,
-      hasBaronModifier: false,
-      baseTownsfolk: base.townsfolk,
-      baseOutsiders: base.outsiders,
-    };
+  let townsfolk = base.townsfolk;
+  let outsiders = base.outsiders;
+
+  if (hasBaron) {
+    // Trouble Brewing Baron adds +2 Outsiders and removes -2 Townsfolk (capped at max 4 Outsiders available in TB)
+    const maxPossibleOutsiders = Math.min(4, base.outsiders + 2);
+    const addedOutsiders = maxPossibleOutsiders - base.outsiders;
+    outsiders = maxPossibleOutsiders;
+    townsfolk = Math.max(0, base.townsfolk - addedOutsiders);
   }
 
-  // Trouble Brewing Baron adds +2 Outsiders and removes -2 Townsfolk (capped at max 4 Outsiders available in TB)
-  const maxPossibleOutsiders = Math.min(4, base.outsiders + 2);
-  const addedOutsiders = maxPossibleOutsiders - base.outsiders;
-  const adjustedTownsfolk = Math.max(0, base.townsfolk - addedOutsiders);
+  // When Drunk is in play, the player receives a Townsfolk token (+1 Townsfolk in bag, -1 other Outsiders in bag)
+  const bagTownsfolk = hasDrunk ? townsfolk + 1 : townsfolk;
+  const bagOutsiders = hasDrunk ? Math.max(0, outsiders - 1) : outsiders;
 
   return {
     players: base.players,
-    townsfolk: adjustedTownsfolk,
-    outsiders: maxPossibleOutsiders,
+    townsfolk,
+    outsiders,
     minions: base.minions,
     demons: base.demons,
-    hasBaronModifier: true,
+    hasBaronModifier: hasBaron,
+    hasDrunkModifier: hasDrunk,
     baseTownsfolk: base.townsfolk,
     baseOutsiders: base.outsiders,
+    bagTownsfolk,
+    bagOutsiders,
   };
 }
 
@@ -122,13 +130,45 @@ export function validateRoleBag(
   }
 
   const errors: string[] = [];
+  const includesDrunkToken = uniqueIds.includes('drunk');
 
-  if (counts.townsfolk !== required.townsfolk) {
-    errors.push(`Pilih tepat ${required.townsfolk} karakter Townsfolk (saat ini ${counts.townsfolk}).`);
+  // Trouble Brewing allows two valid representations when Drunk is in play:
+  // 1. Physical Bag: +1 Townsfolk replaces Drunk token (bagTownsfolk & bagOutsiders)
+  // 2. Logical Bag: Drunk token is explicitly included (townsfolk & outsiders)
+  const matchesPhysicalDrunkBag =
+    required.hasDrunkModifier &&
+    counts.townsfolk === required.bagTownsfolk &&
+    counts.outsiders === required.bagOutsiders;
+  const matchesStandardBag =
+    counts.townsfolk === required.townsfolk &&
+    counts.outsiders === required.outsiders;
+
+  if (!matchesPhysicalDrunkBag && !matchesStandardBag) {
+    const expectedTownsfolk =
+      required.hasDrunkModifier && !includesDrunkToken
+        ? required.bagTownsfolk
+        : required.townsfolk;
+    const expectedOutsiders =
+      required.hasDrunkModifier && !includesDrunkToken
+        ? required.bagOutsiders
+        : required.outsiders;
+
+    if (counts.townsfolk !== expectedTownsfolk) {
+      errors.push(
+        `Pilih tepat ${expectedTownsfolk} karakter Townsfolk${
+          required.hasDrunkModifier ? ' (+1 Townsfolk ekstra karena Drunk)' : ''
+        } (saat ini ${counts.townsfolk}).`
+      );
+    }
+    if (counts.outsiders !== expectedOutsiders) {
+      errors.push(
+        `Pilih tepat ${expectedOutsiders} karakter Outsider${
+          required.hasDrunkModifier ? ' (Drunk telah digantikan token Townsfolk)' : ''
+        } (saat ini ${counts.outsiders}).`
+      );
+    }
   }
-  if (counts.outsiders !== required.outsiders) {
-    errors.push(`Pilih tepat ${required.outsiders} karakter Outsider (saat ini ${counts.outsiders}).`);
-  }
+
   if (counts.minions !== required.minions) {
     errors.push(`Pilih tepat ${required.minions} karakter Minion (saat ini ${counts.minions}).`);
   }

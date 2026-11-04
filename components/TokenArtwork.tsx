@@ -131,12 +131,14 @@ export function CharacterToken({
   size = 'md',
   isDead = false,
   isDrunkSecret = false,
+  isPoisoned = false,
   showIndonesianSubtitle = false,
 }: {
   roleId: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   isDead?: boolean;
   isDrunkSecret?: boolean;
+  isPoisoned?: boolean;
   showIndonesianSubtitle?: boolean;
 }) {
   const role = ROLE_MAP[roleId];
@@ -144,21 +146,22 @@ export function CharacterToken({
 
   const styles = getTeamColorStyles(role.team);
 
+  // Enlarged sizes for high visibility and responsiveness on mobile and tablet
   const sizeMap = {
     sm: {
-      circle: 'w-[52px] h-[52px] sm:w-[64px] sm:h-[64px]',
-      icon: 'w-4 h-4 sm:w-5 sm:h-5',
-    },
-    md: {
-      circle: 'w-[64px] h-[64px] sm:w-[82px] sm:h-[82px]',
+      circle: 'w-[68px] h-[68px] sm:w-[78px] sm:h-[78px]',
       icon: 'w-5 h-5 sm:w-6 sm:h-6',
     },
+    md: {
+      circle: 'w-[82px] h-[82px] sm:w-[98px] sm:h-[98px]',
+      icon: 'w-6 h-6 sm:w-7 sm:h-7',
+    },
     lg: {
-      circle: 'w-24 h-24 sm:w-28 sm:h-28',
-      icon: 'w-9 h-9 sm:w-10 sm:h-10',
+      circle: 'w-[102px] h-[102px] sm:w-[120px] sm:h-[120px]',
+      icon: 'w-10 h-10 sm:w-12 sm:h-12',
     },
     xl: {
-      circle: 'w-36 h-36 sm:w-40 sm:h-40',
+      circle: 'w-36 h-36 sm:w-44 sm:h-44',
       icon: 'w-14 h-14 sm:w-16 sm:h-16',
     },
   }[size];
@@ -167,59 +170,71 @@ export function CharacterToken({
   const maxWordLen = Math.max(...nameLines.map((w) => w.length));
 
   // Determine font size so long words like INVESTIGATOR or WASHERWOMAN never get truncated
-  let fontClasses = 'text-[8.5px] sm:text-[10px]';
+  let fontClasses = 'text-[9px] sm:text-[11px]';
   if (size === 'sm') {
     if (maxWordLen >= 11) {
-      fontClasses = 'text-[6px] sm:text-[7.5px] tracking-tighter';
+      fontClasses = 'text-[7px] sm:text-[8px] tracking-tighter';
     } else if (maxWordLen >= 8) {
-      fontClasses = 'text-[6.5px] sm:text-[8px] tracking-tight';
+      fontClasses = 'text-[8px] sm:text-[9px] tracking-tight';
     } else {
-      fontClasses = 'text-[7.5px] sm:text-[9px] tracking-tight';
+      fontClasses = 'text-[9px] sm:text-[10px] tracking-tight';
     }
   } else if (size === 'md') {
     if (maxWordLen >= 11) {
-      fontClasses = 'text-[7px] sm:text-[8.5px] tracking-tighter';
+      fontClasses = 'text-[8px] sm:text-[9.5px] tracking-tighter';
     } else if (maxWordLen >= 8) {
-      fontClasses = 'text-[8px] sm:text-[9.5px] tracking-tight';
+      fontClasses = 'text-[9px] sm:text-[10.5px] tracking-tight';
     } else {
-      fontClasses = 'text-[9px] sm:text-[11px] tracking-tight';
+      fontClasses = 'text-[10px] sm:text-[12px] tracking-tight';
     }
   } else if (size === 'lg') {
-    fontClasses = maxWordLen >= 11 ? 'text-[10px] sm:text-xs' : 'text-xs sm:text-sm';
+    fontClasses = maxWordLen >= 11 ? 'text-xs sm:text-sm' : 'text-sm sm:text-base';
   } else {
-    fontClasses = 'text-sm sm:text-base';
+    fontClasses = 'text-base sm:text-lg';
   }
 
   return (
     <div
-      className={`relative rounded-full flex flex-col items-center justify-center select-none shadow-xl transition-transform ${
+      className={`relative rounded-full flex flex-col items-center justify-center select-none shadow-2xl transition-transform ${
         sizeMap.circle
       } ${styles.bgGradient} ${
         isDead
-          ? 'border-[3px] border-[#52525B] ring-1 ring-[#71717A]/40 opacity-75 grayscale-[45%]'
+          ? 'border-[3.5px] border-[#52525B] ring-2 ring-[#71717A]/40 opacity-75 grayscale-[45%]'
           : styles.ring
       }`}
     >
       {/* Crisp inner brass ring */}
-      <div className="absolute inset-[2.5px] sm:inset-[3.5px] rounded-full border border-[#D4AF37]/35 pointer-events-none" />
+      <div className="absolute inset-[3px] sm:inset-[4px] rounded-full border border-[#D4AF37]/45 pointer-events-none" />
 
       {/* Death Shroud Ribbon */}
       {isDead && (
         <div
-          className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-10 bg-[#09090B] border-2 border-[#E4E4E7] rounded-b-md px-1.5 py-0.5 flex items-center justify-center shadow-md"
+          className="absolute -top-2 left-1/2 -translate-x-1/2 z-20 bg-[#09090B] border-2 border-[#E4E4E7] rounded-b-md px-2 py-0.5 flex items-center justify-center shadow-md"
           title="Pemain Telah Mati"
         >
-          <Skull className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" />
+          <Skull className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
         </div>
       )}
 
-      {/* Secret Drunk indicator dot for Storyteller */}
+      {/* Secret Drunk indicator badge for Storyteller */}
       {isDrunkSecret && (
         <div
-          className="absolute -bottom-1 -right-1 z-10 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#1E3A8A] border-2 border-[#93C5FD] flex items-center justify-center shadow-lg"
+          className="absolute -bottom-1 -left-1 z-20 px-1.5 py-0.5 rounded-full bg-[#B45309] border-2 border-[#FDE68A] flex items-center justify-center gap-1 shadow-lg"
           title="Sebenarnya adalah THE DRUNK"
         >
-          <Beer className="w-3 h-3 text-[#BFDBFE]" />
+          <Beer className="w-3.5 h-3.5 text-[#FDE68A]" />
+          <span className="text-[8px] sm:text-[9px] font-black text-white uppercase tracking-wider">DRUNK</span>
+        </div>
+      )}
+
+      {/* Poisoned status badge for Storyteller */}
+      {isPoisoned && (
+        <div
+          className="absolute -top-1 -right-1 z-20 px-1.5 py-0.5 rounded-full bg-[#991B1B] border-2 border-[#FCA5A5] flex items-center justify-center gap-1 shadow-lg animate-pulse"
+          title="Sedang Diracun (Poisoned)"
+        >
+          <FlaskConical className="w-3.5 h-3.5 text-[#FECACA]" />
+          <span className="text-[8px] sm:text-[9px] font-black text-white uppercase tracking-wider">RACUN</span>
         </div>
       )}
 

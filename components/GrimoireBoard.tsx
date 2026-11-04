@@ -8,12 +8,14 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
+  FlaskConical,
   Gavel,
   Ghost,
   HeartPulse,
   Skull,
   Trash2,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { REMINDER_MAP, REMINDER_TOKENS, ROLE_MAP, ROLES } from '@/lib/botc-data';
 import {
   GamePhase,
@@ -23,6 +25,7 @@ import {
 import { CharacterToken, ReminderTokenChip, RoleGlyph } from './TokenArtwork';
 import { SilentCardPayload } from './FullscreenCardModal';
 import PeekCardModal from './PeekCardModal';
+import DesignateDrunkModal from './DesignateDrunkModal';
 
 interface GrimoireBoardProps {
   players: PlayerSeat[];
@@ -30,6 +33,8 @@ interface GrimoireBoardProps {
   dayNumber: number;
   executedTodayPlayerId: string | null;
   demonBluffIds?: string[];
+  isDrunkActive?: boolean;
+  onSetDrunkPlayer?: (playerId: string) => void;
   onSwapSeats: (fromIndex: number, toIndex: number) => void;
   onMoveSeat: (seatIndex: number, direction: 'cw' | 'ccw') => void;
   onToggleAlive: (playerId: string) => void;
@@ -47,6 +52,8 @@ export default function GrimoireBoard({
   dayNumber,
   executedTodayPlayerId,
   demonBluffIds = [],
+  isDrunkActive = false,
+  onSetDrunkPlayer,
   onSwapSeats,
   onMoveSeat,
   onToggleAlive,
@@ -76,6 +83,11 @@ export default function GrimoireBoard({
 
   const selectedPlayer =
     players.find((p) => p.id === selectedPlayerId) ?? players[0] ?? null;
+
+  const currentDrunkPlayer = players.find((p) => p.trueRoleId === 'drunk');
+  const [isDrunkModalOpen, setIsDrunkModalOpen] = useState(() => {
+    return Boolean(isDrunkActive && !currentDrunkPlayer);
+  });
 
   const voteStats = calculateVoteThreshold(players);
   const totalSeats = players.length;
@@ -139,6 +151,34 @@ export default function GrimoireBoard({
 
   return (
     <div className="space-y-6">
+      {/* Drunk Alert Banner if Drunk is active but no player designated yet */}
+      {isDrunkActive && !currentDrunkPlayer && !spyCleanMode && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="px-4 py-3.5 rounded-2xl bg-[#2C1808] border-2 border-[#F59E0B] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs sm:text-sm text-[#FDE68A] shadow-xl"
+        >
+          <div className="flex items-center gap-2.5">
+            <Beer className="w-5 h-5 text-[#F59E0B] shrink-0" />
+            <div>
+              <strong className="block font-bold text-white">
+                Perhatian Storyteller: The Drunk Belum Ditentukan!
+              </strong>
+              <span>
+                Tas karakter memiliki +1 Townsfolk ekstra untuk The Drunk. Tentukan pemain Townsfolk mana yang sebenarnya adalah The Drunk sebelum Malam Pertama dimulai.
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsDrunkModalOpen(true)}
+            className="min-h-[40px] px-4 py-2 rounded-xl bg-[#D97706] hover:bg-[#F59E0B] text-[#121016] text-xs font-black uppercase tracking-wider shrink-0 cursor-pointer transition-colors shadow"
+          >
+            Pilih Drunk Sekarang
+          </button>
+        </motion.div>
+      )}
+
       {/* Top Toolbar above Grimoire */}
       <div className="flex flex-wrap items-center justify-between gap-2 bg-[#181520] border border-[#2A2636] rounded-2xl px-4 py-3">
         <div className="flex flex-wrap items-center gap-2 text-xs text-[#C8C0B3]">
@@ -157,7 +197,21 @@ export default function GrimoireBoard({
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Drunk Designation Button in Toolbar */}
+          {isDrunkActive && (
+            <button
+              type="button"
+              onClick={() => setIsDrunkModalOpen(true)}
+              className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-[#2D1B08] hover:bg-[#3D250C] border border-[#F59E0B] text-[#FDE68A] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md transition-colors whitespace-nowrap"
+            >
+              <Beer className="w-4 h-4 text-[#F59E0B]" />
+              <span>
+                {currentDrunkPlayer ? `Drunk: ${currentDrunkPlayer.name}` : 'Tentukan Drunk'}
+              </span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => {
@@ -248,8 +302,12 @@ export default function GrimoireBoard({
             {/* Subtle clocktower compass ring */}
             <div className="absolute inset-[15%] rounded-full border-2 border-dashed border-[#D4AF37]/20 pointer-events-none" />
 
-            {/* Center Clocktower Hub */}
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[26%] h-[26%] rounded-full bg-[#13101A]/95 border-2 border-[#38314A] flex flex-col items-center justify-center text-center p-2 pointer-events-none shadow-xl">
+            {/* Center Clocktower Hub with subtle floating animation */}
+            <motion.div
+              animate={{ scale: [1, 1.025, 1] }}
+              transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[26%] h-[26%] rounded-full bg-[#13101A]/95 border-2 border-[#38314A] flex flex-col items-center justify-center text-center p-2 pointer-events-none shadow-xl"
+            >
               <span className="font-display text-[10px] sm:text-xs font-black tracking-widest text-[#D4AF37] leading-tight">
                 GRIMOIRE
               </span>
@@ -259,7 +317,7 @@ export default function GrimoireBoard({
               <span className="font-mono text-[9px] sm:text-[11px] font-bold text-[#6EE7B7] mt-0.5 tabular-nums">
                 {voteStats.aliveCount}H · {voteStats.votesNeeded}V
               </span>
-            </div>
+            </motion.div>
 
             {/* Circular Player Seats & Inner-Ring Reminder Tokens */}
             {players.map((player, index) => {
@@ -276,6 +334,7 @@ export default function GrimoireBoard({
               const isSwapSource = swapModeSourceIdx === index;
               const isDragTarget = dragOverSeatIdx === index;
               const isDrunk = player.trueRoleId === 'drunk';
+              const isPoisoned = player.reminders.some((r) => r.reminderId === 'poisoned');
               const displayRoleId = spyCleanMode ? player.trueRoleId : player.perceivedRoleId;
 
               return (
@@ -311,73 +370,86 @@ export default function GrimoireBoard({
                     }}
                     className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-10"
                   >
-                    <button
-                      type="button"
-                      onClick={() => handleSeatClick(player)}
-                      aria-label={`Kursi ${index + 1}: ${player.name}, peran ${
-                        ROLE_MAP[player.perceivedRoleId]?.name
-                      }${isDrunk ? ' (Sebenarnya Drunk)' : ''}, status ${
-                        player.isAlive ? 'Hidup' : 'Mati'
-                      }`}
-                      className={`group relative rounded-full p-0.5 transition-transform cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FBBF24] ${
-                        isSelected
-                          ? 'ring-[3.5px] ring-[#D4AF37] scale-105 shadow-[0_0_20px_rgba(212,175,55,0.45)]'
-                          : isSwapSource || isDragTarget
-                          ? 'ring-[3.5px] ring-[#38BDF8] scale-110 shadow-[0_0_20px_rgba(56,189,248,0.45)]'
-                          : 'hover:scale-105'
-                      }`}
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: index * 0.03, duration: 0.25 }}
+                      className="flex flex-col items-center"
                     >
-                      <CharacterToken
-                        roleId={displayRoleId}
-                        size={tokenSize}
-                        isDead={!player.isAlive}
-                        isDrunkSecret={isDrunk}
-                      />
-
-                      {/* Seat Number Tag - High contrast and bold */}
-                      <span className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#121018] border-2 border-[#D4AF37] font-mono text-[10px] sm:text-xs font-black text-[#FDE68A] flex items-center justify-center tabular-nums shadow-md z-20">
-                        {index + 1}
-                      </span>
-
-                      {/* Storyteller Drunk Badge: Distinct, visible, bold */}
-                      {isDrunk && !spyCleanMode && (
-                        <span
-                          title="Pemain ini sebenarnya The Drunk (Outsider)"
-                          className="absolute -bottom-1.5 -left-1.5 px-1.5 py-0.5 rounded-full bg-[#D97706] border-2 border-[#FDE68A] text-[#121016] font-black text-[8px] sm:text-[9px] uppercase tracking-wider shadow-lg flex items-center gap-0.5 z-20"
-                        >
-                          <Beer className="w-2.5 h-2.5" />
-                          <span>DRUNK</span>
-                        </span>
-                      )}
-
-                      {/* Ghost Vote Pip when Dead */}
-                      {!player.isAlive && player.hasGhostVote && (
-                        <span
-                          title="Suara Hantu masih tersedia"
-                          className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#1E293B] border-2 border-[#94A3B8] flex items-center justify-center shadow-md z-20"
-                        >
-                          <Ghost className="w-3 h-3 text-[#E2E8F0]" />
-                        </span>
-                      )}
-                    </button>
-
-                    {/* Player Name Label - Bolder, clearer, higher contrast */}
-                    <div className="flex flex-col items-center">
-                      <span
-                        className={`mt-1 px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-black tracking-wide max-w-[80px] sm:max-w-[110px] truncate text-center shadow-lg border leading-tight ${
-                          player.isAlive
-                            ? 'bg-[#15121F]/95 text-white border-[#4E4466]'
-                            : 'bg-[#100D16]/95 text-[#A1A1AA] border-[#3F3F46] line-through'
+                      <button
+                        type="button"
+                        onClick={() => handleSeatClick(player)}
+                        aria-label={`Kursi ${index + 1}: ${player.name}, peran ${
+                          ROLE_MAP[player.perceivedRoleId]?.name
+                        }${isDrunk ? ' (Sebenarnya Drunk)' : ''}, status ${
+                          player.isAlive ? 'Hidup' : 'Mati'
+                        }`}
+                        className={`group relative rounded-full p-0.5 transition-transform cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FBBF24] ${
+                          isSelected
+                            ? 'ring-[3.5px] ring-[#D4AF37] scale-105 shadow-[0_0_20px_rgba(212,175,55,0.45)]'
+                            : isSwapSource || isDragTarget
+                            ? 'ring-[3.5px] ring-[#38BDF8] scale-110 shadow-[0_0_20px_rgba(56,189,248,0.45)]'
+                            : 'hover:scale-105'
                         }`}
                       >
-                        {player.name}
-                      </span>
-                      {isDrunk && !spyCleanMode && (
-                        <span className="text-[9px] font-black text-[#F59E0B] leading-none mt-0.5">
-                          (Asli: Drunk)
+                        <CharacterToken
+                          roleId={displayRoleId}
+                          size={tokenSize}
+                          isDead={!player.isAlive}
+                          isDrunkSecret={isDrunk && !spyCleanMode}
+                          isPoisoned={isPoisoned && !spyCleanMode}
+                        />
+
+                        {/* Seat Number Tag - High contrast and bold */}
+                        <span className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#121018] border-2 border-[#D4AF37] font-mono text-[10px] sm:text-xs font-black text-[#FDE68A] flex items-center justify-center tabular-nums shadow-md z-20">
+                          {index + 1}
                         </span>
-                      )}
-                    </div>
+
+                        {/* Storyteller Drunk Badge: Distinct, visible, bold */}
+                        {isDrunk && !spyCleanMode && (
+                          <span
+                            title="Pemain ini sebenarnya The Drunk (Outsider)"
+                            className="absolute -bottom-1.5 -left-1.5 px-1.5 py-0.5 rounded-full bg-[#D97706] border-2 border-[#FDE68A] text-[#121016] font-black text-[8px] sm:text-[9px] uppercase tracking-wider shadow-lg flex items-center gap-0.5 z-20"
+                          >
+                            <Beer className="w-2.5 h-2.5" />
+                            <span>DRUNK</span>
+                          </span>
+                        )}
+
+                        {/* Ghost Vote Pip when Dead */}
+                        {!player.isAlive && player.hasGhostVote && (
+                          <span
+                            title="Suara Hantu masih tersedia"
+                            className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#1E293B] border-2 border-[#94A3B8] flex items-center justify-center shadow-md z-20"
+                          >
+                            <Ghost className="w-3 h-3 text-[#E2E8F0]" />
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Player Name Label & Status Tags */}
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span
+                          className={`mt-1 px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-black tracking-wide max-w-[85px] sm:max-w-[110px] truncate text-center shadow-lg border leading-tight ${
+                            player.isAlive
+                              ? 'bg-[#15121F]/95 text-white border-[#4E4466]'
+                              : 'bg-[#100D16]/95 text-[#A1A1AA] border-[#3F3F46] line-through'
+                          }`}
+                        >
+                          {player.name}
+                        </span>
+                        {isDrunk && !spyCleanMode && (
+                          <span className="text-[8px] sm:text-[9px] font-black text-[#FDE68A] bg-[#78350F] border border-[#F59E0B] px-1.5 py-0.2 rounded-full uppercase tracking-wider shadow">
+                            ASLI: DRUNK
+                          </span>
+                        )}
+                        {isPoisoned && !spyCleanMode && (
+                          <span className="text-[8px] sm:text-[9px] font-black text-[#FECACA] bg-[#7F1D1D] border border-[#EF4444] px-1.5 py-0.2 rounded-full uppercase tracking-wider shadow animate-pulse">
+                            DIRACUN
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
                   </div>
 
                   {/* Placed Miniature Reminder Tokens on Inner Ring */}
@@ -586,9 +658,7 @@ export default function GrimoireBoard({
                       if (!roleDef) return;
                       onShowSilentCard({
                         heading: `Karakter: ${roleDef.name}`,
-                        subheading: `${selectedPlayer.name} (Kursi ${
-                          selectedPlayer.seatIndex + 1
-                        })`,
+                        subheading: roleDef.indonesianName,
                         roleIds: [roleDef.id],
                       });
                     }}
@@ -678,7 +748,9 @@ export default function GrimoireBoard({
                     Baki Token Pengingat (Reminder Tokens)
                   </h3>
                   <p className="text-xs text-[#A8A092]">
-                    Seret ke lingkaran atau ketuk token lalu ketuk kursi pemain.
+                    {selectedPlayer
+                      ? `Ketuk token mana saja untuk langsung menempelkannya ke ${selectedPlayer.name} (Kursi ${selectedPlayer.seatIndex + 1}).`
+                      : 'Pilih kursi pemain terlebih dahulu, atau ketuk token lalu ketuk kursi di lingkaran.'}
                   </p>
                 </div>
 
@@ -720,11 +792,15 @@ export default function GrimoireBoard({
                       e.dataTransfer.effectAllowed = 'copy';
                     }}
                     onClick={() => {
-                      setIsSwapModeActive(false);
-                      setSwapModeSourceIdx(null);
-                      setActiveBrushReminderId((prev) =>
-                        prev === rem.id ? null : rem.id
-                      );
+                      if (selectedPlayer) {
+                        onAddReminder(selectedPlayer.id, rem.id);
+                      } else {
+                        setIsSwapModeActive(false);
+                        setSwapModeSourceIdx(null);
+                        setActiveBrushReminderId((prev) =>
+                          prev === rem.id ? null : rem.id
+                        );
+                      }
                     }}
                   />
                 ))}
@@ -788,6 +864,20 @@ export default function GrimoireBoard({
         demonBluffIds={demonBluffIds}
         onClose={() => setIsPeekModalOpen(false)}
       />
+
+      {/* Designate Drunk Modal */}
+      {isDrunkActive && onSetDrunkPlayer && (
+        <DesignateDrunkModal
+          isOpen={isDrunkModalOpen}
+          players={players}
+          currentDrunkPlayerId={currentDrunkPlayer?.id ?? null}
+          onSelectDrunkPlayer={(playerId) => {
+            onSetDrunkPlayer(playerId);
+            setIsDrunkModalOpen(false);
+          }}
+          onClose={() => setIsDrunkModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

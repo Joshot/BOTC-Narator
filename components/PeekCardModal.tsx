@@ -6,17 +6,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  EyeOff,
-  Ghost,
-  HeartPulse,
   Info,
-  Shield,
   ShieldAlert,
-  Skull,
   Swords,
-  Users,
   X,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { REMINDER_MAP, ROLE_MAP } from '@/lib/botc-data';
 import { PlayerSeat } from '@/lib/botc-engine';
 import { CharacterToken, RoleGlyph } from './TokenArtwork';
@@ -68,10 +63,15 @@ export default function PeekCardModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`Intip Rahasia: ${player.name}`}
+      aria-label="Mode Intip Rahasia"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
     >
-      <div className="relative w-full max-w-2xl bg-[#14111B] border-2 border-[#D4AF37]/60 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col max-h-[92vh]">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="relative w-full max-w-2xl bg-[#14111B] border-2 border-[#D4AF37]/60 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col max-h-[92vh]"
+      >
         {/* Modal Top Header */}
         <div className="flex items-center justify-between px-5 py-3.5 bg-[#1C1726] border-b border-[#2E283C]">
           <div className="flex items-center gap-2">
@@ -79,7 +79,7 @@ export default function PeekCardModal({
               Mode Intip Rahasia
             </span>
             <span className="text-xs text-[#9C9486]">
-              Kursi {player.seatIndex + 1} dari {players.length}
+              {activeTab === 'storyteller_view' ? `Kursi ${player.seatIndex + 1} dari ${players.length}` : 'Tampilan Aman untuk Pemain'}
             </span>
           </div>
 
@@ -122,50 +122,76 @@ export default function PeekCardModal({
           </button>
         </div>
 
-        {/* Player Carousel Bar */}
-        <div className="flex items-center justify-between px-4 py-2.5 bg-[#171321] border-b border-[#282234]">
-          <button
-            type="button"
-            onClick={handlePrev}
-            className="px-3 py-1.5 rounded-lg bg-[#221B2E] hover:bg-[#302742] text-xs font-semibold text-[#EDE7DB] flex items-center gap-1 cursor-pointer transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Sebelumnya</span>
-          </button>
+        {/* Carousel Bar (shown in Storyteller View or subtle in Player View) */}
+        {activeTab === 'storyteller_view' ? (
+          <div className="flex items-center justify-between px-4 py-2.5 bg-[#171321] border-b border-[#282234]">
+            <button
+              type="button"
+              onClick={handlePrev}
+              className="px-3 py-1.5 rounded-lg bg-[#221B2E] hover:bg-[#302742] text-xs font-semibold text-[#EDE7DB] flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Sebelumnya</span>
+            </button>
 
-          <div className="text-center min-w-0 px-2">
-            <h2 className="font-display text-base sm:text-lg font-bold text-[#F5EFE6] truncate">
-              {player.name}
-            </h2>
-            <p className="text-[11px] text-[#A8A092]">
-              Kursi {player.seatIndex + 1} · {player.isAlive ? 'Status: Masih Hidup' : 'Status: Telah Mati'}
-            </p>
+            <div className="text-center min-w-0 px-2">
+              <h2 className="font-display text-base sm:text-lg font-bold text-[#F5EFE6] truncate">
+                {player.name}
+              </h2>
+              <p className="text-[11px] text-[#A8A092]">
+                Kursi {player.seatIndex + 1} · {player.isAlive ? 'Status: Masih Hidup' : 'Status: Telah Mati'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleNext}
+              className="px-3 py-1.5 rounded-lg bg-[#221B2E] hover:bg-[#302742] text-xs font-semibold text-[#EDE7DB] flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              <span className="hidden sm:inline">Berikutnya</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
+        ) : (
+          <div className="flex items-center justify-between px-4 py-2 bg-[#171321] border-b border-[#282234]">
+            <button
+              type="button"
+              onClick={handlePrev}
+              className="px-3 py-1 rounded-lg bg-[#221B2E] text-xs font-semibold text-[#A8A092] hover:text-white flex items-center gap-1 cursor-pointer"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Ganti Pemain</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={handleNext}
-            className="px-3 py-1.5 rounded-lg bg-[#221B2E] hover:bg-[#302742] text-xs font-semibold text-[#EDE7DB] flex items-center gap-1 cursor-pointer transition-colors"
-          >
-            <span className="hidden sm:inline">Berikutnya</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+            <span className="text-[11px] font-medium text-[#A8A092]">
+              Layar Pribadi Pemain
+            </span>
+
+            <button
+              type="button"
+              onClick={handleNext}
+              className="px-3 py-1 rounded-lg bg-[#221B2E] text-xs font-semibold text-[#A8A092] hover:text-white flex items-center gap-1 cursor-pointer"
+            >
+              <span>Ganti Pemain</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Modal Content Scroll Area */}
         <div className="p-5 sm:p-6 overflow-y-auto space-y-5 text-sm">
           {activeTab === 'player_view' ? (
-            /* TAB 1: PLAYER-FACING VIEW (SAFE / NO SPOILERS) */
+            /* TAB 1: PLAYER-FACING VIEW (CLEAN / ONLY CHARACTER & ARTWORK AS REQUESTED) */
             <div className="space-y-5">
               <div className="p-3 rounded-xl bg-[#262115] border border-[#D4AF37]/50 text-xs text-[#FDE68A] flex items-center gap-2">
                 <Info className="w-4 h-4 shrink-0 text-[#D4AF37]" />
                 <span>
-                  Tampilan Aman: Anda dapat memperlihatkan layar ini secara pribadi kepada <strong>{player.name}</strong>. Rahasia Storyteller tetap terlindungi.
+                  Tampilan Aman: Berikan layar HP ini kepada pemain terkait secara pribadi. Hanya menampilkan gambar dan kemampuan peran tanpa informasi kursi.
                 </span>
               </div>
 
-              {/* Card Token & Role Presentation */}
-              <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-radial from-[#251E33] via-[#1A1525] to-[#100D17] border border-[#3A324C] shadow-inner space-y-4">
+              {/* Pure Character Card Presentation (Clean, without seat codes like '1HG Kursi 6') */}
+              <div className="flex flex-col items-center text-center p-6 sm:p-8 rounded-3xl bg-radial from-[#251E33] via-[#1A1525] to-[#100D17] border-2 border-[#D4AF37]/40 shadow-inner space-y-5">
                 <CharacterToken
                   roleId={player.perceivedRoleId}
                   size="xl"
@@ -173,20 +199,22 @@ export default function PeekCardModal({
                   isDrunkSecret={false}
                 />
 
-                <div>
-                  <span className="text-xs uppercase tracking-widest font-bold text-[#D4AF37]">
-                    Peran Karakter Anda
+                <div className="space-y-1">
+                  <span className="text-xs uppercase tracking-widest font-black text-[#D4AF37]">
+                    Karakter Peran Anda
                   </span>
-                  <h3 className="font-display text-2xl sm:text-3xl font-black text-white mt-1">
+                  <h3 className="font-display text-3xl sm:text-4xl font-black text-white">
                     {perceivedRole?.name}
                   </h3>
-                  <p className="text-sm font-semibold text-[#BFDBFE] mt-0.5">
+                  <p className="text-sm font-bold text-[#BFDBFE]">
                     {perceivedRole?.indonesianName} ({perceivedRole?.team === 'townsfolk' ? 'Warga Kota / Townsfolk' : perceivedRole?.team === 'outsider' ? 'Warga Luar / Outsider' : perceivedRole?.team === 'minion' ? 'Anak Buah Jahat / Minion' : 'Iblis Utama / Demon'})
                   </p>
                 </div>
 
-                <div className="max-w-md p-4 rounded-xl bg-black/40 border border-[#3E3550] text-xs sm:text-sm text-[#EDE7DB] leading-relaxed text-left">
-                  <div className="font-bold text-[#D4AF37] mb-1">Kemampuan Resmi:</div>
+                <div className="max-w-md p-4 sm:p-5 rounded-2xl bg-black/50 border border-[#443859] text-xs sm:text-sm text-[#EDE7DB] leading-relaxed text-left">
+                  <div className="font-bold text-[#D4AF37] mb-1.5 text-xs uppercase tracking-wider">
+                    Kemampuan Resmi:
+                  </div>
                   <p>{perceivedRole?.ability}</p>
                 </div>
               </div>
@@ -196,10 +224,9 @@ export default function PeekCardModal({
                 <div className="p-4 rounded-2xl bg-[#261215] border border-[#DC2626]/50 space-y-3">
                   <div className="flex items-center gap-2 text-sm font-bold text-[#FECACA]">
                     <Swords className="w-4 h-4 text-[#EF4444]" />
-                    <span>Informasi Rahasia Tim Evil (Hanya untuk Demon)</span>
+                    <span>Informasi Rahasia Tim Evil (Khusus Demon)</span>
                   </div>
 
-                  {/* Minions */}
                   <div>
                     <span className="text-xs font-semibold text-[#FCA5A5] block mb-1">
                       Rekan Minion Anda:
@@ -213,17 +240,16 @@ export default function PeekCardModal({
                             key={m.id}
                             className="px-2.5 py-1 rounded-lg bg-[#3F1B20] text-xs font-bold text-[#FED7D7] border border-[#7F1D1D]"
                           >
-                            Kursi {m.seatIndex + 1}: {m.name} ({ROLE_MAP[m.trueRoleId]?.name})
+                            {m.name} ({ROLE_MAP[m.trueRoleId]?.name})
                           </span>
                         ))}
                       </div>
                     )}
                   </div>
 
-                  {/* 3 Demon Bluffs */}
                   <div className="pt-2 border-t border-[#4E1E24]">
                     <span className="text-xs font-semibold text-[#FCA5A5] block mb-1.5">
-                      3 Karakter Bluff Aman (Tidak Ada yang Memainkannya):
+                      3 Karakter Bluff Aman (Bisa Anda Akui):
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       {demonBluffIds.map((bid) => {
@@ -256,7 +282,7 @@ export default function PeekCardModal({
                 <div className="p-4 rounded-2xl bg-[#261215] border border-[#DC2626]/50 space-y-3">
                   <div className="flex items-center gap-2 text-sm font-bold text-[#FECACA]">
                     <Swords className="w-4 h-4 text-[#EF4444]" />
-                    <span>Informasi Rahasia Tim Evil (Untuk Minion)</span>
+                    <span>Informasi Rahasia Tim Evil (Khusus Minion)</span>
                   </div>
 
                   <div>
@@ -265,7 +291,7 @@ export default function PeekCardModal({
                     </span>
                     {demonPlayer ? (
                       <span className="inline-block px-3 py-1 rounded-lg bg-[#3F1B20] text-xs font-bold text-[#FED7D7] border border-[#7F1D1D]">
-                        Kursi {demonPlayer.seatIndex + 1}: {demonPlayer.name} ({ROLE_MAP[demonPlayer.trueRoleId]?.name})
+                        {demonPlayer.name} ({ROLE_MAP[demonPlayer.trueRoleId]?.name})
                       </span>
                     ) : (
                       <p className="text-xs text-[#E2C4C6]">Demon belum terdaftar.</p>
@@ -283,7 +309,7 @@ export default function PeekCardModal({
                             key={m.id}
                             className="px-2.5 py-1 rounded-lg bg-[#3F1B20] text-xs font-bold text-[#FED7D7] border border-[#7F1D1D]"
                           >
-                            Kursi {m.seatIndex + 1}: {m.name} ({ROLE_MAP[m.trueRoleId]?.name})
+                            {m.name} ({ROLE_MAP[m.trueRoleId]?.name})
                           </span>
                         ))}
                       </div>
@@ -295,18 +321,17 @@ export default function PeekCardModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full min-h-[44px] py-2.5 rounded-xl bg-[#251E33] hover:bg-[#342A47] text-xs sm:text-sm font-bold text-[#EDE7DB] border border-[#483D60] cursor-pointer transition-colors"
+                className="w-full min-h-[46px] py-2.5 rounded-xl bg-[#251E33] hover:bg-[#342A47] text-xs sm:text-sm font-bold text-[#EDE7DB] border border-[#483D60] cursor-pointer transition-colors"
               >
-                Selesai Membaca (Tutup Layar)
+                Selesai & Sembunyikan Layar
               </button>
             </div>
           ) : (
-            /* TAB 2: STORYTELLER DOSSIER VIEW (FULL SECRETS & ENGINE STATUS) */
+            /* TAB 2: STORYTELLER DOSSIER VIEW (FULL STORYTELLER SECRETS) */
             <div className="space-y-4">
-              {/* True Identity vs Perceived Identity */}
               <div className="p-4 rounded-2xl bg-[#1C1728] border border-[#342D45] space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-[#D4AF37]">
-                  Identitas & Status Pemain
+                  Identitas Asli Pemain: {player.name} (Kursi {player.seatIndex + 1})
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -331,7 +356,6 @@ export default function PeekCardModal({
                   </div>
                 </div>
 
-                {/* Health & Ghost Vote */}
                 <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#2B2438] text-xs">
                   <span className="text-[#A8A092]">Status Hidup:</span>
                   <span
@@ -352,14 +376,13 @@ export default function PeekCardModal({
                 </div>
               </div>
 
-              {/* Special Malfunction Alerts */}
               {isDrunk && (
                 <div className="p-4 rounded-2xl bg-[#281D12] border border-[#D97706]/60 flex items-start gap-3">
                   <Beer className="w-5 h-5 text-[#F59E0B] shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="font-bold text-sm text-[#FDE68A]">Pemain Ini Adalah The Drunk!</h5>
+                    <h5 className="font-bold text-sm text-[#FDE68A]">Pemain Ini Adalah THE DRUNK!</h5>
                     <p className="text-xs text-[#FDE68A]/90 mt-1 leading-relaxed">
-                      Token aslinya adalah <strong>Drunk (Outsider)</strong>, tetapi pemain ini diberi token <strong>{perceivedRole?.name}</strong>. Kemampuannya TIDAK BERFUNGSI secara nyata. Berikan informasi yang salah atau buat seolah-olah berfungsi!
+                      Token aslinya adalah <strong>Drunk (Outsider)</strong>, tetapi pemain ini memegang token <strong>{perceivedRole?.name}</strong>. Kemampuannya TIDAK BERFUNGSI secara nyata. Berikan informasi yang salah atau buat seolah-olah berfungsi!
                     </p>
                   </div>
                 </div>
@@ -404,39 +427,10 @@ export default function PeekCardModal({
                   </div>
                 )}
               </div>
-
-              {/* Night Instructions Guide */}
-              <div className="p-4 rounded-2xl bg-[#1C1728] border border-[#342D45] space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#D4AF37]">
-                  Instruksi Narator untuk Karakter Ini
-                </h4>
-
-                {trueRole?.firstNightInstruction && (
-                  <div className="text-xs text-[#EDE7DB] space-y-1">
-                    <strong className="text-[#93C5FD] block">Malam Pertama:</strong>
-                    <p className="p-2.5 rounded-lg bg-[#120F1A] border border-[#2A2338] leading-relaxed">
-                      {trueRole.firstNightInstruction}
-                    </p>
-                  </div>
-                )}
-
-                {trueRole?.otherNightInstruction && (
-                  <div className="text-xs text-[#EDE7DB] space-y-1 pt-1">
-                    <strong className="text-[#FDE68A] block">Malam Berikutnya:</strong>
-                    <p className="p-2.5 rounded-lg bg-[#120F1A] border border-[#2A2338] leading-relaxed">
-                      {trueRole.otherNightInstruction}
-                    </p>
-                  </div>
-                )}
-
-                <div className="text-xs text-[#A8A092] pt-2 border-t border-[#292237]">
-                  <strong>Catatan Storyteller:</strong> {trueRole?.storytellerNote}
-                </div>
-              </div>
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
