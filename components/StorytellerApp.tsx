@@ -20,6 +20,7 @@ import {
   isPlayerPoisoned,
   movePlayerSeat,
   swapPlayerSeats,
+  sanitizePlayerSeats,
 } from '@/lib/botc-engine';
 import DashboardView from './DashboardView';
 import SetupWizard from './SetupWizard';
@@ -143,8 +144,8 @@ export default function StorytellerApp({
     return initialDemo ? initialDemo.demonBluffIds : [];
   });
   const [players, setPlayers] = useState<PlayerSeat[]>(() => {
-    if (initialSaved) return initialSaved.players;
-    return initialDemo ? initialDemo.players : [];
+    if (initialSaved) return sanitizePlayerSeats(initialSaved.players);
+    return initialDemo ? sanitizePlayerSeats(initialDemo.players) : [];
   });
   const [phase, setPhase] = useState<GamePhase>(() => {
     if (initialSaved) return initialSaved.phase;
@@ -271,32 +272,44 @@ export default function StorytellerApp({
   ]);
 
   const handleSetDrunkPlayer = (targetPlayerId: string) => {
-    setPlayers((prev) =>
-      prev.map((p) => {
+    setPlayers((prev) => {
+      const target = prev.find((p) => p.id === targetPlayerId);
+      const isAlreadyDrunk = target?.trueRoleId === 'drunk';
+
+      const next = prev.map((p) => {
+        const withoutDrunkRem = p.reminders.filter((r) => r.reminderId !== 'is_the_drunk');
         if (p.id === targetPlayerId) {
-          const cleaned = p.reminders.filter((r) => r.reminderId !== 'is_the_drunk');
-          return {
-            ...p,
-            trueRoleId: 'drunk',
-            reminders: [
-              ...cleaned,
-              {
-                instanceId: `rem-drunk-${Date.now()}`,
-                reminderId: 'is_the_drunk',
-              },
-            ],
-          };
+          if (isAlreadyDrunk) {
+            // Toggle off Drunk
+            return {
+              ...p,
+              trueRoleId: p.perceivedRoleId,
+              reminders: withoutDrunkRem,
+            };
+          } else {
+            // Become Drunk
+            return {
+              ...p,
+              trueRoleId: 'drunk',
+              reminders: [
+                ...withoutDrunkRem,
+                { instanceId: `rem-drunk-${Date.now()}`, reminderId: 'is_the_drunk' },
+              ],
+            };
+          }
         }
-        if (p.trueRoleId === 'drunk') {
+        // If another player was Drunk and target is becoming Drunk, revert other player
+        if (!isAlreadyDrunk && p.trueRoleId === 'drunk') {
           return {
             ...p,
             trueRoleId: p.perceivedRoleId,
-            reminders: p.reminders.filter((r) => r.reminderId !== 'is_the_drunk'),
+            reminders: withoutDrunkRem,
           };
         }
         return p;
-      })
-    );
+      });
+      return sanitizePlayerSeats(next);
+    });
     setGameAlertBanner(null);
   };
 
@@ -407,8 +420,8 @@ export default function StorytellerApp({
       return;
     }
 
-    setPlayers((prev) =>
-      prev.map((p) => {
+    setPlayers((prev) => {
+      const next = prev.map((p) => {
         // If moving single-target tokens (Poisoned, Protected, Die), clean up from other players
         if (p.id !== playerId) {
           if (reminderId === 'poisoned' || reminderId === 'protected' || reminderId === 'die_imp') {
@@ -429,10 +442,13 @@ export default function StorytellerApp({
           };
         }
 
+        // Clean any existing reminder of this ID before adding (defensive deduplication)
+        const withoutThis = p.reminders.filter((r) => r.reminderId !== reminderId);
+
         return {
           ...p,
           reminders: [
-            ...p.reminders,
+            ...withoutThis,
             {
               instanceId: `rem-${reminderId}-${Date.now()}-${Math.random()
                 .toString(36)
@@ -441,8 +457,9 @@ export default function StorytellerApp({
             },
           ],
         };
-      })
-    );
+      });
+      return sanitizePlayerSeats(next);
+    });
   };
 
   const handleSetSingleReminderTarget = (reminderId: string, targetPlayerId: string) => {

@@ -506,6 +506,59 @@ export function getActiveReminderTokensForSeats(players: PlayerSeat[]): Reminder
   });
 }
 
+/**
+ * Sanitizes player seats to eliminate duplicate tokens, enforce at most 1 Drunk,
+ * and guarantee death causes match alive status. Prevents corrupt local storage or spam.
+ */
+export function sanitizePlayerSeats(players: PlayerSeat[]): PlayerSeat[] {
+  if (!players || !Array.isArray(players)) return [];
+
+  // Single-target reminder tokens that can only exist on 1 player globally in Trouble Brewing
+  const singleTargetTokens = new Set(['poisoned', 'protected', 'die_imp', 'is_the_drunk']);
+  const claimedSingleTokens = new Set<string>();
+
+  // Ensure only 1 Drunk exists across all seats
+  let drunkAssigned = false;
+
+  return players.map((p, idx) => {
+    let trueRoleId = p.trueRoleId;
+    if (trueRoleId === 'drunk') {
+      if (drunkAssigned) {
+        trueRoleId = p.perceivedRoleId;
+      } else {
+        drunkAssigned = true;
+      }
+    }
+
+    const uniqueReminders: PlacedReminder[] = [];
+    const seatSeen = new Set<string>();
+
+    for (const r of p.reminders || []) {
+      if (!r || !r.reminderId) continue;
+
+      // Deduplicate per seat: only 1 instance of any reminder token per player
+      if (seatSeen.has(r.reminderId)) continue;
+
+      // Single-target global uniqueness: only 1 player gets poisoned/protected/die_imp/is_the_drunk
+      if (singleTargetTokens.has(r.reminderId)) {
+        if (claimedSingleTokens.has(r.reminderId)) continue;
+        claimedSingleTokens.add(r.reminderId);
+      }
+
+      seatSeen.add(r.reminderId);
+      uniqueReminders.push(r);
+    }
+
+    return {
+      ...p,
+      seatIndex: idx,
+      trueRoleId,
+      deathCause: p.isAlive ? undefined : (p.deathCause ?? ('demon' as const)),
+      reminders: uniqueReminders,
+    };
+  });
+}
+
 export function calculateChefNumber(players: PlayerSeat[]): {
   evilPairs: number;
   hasRecluseOrSpyNote: boolean;

@@ -237,26 +237,20 @@ export function CharacterToken({
         )
       )}
 
-      {/* Secret Drunk indicator badge for Storyteller - Centered, sharp, high contrast */}
+      {/* Secret Drunk indicator for Storyteller - Regal glowing amber halo (zero collision with name) */}
       {isDrunkSecret && (
         <div
-          className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-20 px-2 py-0.5 rounded-full bg-[#78350F] border-2 border-[#FDE68A] flex items-center justify-center gap-1 shadow-xl whitespace-nowrap"
+          className="absolute inset-0 rounded-full border-[3px] border-[#F59E0B] shadow-[0_0_16px_rgba(245,158,11,0.6)] pointer-events-none"
           title="Sebenarnya adalah THE DRUNK"
-        >
-          <Beer className="w-3.5 h-3.5 text-[#FDE68A]" />
-          <span className="text-[8px] sm:text-[9px] font-black text-white uppercase tracking-wider">DRUNK</span>
-        </div>
+        />
       )}
 
-      {/* Poisoned status badge for Storyteller */}
+      {/* Poisoned status indicator for Storyteller - Pulsing crimson halo */}
       {isPoisoned && (
         <div
-          className="absolute -top-1 -right-1 z-20 px-1.5 py-0.5 rounded-full bg-[#991B1B] border-2 border-[#FCA5A5] flex items-center justify-center gap-1 shadow-lg animate-pulse whitespace-nowrap"
+          className="absolute inset-0 rounded-full border-[3px] border-[#EF4444] shadow-[0_0_16px_rgba(239,68,68,0.6)] pointer-events-none animate-pulse"
           title="Sedang Diracun (Poisoned)"
-        >
-          <FlaskConical className="w-3.5 h-3.5 text-[#FECACA]" />
-          <span className="text-[8px] sm:text-[9px] font-black text-white uppercase tracking-wider">RACUN</span>
-        </div>
+        />
       )}
 
       <RoleGlyph roleId={role.id} className={`${sizeMap.icon} ${styles.iconText} shrink-0 mb-0.5`} />

@@ -336,17 +336,13 @@ export default function GrimoireBoard({
               const leftPct = 50 + radiusPct * Math.cos(angle);
               const topPct = 50 + radiusPct * Math.sin(angle);
 
-              // Place attached reminder tokens inward toward center of Grimoire (authentic physical Grimoire layout)
-              const innerReminderRadius = Math.max(18, radiusPct - 14.5);
-              const remLeftPct = 50 + innerReminderRadius * Math.cos(angle);
-              const remTopPct = 50 + innerReminderRadius * Math.sin(angle);
-
               const isSelected = !spyCleanMode && selectedPlayer?.id === player.id;
               const isSwapSource = swapModeSourceIdx === index;
               const isDragTarget = dragOverSeatIdx === index;
               const isDrunk = player.trueRoleId === 'drunk';
               const isPoisoned = player.reminders.some((r) => r.reminderId === 'poisoned');
               const displayRoleId = spyCleanMode ? player.trueRoleId : player.perceivedRoleId;
+              const nonDrunkReminders = player.reminders.filter((r) => r.reminderId !== 'is_the_drunk');
 
               return (
                 <React.Fragment key={player.id}>
@@ -428,10 +424,11 @@ export default function GrimoireBoard({
                         )}
                       </button>
 
-                      {/* Player Name Label & Status Tags */}
-                      <div className="flex flex-col items-center gap-0.5">
+                      {/* Player Name, Status Badges, and Attached Reminder Tokens - Vertically stacked, zero overlaps! */}
+                      <div className="flex flex-col items-center gap-1 mt-1.5">
+                        {/* Name Pill */}
                         <span
-                          className={`mt-1 px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-black tracking-wide max-w-[85px] sm:max-w-[110px] truncate text-center shadow-lg border leading-tight ${
+                          className={`px-2.5 py-0.5 rounded-lg text-[10px] sm:text-xs font-black tracking-wide max-w-[90px] sm:max-w-[120px] truncate text-center shadow-lg border leading-tight ${
                             player.isAlive
                               ? 'bg-[#15121F]/95 text-white border-[#4E4466]'
                               : 'bg-[#100D16]/95 text-[#A1A1AA] border-[#3F3F46] line-through'
@@ -440,61 +437,60 @@ export default function GrimoireBoard({
                           {player.name}
                         </span>
 
-                        {/* Distinct Death Status Tag */}
-                        {!player.isAlive && !spyCleanMode && (
-                          player.deathCause === 'demon' ? (
-                            <span className="text-[7.5px] sm:text-[8.5px] font-black text-[#FECACA] bg-[#450A0A] border border-[#DC2626] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
-                              DIBUNUH DEMON
-                            </span>
-                          ) : player.deathCause === 'execution' ? (
-                            <span className="text-[7.5px] sm:text-[8.5px] font-black text-[#FDE68A] bg-[#3B2808] border border-[#D4AF37] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
-                              DIGANTUNG
-                            </span>
-                          ) : (
-                            <span className="text-[7.5px] sm:text-[8.5px] font-black text-[#E4E4E7] bg-[#18181B] border border-[#52525B] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
-                              MATI
-                            </span>
-                          )
+                        {/* Distinct Status Badges: Dead / Drunk / Poisoned */}
+                        {!spyCleanMode && (
+                          <div className="flex flex-wrap items-center justify-center gap-1 max-w-[130px]">
+                            {!player.isAlive && (
+                              player.deathCause === 'demon' ? (
+                                <span className="text-[8px] sm:text-[9px] font-black text-[#FECACA] bg-[#450A0A] border border-[#DC2626] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
+                                  DIBUNUH DEMON
+                                </span>
+                              ) : player.deathCause === 'execution' ? (
+                                <span className="text-[8px] sm:text-[9px] font-black text-[#FDE68A] bg-[#3B2808] border border-[#D4AF37] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
+                                  DIGANTUNG
+                                </span>
+                              ) : (
+                                <span className="text-[8px] sm:text-[9px] font-black text-[#E4E4E7] bg-[#18181B] border border-[#52525B] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
+                                  MATI
+                                </span>
+                              )
+                            )}
+
+                            {isDrunk && (
+                              <span className="text-[8px] sm:text-[9px] font-black text-[#FDE68A] bg-[#451A03] border border-[#F59E0B] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow flex items-center gap-1">
+                                <Beer className="w-3 h-3 text-[#F59E0B]" />
+                                <span>ASLI: DRUNK</span>
+                              </span>
+                            )}
+
+                            {isPoisoned && (
+                              <span className="text-[8px] sm:text-[9px] font-black text-[#FECACA] bg-[#7F1D1D] border border-[#EF4444] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow flex items-center gap-1 animate-pulse">
+                                <FlaskConical className="w-3 h-3 text-[#F87171]" />
+                                <span>DIRACUN</span>
+                              </span>
+                            )}
+                          </div>
                         )}
 
-                        {isDrunk && !spyCleanMode && (
-                          <span className="text-[7.5px] sm:text-[8.5px] font-black text-[#FDE68A] bg-[#451A03] border border-[#D97706] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
-                            ASLI: DRUNK
-                          </span>
-                        )}
-                        {isPoisoned && !spyCleanMode && (
-                          <span className="text-[7.5px] sm:text-[8.5px] font-black text-[#FECACA] bg-[#7F1D1D] border border-[#EF4444] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow animate-pulse">
-                            DIRACUN
-                          </span>
+                        {/* Attached Reminder Tokens (Excluding is_the_drunk to prevent duplicate indicator) */}
+                        {!spyCleanMode && nonDrunkReminders.length > 0 && (
+                          <div className="flex flex-wrap items-center justify-center gap-1 max-w-[120px] mt-0.5">
+                            {nonDrunkReminders.map((rem) => (
+                              <ReminderTokenChip
+                                key={rem.instanceId}
+                                reminderId={rem.reminderId}
+                                size="xs"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onRemoveReminder(player.id, rem.instanceId);
+                                }}
+                              />
+                            ))}
+                          </div>
                         )}
                       </div>
                     </motion.div>
                   </div>
-
-                  {/* Placed Miniature Reminder Tokens on Inner Ring */}
-                  {player.reminders.length > 0 && (
-                    <div
-                      style={{
-                        left: `${remLeftPct}%`,
-                        top: `${remTopPct}%`,
-                      }}
-                      className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-wrap items-center justify-center gap-0.5 max-w-[64px] z-20"
-                    >
-                      {player.reminders.map((rem) => (
-                        <ReminderTokenChip
-                          key={rem.instanceId}
-                          reminderId={rem.reminderId}
-                          size="xs"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (!spyCleanMode) {
-                              onRemoveReminder(player.id, rem.instanceId);
-                            }
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
                 </React.Fragment>
               );
             })}

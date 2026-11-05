@@ -14,6 +14,7 @@ import {
   swapPlayerSeats,
   validateRoleSelection,
   validateRoleBag,
+  sanitizePlayerSeats,
 } from './botc-engine.ts';
 
 test('official Trouble Brewing character counts match 5 to 15 players table', () => {
@@ -187,5 +188,49 @@ test('getActiveReminderTokensForSeats dynamically filters tokens based on in-pla
 
   assert.equal(tokenIdsWithBoth.includes('poisoned'), true, 'Poisoned token must exist when Poisoner is in play');
   assert.equal(tokenIdsWithBoth.includes('is_the_drunk'), true, 'Is the Drunk token must exist when Drunk is in play');
+});
+
+test('sanitizePlayerSeats removes duplicate tokens and limits single-target tokens to 1 seat', () => {
+  const dirtySeats = [
+    {
+      id: 'p1',
+      seatIndex: 0,
+      name: 'Player 1',
+      trueRoleId: 'drunk',
+      perceivedRoleId: 'chef',
+      isAlive: true,
+      hasGhostVote: true,
+      reminders: [
+        { instanceId: 'r1', reminderId: 'poisoned' },
+        { instanceId: 'r2', reminderId: 'poisoned' }, // duplicate!
+        { instanceId: 'r3', reminderId: 'is_the_drunk' },
+      ],
+    },
+    {
+      id: 'p2',
+      seatIndex: 1,
+      name: 'Player 2',
+      trueRoleId: 'drunk', // illegal second Drunk!
+      perceivedRoleId: 'investigator',
+      isAlive: false,
+      hasGhostVote: true,
+      reminders: [
+        { instanceId: 'r4', reminderId: 'poisoned' }, // second poisoned!
+        { instanceId: 'r5', reminderId: 'die_imp' },
+      ],
+    },
+  ];
+
+  const cleaned = sanitizePlayerSeats(dirtySeats);
+
+  // Player 1 should only have 1 poisoned token
+  assert.equal(cleaned[0].reminders.filter((r) => r.reminderId === 'poisoned').length, 1);
+  assert.equal(cleaned[0].trueRoleId, 'drunk');
+
+  // Player 2 should NOT be Drunk (reverted to perceived role), and should NOT have poisoned (already claimed by p1)
+  assert.equal(cleaned[1].trueRoleId, 'investigator');
+  assert.equal(cleaned[1].reminders.filter((r) => r.reminderId === 'poisoned').length, 0);
+  assert.equal(cleaned[1].reminders.filter((r) => r.reminderId === 'die_imp').length, 1);
+  assert.equal(cleaned[1].deathCause, 'demon');
 });
 
