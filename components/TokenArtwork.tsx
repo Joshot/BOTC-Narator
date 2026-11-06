@@ -173,7 +173,7 @@ export function CharacterToken({
 
   return (
     <div
-      className={`relative rounded-full flex items-center justify-center select-none shadow-2xl transition-all duration-200 bg-[#14111B] ${
+      className={`relative rounded-full shrink-0 aspect-square flex items-center justify-center select-none shadow-2xl transition-all duration-200 bg-[#14111B] ${
         sizeMap.circle
       } ${
         isDead

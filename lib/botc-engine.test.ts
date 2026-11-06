@@ -234,3 +234,23 @@ test('sanitizePlayerSeats removes duplicate tokens and limits single-target toke
   assert.equal(cleaned[1].deathCause, 'demon');
 });
 
+test('physical Drunk bag representation (+1 Townsfolk chosen at start) validates successfully', () => {
+  // 8 players with Drunk active: 6 Townsfolk, 0 Outsiders, 1 Minion, 1 Imp
+  const selectedRoles = [
+    'washerwoman',
+    'librarian',
+    'investigator',
+    'chef',
+    'empath',
+    'mayor',
+    'poisoner',
+    'imp',
+  ];
+  // Drunk fake role is one of the chosen Townsfolk (e.g. mayor)
+  const validation = validateRoleSelection(8, selectedRoles, 'mayor', true);
+  assert.equal(validation.isValid, true);
+  assert.equal(validation.errors.length, 0);
+  assert.equal(validation.counts.townsfolk, 6);
+  assert.equal(validation.counts.outsiders, 0);
+});
+

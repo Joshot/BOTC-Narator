@@ -87,30 +87,42 @@ export default function EvilAndBluffsView({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Demon Box */}
-          <div className="p-4 rounded-xl bg-[#221418] border border-[#DC2626]/40 flex items-start gap-4">
+          <div className="p-4 rounded-xl bg-[#221418] border border-[#DC2626]/40 space-y-3">
+            <div className="text-xs text-[#FCA5A5] font-medium flex items-center gap-1.5">
+              <Swords className="w-4 h-4 text-[#F87171]" />
+              <span>DEMON UTAMA (1 ORANG)</span>
+            </div>
             {demon ? (
-              <>
-                <CharacterToken
-                  roleId={demon.trueRoleId}
-                  size="md"
-                  isDead={!demon.isAlive}
-                />
-                <div className="space-y-1 min-w-0">
-                  <div className="text-xs text-[#FCA5A5] font-medium">
-                    DEMON UTAMA · KURSI {demon.seatIndex + 1}
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-[#141019] border border-[#3E1A22]">
+                <div className="shrink-0 mt-0.5">
+                  <CharacterToken
+                    roleId={demon.trueRoleId}
+                    size="sm"
+                    isDead={!demon.isAlive}
+                  />
+                </div>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-[#A8A092]">
+                    <span className="font-mono tabular-nums text-[#D4AF37] font-bold">
+                      Kursi {demon.seatIndex + 1}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span className={demon.isAlive ? 'text-[#86EFAC] font-semibold' : 'text-[#FCA5A5] font-semibold'}>
+                      {demon.isAlive ? 'Masih Hidup' : 'Sudah Mati'}
+                    </span>
                   </div>
-                  <h3 className="font-display text-lg font-bold text-[#F5EFE6]">
-                    {demon.name}
-                  </h3>
-                  <p className="text-xs text-[#E5DFD3]">
-                    {ROLE_MAP[demon.trueRoleId]?.name} —{' '}
-                    {demon.isAlive ? 'Masih Hidup' : 'Sudah Mati'}
-                  </p>
-                  <p className="text-xs text-[#C8C0B3] leading-relaxed pt-1">
+                  <div className="font-semibold text-sm text-[#F5EFE6] break-words">
+                    <span className="text-white font-bold">{demon.name}</span> —{' '}
+                    <span className="text-[#FDE68A] font-bold">
+                      {ROLE_MAP[demon.trueRoleId]?.name}
+                    </span>{' '}
+                    ({ROLE_MAP[demon.trueRoleId]?.indonesianName})
+                  </div>
+                  <p className="text-xs text-[#C8C0B3] leading-relaxed break-words pt-0.5">
                     {ROLE_MAP[demon.trueRoleId]?.ability}
                   </p>
                 </div>
-              </>
+              </div>
             ) : (
               <p className="text-sm text-[#FCA5A5]">Demon belum ditentukan.</p>
             )}
@@ -128,25 +140,33 @@ export default function EvilAndBluffsView({
                 return (
                   <div
                     key={m.id}
-                    className="flex items-center gap-3 p-2.5 rounded-lg bg-[#141019] border border-[#2C2436]"
+                    className="flex items-start gap-3 p-3 rounded-lg bg-[#141019] border border-[#2C2436]"
                   >
-                    <CharacterToken
-                      roleId={m.trueRoleId}
-                      size="sm"
-                      isDead={!m.isAlive}
-                    />
-                    <div className="min-w-0 flex-1">
+                    <div className="shrink-0 mt-0.5">
+                      <CharacterToken
+                        roleId={m.trueRoleId}
+                        size="sm"
+                        isDead={!m.isAlive}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex items-center gap-1.5 text-xs text-[#A8A092]">
-                        <span className="font-mono tabular-nums">
+                        <span className="font-mono tabular-nums text-[#D4AF37] font-bold">
                           Kursi {m.seatIndex + 1}
                         </span>
                         <span aria-hidden="true">·</span>
-                        <span>{m.isAlive ? 'Hidup' : 'Mati'}</span>
+                        <span className={m.isAlive ? 'text-[#86EFAC] font-semibold' : 'text-[#FCA5A5] font-semibold'}>
+                          {m.isAlive ? 'Hidup' : 'Mati'}
+                        </span>
                       </div>
-                      <div className="font-semibold text-sm text-[#F5EFE6] truncate">
-                        {m.name} — {role?.name} ({role?.indonesianName})
+                      <div className="font-semibold text-sm text-[#F5EFE6] break-words">
+                        <span className="text-white font-bold">{m.name}</span> —{' '}
+                        <span className="text-[#FDE68A] font-bold">{role?.name}</span>{' '}
+                        ({role?.indonesianName})
                       </div>
-                      <p className="text-xs text-[#B8B0A2] truncate">{role?.ability}</p>
+                      <p className="text-xs text-[#C8C0B3] leading-relaxed break-words pt-0.5">
+                        {role?.ability}
+                      </p>
                     </div>
                   </div>
                 );

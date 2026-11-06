@@ -66,11 +66,15 @@ export function getBaseCharacterCounts(playerCount: number): CharacterCountRow {
 
 export function getEffectiveCharacterCounts(
   playerCount: number,
-  selectedRoleIds: string[]
+  selectedRoleIds: string[],
+  isDrunkActiveOverride?: boolean
 ): EffectiveCounts {
   const base = getBaseCharacterCounts(playerCount);
   const hasBaron = selectedRoleIds.includes('baron');
-  const hasDrunk = selectedRoleIds.includes('drunk');
+  const hasDrunk =
+    isDrunkActiveOverride !== undefined
+      ? isDrunkActiveOverride
+      : selectedRoleIds.includes('drunk');
 
   let townsfolk = base.townsfolk;
   let outsiders = base.outsiders;
@@ -104,14 +108,15 @@ export function getEffectiveCharacterCounts(
 
 export function validateRoleBag(
   playerCount: number,
-  selectedRoleIds: string[]
+  selectedRoleIds: string[],
+  isDrunkActiveOverride?: boolean
 ): {
   isValid: boolean;
   errors: string[];
   counts: { townsfolk: number; outsiders: number; minions: number; demons: number };
   required: EffectiveCounts;
 } {
-  const required = getEffectiveCharacterCounts(playerCount, selectedRoleIds);
+  const required = getEffectiveCharacterCounts(playerCount, selectedRoleIds, isDrunkActiveOverride);
   const uniqueIds = Array.from(new Set(selectedRoleIds));
 
   const counts = {
@@ -136,6 +141,7 @@ export function validateRoleBag(
   // Trouble Brewing allows two valid representations when Drunk is in play:
   // 1. Physical Bag: +1 Townsfolk replaces Drunk token (bagTownsfolk & bagOutsiders)
   // 2. Logical Bag: Drunk token is explicitly included (townsfolk & outsiders)
+  const isPhysicalBag = required.hasDrunkModifier && !includesDrunkToken;
   const matchesPhysicalDrunkBag =
     required.hasDrunkModifier &&
     counts.townsfolk === required.bagTownsfolk &&
@@ -145,14 +151,8 @@ export function validateRoleBag(
     counts.outsiders === required.outsiders;
 
   if (!matchesPhysicalDrunkBag && !matchesStandardBag) {
-    const expectedTownsfolk =
-      required.hasDrunkModifier && !includesDrunkToken
-        ? required.bagTownsfolk
-        : required.townsfolk;
-    const expectedOutsiders =
-      required.hasDrunkModifier && !includesDrunkToken
-        ? required.bagOutsiders
-        : required.outsiders;
+    const expectedTownsfolk = isPhysicalBag ? required.bagTownsfolk : required.townsfolk;
+    const expectedOutsiders = isPhysicalBag ? required.bagOutsiders : required.outsiders;
 
     if (counts.townsfolk !== expectedTownsfolk) {
       errors.push(
@@ -164,7 +164,7 @@ export function validateRoleBag(
     if (counts.outsiders !== expectedOutsiders) {
       errors.push(
         `Pilih tepat ${expectedOutsiders} karakter Outsider${
-          required.hasDrunkModifier ? ' (Drunk telah digantikan token Townsfolk)' : ''
+          required.hasDrunkModifier && isPhysicalBag ? ' (Drunk telah digantikan token Townsfolk)' : ''
         } (saat ini ${counts.outsiders}).`
       );
     }
@@ -193,25 +193,33 @@ export function validateRoleBag(
 export function validateRoleSelection(
   playerCount: number,
   selectedRoleIds: string[],
-  drunkFakeRoleId: string | null
+  drunkFakeRoleId: string | null,
+  isDrunkActiveOverride?: boolean
 ): {
   isValid: boolean;
   errors: string[];
   counts: { townsfolk: number; outsiders: number; minions: number; demons: number };
   required: EffectiveCounts;
 } {
-  const bagValidation = validateRoleBag(playerCount, selectedRoleIds);
+  const bagValidation = validateRoleBag(playerCount, selectedRoleIds, isDrunkActiveOverride);
   const errors = [...bagValidation.errors];
   const uniqueIds = Array.from(new Set(selectedRoleIds));
 
-  if (uniqueIds.includes('drunk')) {
+  const hasDrunk =
+    isDrunkActiveOverride !== undefined
+      ? isDrunkActiveOverride
+      : uniqueIds.includes('drunk');
+
+  if (hasDrunk) {
     if (!drunkFakeRoleId) {
-      errors.push('Karakter Drunk aktif: pilih 1 peran Townsfolk palsu untuk Drunk.');
+      errors.push('Karakter Drunk aktif: tentukan peran Townsfolk mana yang sebenarnya adalah Drunk.');
     } else {
       const fakeRole = ROLE_MAP[drunkFakeRoleId];
       if (!fakeRole || fakeRole.team !== 'townsfolk') {
-        errors.push('Peran palsu untuk Drunk harus berupa karakter Townsfolk.');
-      } else if (uniqueIds.includes(drunkFakeRoleId)) {
+        errors.push('Peran untuk Drunk harus berupa karakter Townsfolk.');
+      } else if (!uniqueIds.includes('drunk') && !uniqueIds.includes(drunkFakeRoleId)) {
+        errors.push('Peran Townsfolk untuk Drunk harus merupakan salah satu dari karakter Townsfolk yang Anda pilih.');
+      } else if (uniqueIds.includes('drunk') && uniqueIds.includes(drunkFakeRoleId)) {
         errors.push('Peran Townsfolk palsu untuk Drunk tidak boleh sama dengan Townsfolk yang sedang dimainkan pemain lain.');
       }
     }

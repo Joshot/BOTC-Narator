@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowRight,
+  Beer,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -24,11 +25,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ROLES, ROLE_MAP } from '@/lib/botc-data';
 import {
   PlayerSeat,
-  autoSelectRoles,
   clampPlayerCount,
   computeSafeDemonBluffs,
+  getBaseCharacterCounts,
   getEffectiveCharacterCounts,
-  getUnusedTownsfolkForDrunk,
   validateRoleSelection,
 } from '@/lib/botc-engine';
 import { CharacterToken, RoleGlyph } from './TokenArtwork';
@@ -54,16 +54,28 @@ interface RolledSeatData {
   perceivedRoleId: string;
 }
 
-function generateAutoRoles(count: number): {
+function generateAutoRoles(
+  count: number,
+  isDrunk: boolean
+): {
   selectedRoleIds: string[];
   drunkFakeRoleId: string | null;
 } {
-  const auto = autoSelectRoles(count, { forceDrunk: count >= 6 });
-  const inPlay = new Set(auto.selectedRoleIds);
-  const unused = ROLES.filter((r) => r.team === 'townsfolk' && !inPlay.has(r.id));
+  const base = getBaseCharacterCounts(count);
+  const targetTownsfolk = isDrunk ? base.townsfolk + 1 : base.townsfolk;
+  const targetOutsiders = isDrunk ? Math.max(0, base.outsiders - 1) : base.outsiders;
+
+  const allTownsfolk = ROLES.filter((r) => r.team === 'townsfolk').map((r) => r.id);
+  const allOutsiders = ROLES.filter((r) => r.team === 'outsider' && r.id !== 'drunk').map((r) => r.id);
+  const allMinions = ROLES.filter((r) => r.team === 'minion' && r.id !== 'baron').map((r) => r.id);
+
+  const chosenTf = allTownsfolk.slice(0, targetTownsfolk);
+  const chosenOut = allOutsiders.slice(0, targetOutsiders);
+  const chosenMin = allMinions.slice(0, base.minions);
+
   return {
-    selectedRoleIds: auto.selectedRoleIds,
-    drunkFakeRoleId: unused[0]?.id ?? null,
+    selectedRoleIds: [...chosenTf, ...chosenOut, ...chosenMin, 'imp'],
+    drunkFakeRoleId: isDrunk && chosenTf.length > 0 ? chosenTf[chosenTf.length - 1] : null,
   };
 }
 
@@ -74,10 +86,11 @@ export default function WebPlayMode({
   // ================= STEP 1: SETUP STATE =================
   const [subStep, setSubStep] = useState<WebPlaySubStep>('setup');
   const [playerCount, setPlayerCount] = useState<number>(8);
+  const [isDrunkActive, setIsDrunkActive] = useState<boolean>(() => 8 >= 6);
   const [{ selectedRoleIds, drunkFakeRoleId }, setRolesState] = useState<{
     selectedRoleIds: string[];
     drunkFakeRoleId: string | null;
-  }>(() => generateAutoRoles(8));
+  }>(() => generateAutoRoles(8, true));
   const [setupError, setSetupError] = useState<string | null>(null);
 
   const setSelectedRoleIds = (updater: (prev: string[]) => string[]) => {
@@ -94,43 +107,72 @@ export default function WebPlayMode({
   const handleUpdatePlayerCount = (cnt: number) => {
     setPlayerCount(cnt);
     setSetupError(null);
-    setRolesState(generateAutoRoles(cnt));
+    const shouldDrunk = cnt >= 6;
+    setIsDrunkActive(shouldDrunk);
+    setRolesState(generateAutoRoles(cnt, shouldDrunk));
+  };
+
+  const handleToggleDrunk = () => {
+    const nextDrunk = !isDrunkActive;
+    setIsDrunkActive(nextDrunk);
+    setSetupError(null);
+    setRolesState(generateAutoRoles(playerCount, nextDrunk));
   };
 
   const effectiveCounts = useMemo(() => {
-    return getEffectiveCharacterCounts(playerCount, selectedRoleIds);
-  }, [playerCount, selectedRoleIds]);
+    return getEffectiveCharacterCounts(playerCount, selectedRoleIds, isDrunkActive);
+  }, [playerCount, selectedRoleIds, isDrunkActive]);
 
-  const isDrunkActive = selectedRoleIds.includes('drunk');
-  const unusedTownsfolkForDrunk = useMemo(() => {
-    return getUnusedTownsfolkForDrunk(selectedRoleIds);
-  }, [selectedRoleIds]);
+  const selectedTownsfolk = useMemo(
+    () => selectedRoleIds.filter((id) => ROLE_MAP[id]?.team === 'townsfolk'),
+    [selectedRoleIds]
+  );
+  const selectedOutsiders = useMemo(
+    () => selectedRoleIds.filter((id) => ROLE_MAP[id]?.team === 'outsider' && id !== 'drunk'),
+    [selectedRoleIds]
+  );
+  const selectedMinions = useMemo(
+    () => selectedRoleIds.filter((id) => ROLE_MAP[id]?.team === 'minion'),
+    [selectedRoleIds]
+  );
+  const selectedDemons = useMemo(
+    () => selectedRoleIds.filter((id) => ROLE_MAP[id]?.team === 'demon'),
+    [selectedRoleIds]
+  );
 
-  const activeDrunkFakeRoleId = useMemo(() => {
+  const effectiveDrunkFakeRoleId = useMemo(() => {
     if (!isDrunkActive) return null;
-    if (drunkFakeRoleId && unusedTownsfolkForDrunk.some((tf) => tf.id === drunkFakeRoleId)) {
+    if (drunkFakeRoleId && selectedTownsfolk.includes(drunkFakeRoleId)) {
       return drunkFakeRoleId;
     }
-    return unusedTownsfolkForDrunk[0]?.id ?? null;
-  }, [isDrunkActive, drunkFakeRoleId, unusedTownsfolkForDrunk]);
+    return selectedTownsfolk[selectedTownsfolk.length - 1] ?? null;
+  }, [isDrunkActive, drunkFakeRoleId, selectedTownsfolk]);
 
   const validation = useMemo(() => {
-    return validateRoleSelection(playerCount, selectedRoleIds, activeDrunkFakeRoleId);
-  }, [playerCount, selectedRoleIds, activeDrunkFakeRoleId]);
+    return validateRoleSelection(
+      playerCount,
+      selectedRoleIds,
+      effectiveDrunkFakeRoleId,
+      isDrunkActive
+    );
+  }, [playerCount, selectedRoleIds, effectiveDrunkFakeRoleId, isDrunkActive]);
 
   // Role toggling for setup
   const handleToggleRole = (roleId: string) => {
     setSetupError(null);
+    if (roleId === 'imp') return; // 1 Imp locked
+    if (roleId === 'drunk') {
+      handleToggleDrunk();
+      return;
+    }
+
     const role = ROLE_MAP[roleId];
     if (!role) return;
 
     if (selectedRoleIds.includes(roleId)) {
       setSelectedRoleIds((prev) => prev.filter((id) => id !== roleId));
-      if (roleId === 'drunk') {
-        setDrunkFakeRoleId(null);
-      }
     } else {
-      if (role.team === 'demon' && selectedRoleIds.some((id) => ROLE_MAP[id]?.team === 'demon')) {
+      if (role.team === 'demon') {
         setSelectedRoleIds((prev) => [
           ...prev.filter((id) => ROLE_MAP[id]?.team !== 'demon'),
           roleId,
@@ -138,15 +180,12 @@ export default function WebPlayMode({
         return;
       }
       setSelectedRoleIds((prev) => [...prev, roleId]);
-      if (roleId === 'drunk' && !drunkFakeRoleId && unusedTownsfolkForDrunk.length > 0) {
-        setDrunkFakeRoleId(unusedTownsfolkForDrunk[0].id);
-      }
     }
   };
 
   const handleAutoSelect = () => {
     setSetupError(null);
-    setRolesState(generateAutoRoles(playerCount));
+    setRolesState(generateAutoRoles(playerCount, isDrunkActive));
   };
 
   // ================= STEP 2: ROLLING DECK STATE =================
@@ -169,11 +208,10 @@ export default function WebPlayMode({
 
     // Build the secret deck
     const deckItems = selectedRoleIds.map((trueId) => {
-      const isDrunk = trueId === 'drunk';
-      const perceivedId = isDrunk && activeDrunkFakeRoleId ? activeDrunkFakeRoleId : trueId;
+      const isThisDrunk = isDrunkActive && trueId === effectiveDrunkFakeRoleId;
       return {
-        trueRoleId: trueId,
-        perceivedRoleId: perceivedId,
+        trueRoleId: isThisDrunk ? 'drunk' : trueId,
+        perceivedRoleId: trueId,
       };
     });
 
@@ -305,14 +343,19 @@ export default function WebPlayMode({
 
       const { recommendedBluffs } = computeSafeDemonBluffs(
         selectedRoleIds,
-        activeDrunkFakeRoleId
+        null
       );
+
+      const finalSelectedRoles =
+        isDrunkActive && !selectedRoleIds.includes('drunk')
+          ? [...selectedRoleIds, 'drunk']
+          : selectedRoleIds;
 
       onCompleteWebPlay({
         playerCount,
-        selectedRoleIds,
+        selectedRoleIds: finalSelectedRoles,
         isDrunkActive,
-        drunkFakeRoleId: activeDrunkFakeRoleId,
+        drunkFakeRoleId: effectiveDrunkFakeRoleId,
         demonBluffIds: recommendedBluffs,
         players: finalSeats,
       });
@@ -324,7 +367,7 @@ export default function WebPlayMode({
     playerCount,
     selectedRoleIds,
     isDrunkActive,
-    activeDrunkFakeRoleId,
+    effectiveDrunkFakeRoleId,
     onCompleteWebPlay,
   ]);
 
@@ -408,82 +451,167 @@ export default function WebPlayMode({
               ))}
             </div>
 
+            {/* Drunk Toggle Feature matching SetupWizard */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-[#281D12] via-[#201710] to-[#17121E] border-2 border-[#D97706]/70 flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#3D2611] border border-[#B45309] flex items-center justify-center text-[#F59E0B] shrink-0 mt-0.5">
+                    <Beer className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-display text-sm sm:text-base font-bold text-[#FDE68A]">
+                        Aktifkan Karakter The Drunk (Outsider)?
+                      </h3>
+                      {isDrunkActive && (
+                        <span className="px-2 py-0.5 rounded-full bg-[#D97706] text-[#121016] text-[10px] font-black uppercase">
+                          Aktif (+1 Townsfolk)
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[#E5D7B7] mt-1 leading-relaxed">
+                      Karena Drunk mengira dirinya adalah Townsfolk asli, <strong>jumlah Townsfolk yang Anda pilih BERTAMBAH +1</strong> (misal dari {effectiveCounts.townsfolk} menjadi {effectiveCounts.bagTownsfolk} Townsfolk). Anda memilih semua {effectiveCounts.bagTownsfolk} Townsfolk langsung di daftar Townsfolk di bawah!
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleToggleDrunk}
+                  className={`min-h-[44px] px-5 py-2 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 cursor-pointer transition-all shrink-0 ${
+                    isDrunkActive
+                      ? 'bg-[#F59E0B] text-[#121016] shadow-[0_0_15px_rgba(245,158,11,0.4)]'
+                      : 'bg-[#291D1A] text-[#EDE7DB] border border-[#523B2A] hover:bg-[#382723]'
+                  }`}
+                >
+                  <Beer className="w-4 h-4" />
+                  <span>{isDrunkActive ? 'Drunk Aktif' : 'Aktifkan Drunk'}</span>
+                </button>
+              </div>
+
+              {/* Designated Drunk Role Selector from the selected Townsfolk */}
+              {isDrunkActive && selectedTownsfolk.length > 0 && (
+                <div className="pt-3 border-t border-[#D97706]/30 space-y-2">
+                  <span className="text-xs text-[#FDE68A] font-semibold block">
+                    Peran Townsfolk yang sebenarnya adalah The Drunk:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTownsfolk.map((tfId) => {
+                      const r = ROLE_MAP[tfId];
+                      if (!r) return null;
+                      const isDesignated = tfId === effectiveDrunkFakeRoleId;
+                      return (
+                        <button
+                          key={tfId}
+                          type="button"
+                          onClick={() => setDrunkFakeRoleId(tfId)}
+                          className={`min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all border ${
+                            isDesignated
+                              ? 'bg-[#D97706] text-[#121016] border-[#FDE68A] shadow-md scale-105'
+                              : 'bg-[#1F1710] text-[#E5D7B7] border-[#78350F] hover:bg-[#2B1F16]'
+                          }`}
+                        >
+                          <img
+                            src={`/tokens/${r.id}.png`}
+                            alt={r.name}
+                            className="w-5 h-5 rounded-full object-contain shrink-0"
+                          />
+                          <span>{r.name}</span>
+                          {isDesignated && (
+                            <span className="text-[10px] uppercase font-black px-1.5 py-0.5 rounded bg-black/30 text-white">
+                              Adalah Drunk
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Official Character Counts Badge */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
-              <div className="p-3 rounded-xl bg-[#131F2E] border border-[#38BDF8]/40">
-                <span className="text-[11px] text-[#7DD3FC] font-semibold block">Townsfolk (Warga)</span>
+              <div
+                className={`p-3 rounded-xl border ${
+                  selectedTownsfolk.length === (isDrunkActive ? effectiveCounts.bagTownsfolk : effectiveCounts.townsfolk)
+                    ? 'bg-[#1E293B]/70 border-[#3B82F6] text-[#93C5FD]'
+                    : 'bg-[#131F2E] border-[#38BDF8]/40 text-[#7DD3FC]'
+                }`}
+              >
+                <span className="text-[11px] font-semibold block">
+                  Townsfolk {isDrunkActive && '(+1 Drunk)'}
+                </span>
                 <span className="text-lg font-mono font-bold text-white">
-                  {selectedRoleIds.filter((id) => ROLE_MAP[id]?.team === 'townsfolk').length} / {effectiveCounts.townsfolk}
+                  {selectedTownsfolk.length} / {isDrunkActive ? effectiveCounts.bagTownsfolk : effectiveCounts.townsfolk}
                 </span>
               </div>
-              <div className="p-3 rounded-xl bg-[#132328] border border-[#2DD4BF]/40">
-                <span className="text-[11px] text-[#5EEAD4] font-semibold block">Outsider (Orang Luar)</span>
+              <div
+                className={`p-3 rounded-xl border ${
+                  selectedOutsiders.length === (isDrunkActive ? effectiveCounts.bagOutsiders : effectiveCounts.outsiders)
+                    ? 'bg-[#162738]/70 border-[#38BDF8] text-[#7DD3FC]'
+                    : 'bg-[#132328] border-[#2DD4BF]/40 text-[#5EEAD4]'
+                }`}
+              >
+                <span className="text-[11px] font-semibold block">
+                  {isDrunkActive ? 'Outsider Lain' : 'Outsider (Orang Luar)'}
+                </span>
                 <span className="text-lg font-mono font-bold text-white">
-                  {selectedRoleIds.filter((id) => ROLE_MAP[id]?.team === 'outsider').length} / {effectiveCounts.outsiders}
+                  {selectedOutsiders.length} / {isDrunkActive ? effectiveCounts.bagOutsiders : effectiveCounts.outsiders}
                 </span>
               </div>
-              <div className="p-3 rounded-xl bg-[#26151B] border border-[#F43F5E]/40">
+              <div
+                className={`p-3 rounded-xl border ${
+                  selectedMinions.length === effectiveCounts.minions
+                    ? 'bg-[#2A151F]/70 border-[#F43F5E] text-[#FDA4AF]'
+                    : 'bg-[#26151B] border-[#F43F5E]/40 text-[#FDA4AF]'
+                }`}
+              >
                 <span className="text-[11px] text-[#FDA4AF] font-semibold block">Minion (Anak Buah)</span>
                 <span className="text-lg font-mono font-bold text-white">
-                  {selectedRoleIds.filter((id) => ROLE_MAP[id]?.team === 'minion').length} / {effectiveCounts.minions}
+                  {selectedMinions.length} / {effectiveCounts.minions}
                 </span>
               </div>
-              <div className="p-3 rounded-xl bg-[#2B1418] border border-[#EF4444]/40">
+              <div
+                className={`p-3 rounded-xl border ${
+                  selectedDemons.length === effectiveCounts.demons
+                    ? 'bg-[#33141B]/70 border-[#EF4444] text-[#FCA5A5]'
+                    : 'bg-[#2B1418] border-[#EF4444]/40 text-[#FCA5A5]'
+                }`}
+              >
                 <span className="text-[11px] text-[#FCA5A5] font-semibold block">Demon (Iblis)</span>
                 <span className="text-lg font-mono font-bold text-white">
-                  {selectedRoleIds.filter((id) => ROLE_MAP[id]?.team === 'demon').length} / {effectiveCounts.demons}
+                  {selectedDemons.length} / {effectiveCounts.demons}
                 </span>
               </div>
             </div>
           </div>
-
-          {/* Drunk Secret Assignment if active */}
-          {isDrunkActive && (
-            <div className="p-4 rounded-2xl bg-[#28180A] border border-[#F59E0B] space-y-3 shadow-md">
-              <div className="flex items-start gap-2.5">
-                <div className="w-7 h-7 rounded-full overflow-hidden border border-[#D97706] shrink-0 filter drop-shadow">
-                  <img
-                    src="/tokens/drunk.png"
-                    alt="The Drunk"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <div>
-                  <h3 className="font-display text-sm font-bold text-[#FDE68A]">
-                    Pengaturan The Drunk Aktif (+1 Peran Townsfolk Palsu)
-                  </h3>
-                  <p className="text-xs text-[#FDE68A]/80 leading-relaxed">
-                    Pemain yang mendapatkan peran Drunk saat koin diundi akan melihat peran Townsfolk palsu ini dan mengira dirinya adalah Townsfolk tersebut.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-[#D4AF37] font-semibold">Peran yang Ditampilkan ke Drunk:</span>
-                <select
-                  value={activeDrunkFakeRoleId ?? ''}
-                  onChange={(e) => setDrunkFakeRoleId(e.target.value || null)}
-                  className="min-h-[40px] px-3 py-1.5 rounded-xl bg-[#1A1208] border border-[#F59E0B] text-xs font-bold text-[#FDE68A] cursor-pointer"
-                >
-                  {unusedTownsfolkForDrunk.map((tf) => (
-                    <option key={tf.id} value={tf.id}>
-                      {tf.name} ({tf.indonesianName})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
 
           {/* Role Picker List Grouped by Team */}
           <div className="space-y-4">
             {(['townsfolk', 'outsider', 'minion', 'demon'] as const).map((team) => {
               const rolesInTeam = ROLES.filter((r) => r.team === team);
               const teamLabels = {
-                townsfolk: { title: 'Townsfolk (Warga Baik)', color: 'text-[#7DD3FC]', border: 'border-[#38BDF8]/40' },
-                outsider: { title: 'Outsider (Orang Luar)', color: 'text-[#5EEAD4]', border: 'border-[#2DD4BF]/40' },
-                minion: { title: 'Minion (Anak Buah Demon)', color: 'text-[#FDA4AF]', border: 'border-[#F43F5E]/40' },
-                demon: { title: 'Demon (Iblis Utama)', color: 'text-[#FCA5A5]', border: 'border-[#EF4444]/40' },
+                townsfolk: {
+                  title: `Townsfolk (Warga Baik)${isDrunkActive ? ' — Termasuk +1 Peran untuk Drunk' : ''}`,
+                  color: 'text-[#7DD3FC]',
+                  border: 'border-[#38BDF8]/40',
+                },
+                outsider: {
+                  title: 'Outsider (Orang Luar)',
+                  color: 'text-[#5EEAD4]',
+                  border: 'border-[#2DD4BF]/40',
+                },
+                minion: {
+                  title: 'Minion (Anak Buah Demon)',
+                  color: 'text-[#FDA4AF]',
+                  border: 'border-[#F43F5E]/40',
+                },
+                demon: {
+                  title: 'Demon (Iblis Utama)',
+                  color: 'text-[#FCA5A5]',
+                  border: 'border-[#EF4444]/40',
+                },
               }[team];
 
               return (
@@ -493,7 +621,8 @@ export default function WebPlayMode({
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
                     {rolesInTeam.map((role) => {
-                      const isSelected = selectedRoleIds.includes(role.id);
+                      const isDrunkRole = role.id === 'drunk';
+                      const isSelected = isDrunkRole ? isDrunkActive : selectedRoleIds.includes(role.id);
                       return (
                         <button
                           key={role.id}
@@ -515,7 +644,7 @@ export default function WebPlayMode({
                               {role.name}
                             </span>
                             <span className="block text-[10px] text-[#8E8698] truncate leading-tight">
-                              {role.indonesianName}
+                              {isDrunkRole && isDrunkActive ? 'Aktif (+1 Townsfolk)' : role.indonesianName}
                             </span>
                           </div>
                         </button>
