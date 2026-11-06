@@ -29,8 +29,9 @@ import EvilAndBluffsView from './EvilAndBluffsView';
 import NarratorView from './NarratorView';
 import FullscreenCardModal, { SilentCardPayload } from './FullscreenCardModal';
 import ReferenceSheetModal from './ReferenceSheetModal';
+import WebPlayMode from './WebPlayMode';
 
-export type AppView = 'dashboard' | 'setup' | 'grimoire' | 'evil' | 'narrator';
+export type AppView = 'dashboard' | 'setup' | 'grimoire' | 'evil' | 'narrator' | 'webplay';
 
 const GAME_STORAGE_KEY = 'botc_tb_game_session_v2';
 
@@ -60,6 +61,7 @@ function parseUrlParams(): { view: AppView; step: 1 | 2 | 3 } {
   let view: AppView = 'dashboard';
   if (
     rawView === 'setup' ||
+    rawView === 'webplay' ||
     rawView === 'grimoire' ||
     rawView === 'evil' ||
     rawView === 'narrator' ||
@@ -105,7 +107,7 @@ export default function StorytellerApp({
     if (autoStartFromQuery) return 'grimoire';
     if (typeof window !== 'undefined') {
       const { view } = parseUrlParams();
-      if (view === 'setup' || view === 'dashboard') return view;
+      if (view === 'setup' || view === 'dashboard' || view === 'webplay') return view;
       if (initialSaved?.hasActiveGame) return view;
       return 'dashboard';
     }
@@ -905,10 +907,48 @@ export default function StorytellerApp({
             dayNumber={dayNumber}
             players={players}
             onStartNewSetup={() => navigateToView('setup', 1)}
+            onStartWebPlay={() => navigateToView('webplay')}
             onContinueGame={(targetTab) => navigateToView(targetTab)}
             onQuickStartDemo={startDemoGame}
             onOpenRulesReference={() => setIsRefModalOpen(true)}
             onResetSession={handleResetSession}
+          />
+        )}
+
+        {/* ================= VIEW: BERMAIN PENUH DI WEB (PASS-AND-PLAY KOIN) ================= */}
+        {currentView === 'webplay' && (
+          <WebPlayMode
+            onCancelToDashboard={() => navigateToView('dashboard')}
+            onCompleteWebPlay={(payload) => {
+              const fullPayload: PersistedGameSession = {
+                hasActiveGame: true,
+                playerCount: payload.playerCount,
+                isDrunkActive: payload.isDrunkActive,
+                selectedRoleIds: payload.selectedRoleIds,
+                drunkFakeRoleId: payload.drunkFakeRoleId,
+                demonBluffIds: payload.demonBluffIds,
+                players: payload.players,
+                phase: 'first_night',
+                dayNumber: 1,
+                executedTodayPlayerId: null,
+                lastNightDeaths: [],
+                gameAlertBanner: null,
+              };
+              saveSessionDirectly(fullPayload);
+              setPlayerCount(payload.playerCount);
+              setIsDrunkActive(payload.isDrunkActive);
+              setSelectedRoleIds(payload.selectedRoleIds);
+              setDrunkFakeRoleId(payload.drunkFakeRoleId);
+              setDemonBluffIds(payload.demonBluffIds);
+              setPlayers(payload.players);
+              setPhase('first_night');
+              setDayNumber(1);
+              setExecutedTodayPlayerId(null);
+              setLastNightDeaths([]);
+              setGameAlertBanner(null);
+              setHasActiveGame(true);
+              navigateToView('grimoire');
+            }}
           />
         )}
 

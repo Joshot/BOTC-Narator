@@ -3,6 +3,7 @@
 import React from 'react';
 import {
   BookMarked,
+  Coins,
   Compass,
   Moon,
   Play,
@@ -22,6 +23,7 @@ interface DashboardViewProps {
   dayNumber: number;
   players: PlayerSeat[];
   onStartNewSetup: () => void;
+  onStartWebPlay: () => void;
   onContinueGame: (targetTab: 'grimoire' | 'evil' | 'narrator') => void;
   onQuickStartDemo: () => void;
   onOpenRulesReference: () => void;
@@ -35,6 +37,7 @@ export default function DashboardView({
   dayNumber,
   players,
   onStartNewSetup,
+  onStartWebPlay,
   onContinueGame,
   onQuickStartDemo,
   onOpenRulesReference,
@@ -120,6 +123,35 @@ export default function DashboardView({
           </div>
         ) : null}
 
+        {/* Bermain Penuh di Web (Pass-and-Play Koin) Card */}
+        <div className="p-6 rounded-2xl bg-gradient-to-br from-[#231A26] to-[#18131E] border-2 border-[#D4AF37] hover:border-[#F59E0B] transition-all flex flex-col justify-between space-y-4 shadow-xl group">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="w-12 h-12 rounded-xl bg-[#2E201B] border border-[#D4AF37]/60 flex items-center justify-center text-[#F59E0B]">
+                <Coins className="w-6 h-6 animate-pulse" />
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full bg-[#1A1208] border border-[#F59E0B]/60 text-[11px] font-bold text-[#FDE68A] uppercase tracking-wider">
+                Mode Baru
+              </span>
+            </div>
+            <h2 className="font-display text-xl font-bold text-[#F5EFE6]">
+              Bermain Penuh di Web
+            </h2>
+            <p className="text-xs sm:text-sm text-[#D6CFC2] leading-relaxed">
+              Main langsung di HP atau web dengan sistem putar koin rahasia (Pass-and-Play). Pilih karakter, putar koin satu per satu untuk setiap pemain, masukkan nama secara manual tanpa nama bawaan, dan mulai malam pertama setelah jeda 3 detik.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onStartWebPlay}
+            className="w-full min-h-[46px] px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F59E0B] hover:brightness-110 text-[#121016] text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md"
+          >
+            <Coins className="w-4 h-4" />
+            <span>Mulai Bermain di Web (Roll Koin)</span>
+          </button>
+        </div>
+
         {/* Start New Setup Card */}
         <div className="p-6 rounded-2xl bg-[#181520] border border-[#2D283B] hover:border-[#D4AF37]/60 transition-all flex flex-col justify-between space-y-4 shadow-lg group">
           <div className="space-y-2">
@@ -127,10 +159,10 @@ export default function DashboardView({
               <Plus className="w-6 h-6" />
             </div>
             <h2 className="font-display text-xl font-bold text-[#F5EFE6]">
-              Setup Permainan Baru
+              Setup Permainan Fisik / Grimoire Manual
             </h2>
             <p className="text-xs sm:text-sm text-[#A8A092] leading-relaxed">
-              Mulai konfigurasi baru: pilih 5–15 pemain, kunci komposisi resmi Trouble Brewing, ketik nama pemain secara manual tanpa nilai bawaan, dan tentukan rahasia peran Drunk.
+              Mulai konfigurasi baru untuk memandu permainan kartu fisik: tentukan 5–15 pemain, komposisi peran, nama kursi berurutan searah jarum jam, dan rahasia peran Drunk.
             </p>
           </div>
 
@@ -140,7 +172,7 @@ export default function DashboardView({
             className="w-full min-h-[46px] px-5 py-2.5 rounded-xl bg-[#991B1B] hover:bg-[#B91C1C] text-white text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-md"
           >
             <Play className="w-4 h-4 fill-current" />
-            <span>Mulai Setup Pemain</span>
+            <span>Mulai Setup Manual</span>
           </button>
         </div>
 
