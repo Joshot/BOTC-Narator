@@ -258,9 +258,13 @@ export default function PeekCardModal({
                         return (
                           <div
                             key={bid}
-                            className="p-2.5 rounded-xl bg-[#1B0E10] border border-[#6B1F27] flex items-center gap-2"
+                            className="p-2.5 rounded-xl bg-[#1B0E10] border border-[#6B1F27] flex items-center gap-2.5"
                           >
-                            <RoleGlyph roleId={bid} className="w-5 h-5 text-[#93C5FD] shrink-0" />
+                            <img
+                              src={`/tokens/${bid}.png`}
+                              alt={bRole.name}
+                              className="w-8 h-8 rounded-full object-contain shrink-0 filter drop-shadow"
+                            />
                             <div className="min-w-0 text-left">
                               <div className="text-xs font-bold text-white truncate">
                                 {bRole.name}
@@ -416,7 +420,7 @@ export default function PeekCardModal({
                           key={r.instanceId}
                           className="px-3 py-1.5 rounded-xl bg-[#261F36] border border-[#42375C] flex items-center gap-2 text-xs"
                         >
-                          <RoleGlyph roleId={def?.roleId ?? 'imp'} className="w-4 h-4 text-[#D4AF37]" />
+                          <RoleGlyph roleId={def?.roleId ?? 'imp'} className="w-4 h-4 text-[#D4AF37] shrink-0" />
                           <div>
                             <span className="font-bold text-white block">{def?.label}</span>
                             <span className="text-[10px] text-[#A8A092]">{def?.indonesianLabel}</span>

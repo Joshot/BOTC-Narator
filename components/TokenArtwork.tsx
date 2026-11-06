@@ -143,130 +143,126 @@ export function CharacterToken({
   isPoisoned?: boolean;
   showIndonesianSubtitle?: boolean;
 }) {
+  const [imageError, setImageError] = React.useState(false);
   const role = ROLE_MAP[roleId];
   if (!role) return null;
 
   const styles = getTeamColorStyles(role.team);
 
-  // Enlarged sizes for high visibility and responsiveness on mobile and tablet
+  // Enlarged sizes for high visibility and crisp display on mobile, tablet, and desktop
   const sizeMap = {
     sm: {
-      circle: 'w-[68px] h-[68px] sm:w-[78px] sm:h-[78px]',
-      icon: 'w-5 h-5 sm:w-6 sm:h-6',
+      circle: 'w-[72px] h-[72px] sm:w-[84px] sm:h-[84px]',
+      icon: 'w-6 h-6',
     },
     md: {
-      circle: 'w-[82px] h-[82px] sm:w-[98px] sm:h-[98px]',
-      icon: 'w-6 h-6 sm:w-7 sm:h-7',
+      circle: 'w-[88px] h-[88px] sm:w-[104px] sm:h-[104px]',
+      icon: 'w-7 h-7',
     },
     lg: {
-      circle: 'w-[102px] h-[102px] sm:w-[120px] sm:h-[120px]',
-      icon: 'w-10 h-10 sm:w-12 sm:h-12',
+      circle: 'w-[108px] h-[108px] sm:w-[124px] sm:h-[124px]',
+      icon: 'w-10 h-10',
     },
     xl: {
-      circle: 'w-36 h-36 sm:w-44 sm:h-44',
-      icon: 'w-14 h-14 sm:w-16 sm:h-16',
+      circle: 'w-36 h-36 sm:w-48 sm:h-48',
+      icon: 'w-14 h-14',
     },
   }[size];
 
   const nameLines = formatRoleNameLines(role.name);
-  const maxWordLen = Math.max(...nameLines.map((w) => w.length));
-
-  // Determine font size so long words like INVESTIGATOR or WASHERWOMAN never get truncated
-  let fontClasses = 'text-[9px] sm:text-[11px]';
-  if (size === 'sm') {
-    if (maxWordLen >= 11) {
-      fontClasses = 'text-[7px] sm:text-[8px] tracking-tighter';
-    } else if (maxWordLen >= 8) {
-      fontClasses = 'text-[8px] sm:text-[9px] tracking-tight';
-    } else {
-      fontClasses = 'text-[9px] sm:text-[10px] tracking-tight';
-    }
-  } else if (size === 'md') {
-    if (maxWordLen >= 11) {
-      fontClasses = 'text-[8px] sm:text-[9.5px] tracking-tighter';
-    } else if (maxWordLen >= 8) {
-      fontClasses = 'text-[9px] sm:text-[10.5px] tracking-tight';
-    } else {
-      fontClasses = 'text-[10px] sm:text-[12px] tracking-tight';
-    }
-  } else if (size === 'lg') {
-    fontClasses = maxWordLen >= 11 ? 'text-xs sm:text-sm' : 'text-sm sm:text-base';
-  } else {
-    fontClasses = 'text-base sm:text-lg';
-  }
 
   return (
     <div
-      className={`relative rounded-full flex flex-col items-center justify-center select-none shadow-2xl transition-transform ${
+      className={`relative rounded-full flex items-center justify-center select-none shadow-2xl transition-all duration-200 bg-[#14111B] ${
         sizeMap.circle
-      } ${styles.bgGradient} ${
+      } ${
         isDead
-          ? 'border-[3.5px] border-[#52525B] ring-2 ring-[#71717A]/40 opacity-80 grayscale-[40%]'
+          ? 'border-[3.5px] border-[#52525B] ring-2 ring-[#71717A]/40 shadow-[0_0_12px_rgba(82,82,91,0.5)]'
           : styles.ring
       }`}
     >
-      {/* Crisp inner brass ring */}
-      <div className="absolute inset-[3px] sm:inset-[4px] rounded-full border border-[#D4AF37]/45 pointer-events-none" />
+      {/* Storyteller Secret Drunk Halo */}
+      {isDrunkSecret && (
+        <div
+          className="absolute -inset-[3px] rounded-full border-[3.5px] border-[#F59E0B] shadow-[0_0_20px_rgba(245,158,11,0.85)] pointer-events-none z-10"
+          title="Sebenarnya adalah THE DRUNK"
+        />
+      )}
+
+      {/* Storyteller Poisoned Pulsing Halo */}
+      {isPoisoned && (
+        <div
+          className="absolute -inset-[3px] rounded-full border-[3.5px] border-[#EF4444] shadow-[0_0_20px_rgba(239,68,68,0.85)] pointer-events-none animate-pulse z-10"
+          title="Sedang Diracun (Poisoned)"
+        />
+      )}
+
+      {/* Authentic Official Token Artwork from PDF */}
+      {!imageError ? (
+        <img
+          src={`/tokens/${role.id}.png`}
+          alt={role.name}
+          draggable={false}
+          onError={() => setImageError(true)}
+          className={`w-full h-full object-contain rounded-full select-none pointer-events-none filter drop-shadow transition-all duration-200 ${
+            isDead
+              ? 'grayscale-[85%] brightness-[0.55] contrast-[1.15]'
+              : ''
+          }`}
+        />
+      ) : (
+        /* Fallback if image unavailable */
+        <div
+          className={`w-full h-full rounded-full flex flex-col items-center justify-center p-1 ${styles.bgGradient}`}
+        >
+          <RoleGlyph roleId={role.id} className={`${sizeMap.icon} ${styles.iconText} shrink-0 mb-0.5`} />
+          <div className="w-full px-0.5 font-sans font-black uppercase text-center leading-[1.08] text-white text-[9px]">
+            {nameLines.map((line, idx) => (
+              <span key={idx} className="block whitespace-nowrap">
+                {line}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Differentiated Death Shroud Ribbon: Demon Kill vs Execution */}
       {isDead && (
         deathCause === 'demon' ? (
           <div
-            className="absolute -top-2 left-1/2 -translate-x-1/2 z-20 bg-[#3B070B] border-2 border-[#EF4444] rounded-md px-1.5 py-0.5 flex items-center justify-center gap-1 shadow-xl whitespace-nowrap"
+            className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-20 bg-[#3B070B] border-2 border-[#EF4444] rounded-md px-1.5 py-0.5 flex items-center justify-center gap-1 shadow-xl whitespace-nowrap"
             title="Mati: Dibunuh Demon Malam Hari"
           >
             <Swords className="w-3 h-3 text-[#FCA5A5]" />
-            <span className="text-[7.5px] sm:text-[8.5px] font-black text-[#FECACA] uppercase tracking-wider">DEMON KILL</span>
+            <span className="text-[7.5px] sm:text-[8.5px] font-black text-[#FECACA] uppercase tracking-wider">
+              DEMON KILL
+            </span>
           </div>
         ) : deathCause === 'execution' ? (
           <div
-            className="absolute -top-2 left-1/2 -translate-x-1/2 z-20 bg-[#291B07] border-2 border-[#D4AF37] rounded-md px-1.5 py-0.5 flex items-center justify-center gap-1 shadow-xl whitespace-nowrap"
+            className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-20 bg-[#291B07] border-2 border-[#D4AF37] rounded-md px-1.5 py-0.5 flex items-center justify-center gap-1 shadow-xl whitespace-nowrap"
             title="Mati: Digantung / Eksekusi Siang Hari"
           >
             <Gavel className="w-3 h-3 text-[#FDE68A]" />
-            <span className="text-[7.5px] sm:text-[8.5px] font-black text-[#FDE68A] uppercase tracking-wider">GANTUNG</span>
+            <span className="text-[7.5px] sm:text-[8.5px] font-black text-[#FDE68A] uppercase tracking-wider">
+              GANTUNG
+            </span>
           </div>
         ) : (
           <div
-            className="absolute -top-2 left-1/2 -translate-x-1/2 z-20 bg-[#09090B] border-2 border-[#E4E4E7] rounded-md px-1.5 py-0.5 flex items-center justify-center gap-1 shadow-md whitespace-nowrap"
+            className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-20 bg-[#09090B] border-2 border-[#E4E4E7] rounded-md px-1.5 py-0.5 flex items-center justify-center gap-1 shadow-md whitespace-nowrap"
             title="Pemain Telah Mati"
           >
             <Skull className="w-3 h-3 text-white" />
-            <span className="text-[7.5px] sm:text-[8.5px] font-black text-white uppercase tracking-wider">MATI</span>
+            <span className="text-[7.5px] sm:text-[8.5px] font-black text-white uppercase tracking-wider">
+              MATI
+            </span>
           </div>
         )
       )}
 
-      {/* Secret Drunk indicator for Storyteller - Regal glowing amber halo (zero collision with name) */}
-      {isDrunkSecret && (
-        <div
-          className="absolute inset-0 rounded-full border-[3px] border-[#F59E0B] shadow-[0_0_16px_rgba(245,158,11,0.6)] pointer-events-none"
-          title="Sebenarnya adalah THE DRUNK"
-        />
-      )}
-
-      {/* Poisoned status indicator for Storyteller - Pulsing crimson halo */}
-      {isPoisoned && (
-        <div
-          className="absolute inset-0 rounded-full border-[3px] border-[#EF4444] shadow-[0_0_16px_rgba(239,68,68,0.6)] pointer-events-none animate-pulse"
-          title="Sedang Diracun (Poisoned)"
-        />
-      )}
-
-      <RoleGlyph roleId={role.id} className={`${sizeMap.icon} ${styles.iconText} shrink-0 mb-0.5`} />
-
-      <div
-        className={`w-full px-0.5 font-sans font-black uppercase text-center leading-[1.08] text-white drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.95)] ${fontClasses}`}
-      >
-        {nameLines.map((line, idx) => (
-          <span key={idx} className="block whitespace-nowrap">
-            {line}
-          </span>
-        ))}
-      </div>
-
       {showIndonesianSubtitle && (
-        <span className="text-[10px] font-bold text-[#D6CFC2] truncate max-w-[90%] mt-0.5">
+        <span className="absolute -bottom-4 text-[10px] font-bold text-[#D6CFC2] truncate max-w-[90%] whitespace-nowrap">
           {role.indonesianName}
         </span>
       )}
@@ -294,10 +290,10 @@ export function ReminderTokenChip({
 
   const toneClasses =
     rem.team === 'evil'
-      ? 'border-[#EF4444]/80 bg-[#2C181B] text-[#FECACA]'
+      ? 'border-[#EF4444]/90 bg-[#2D171A] text-[#FECACA]'
       : rem.team === 'good'
-      ? 'border-[#38BDF8]/80 bg-[#182633] text-[#BAE6FD]'
-      : 'border-[#D4AF37]/80 bg-[#27231C] text-[#FDE68A]';
+      ? 'border-[#38BDF8]/90 bg-[#162536] text-[#BAE6FD]'
+      : 'border-[#D4AF37]/90 bg-[#2B2418] text-[#FDE68A]';
 
   const iconColor =
     rem.team === 'evil'
@@ -313,9 +309,9 @@ export function ReminderTokenChip({
         onClick={onClick}
         title={`${rem.label} (${rem.indonesianLabel}) — Klik untuk melepas`}
         aria-label={`Hapus token pengingat ${rem.indonesianLabel}`}
-        className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full border flex items-center justify-center shadow transition-transform hover:scale-110 active:scale-95 cursor-pointer ${toneClasses}`}
+        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95 cursor-pointer ${toneClasses}`}
       >
-        <RoleGlyph roleId={rem.roleId} className={`w-3.5 h-3.5 ${iconColor}`} />
+        <RoleGlyph roleId={rem.roleId} className={`w-4 h-4 sm:w-4.5 sm:h-4.5 ${iconColor} shrink-0`} />
       </button>
     );
   }
@@ -327,20 +323,20 @@ export function ReminderTokenChip({
       onDragStart={onDragStart}
       onClick={onClick}
       aria-label={`Token pengingat ${rem.indonesianLabel}`}
-      className={`group flex items-center gap-2 rounded-full border px-3 py-1.5 min-h-[42px] text-left transition-all cursor-pointer select-none ${toneClasses} ${
+      className={`group flex items-center gap-2.5 rounded-full border-2 px-3 py-1.5 min-h-[44px] text-left transition-all cursor-pointer select-none ${toneClasses} ${
         isSelected
-          ? 'ring-2 ring-[#FBBF24] scale-[1.02] shadow-md'
-          : 'hover:brightness-110 active:scale-95'
+          ? 'ring-2 ring-[#FBBF24] scale-[1.03] shadow-lg'
+          : 'hover:brightness-110 active:scale-95 shadow'
       }`}
     >
-      <span className="w-6 h-6 rounded-full bg-black/30 flex items-center justify-center shrink-0">
-        <RoleGlyph roleId={rem.roleId} className={`w-3.5 h-3.5 ${iconColor}`} />
+      <span className="w-7 h-7 rounded-full bg-black/40 flex items-center justify-center shrink-0 border border-white/10">
+        <RoleGlyph roleId={rem.roleId} className={`w-4 h-4 ${iconColor}`} />
       </span>
-      <span className="flex flex-col leading-none pr-1">
-        <span className="text-xs font-semibold text-[#F5EFE6] whitespace-nowrap">
+      <span className="flex flex-col leading-tight pr-1">
+        <span className="text-xs font-bold text-[#F5EFE6] whitespace-nowrap">
           {rem.label}
         </span>
-        <span className="text-[10px] text-[#C8C0B3] whitespace-nowrap mt-0.5">
+        <span className="text-[10px] font-semibold text-[#D6CFC2] whitespace-nowrap mt-0.5">
           {rem.indonesianLabel}
         </span>
       </span>

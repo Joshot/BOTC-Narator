@@ -308,7 +308,7 @@ export default function GrimoireBoard({
         <div className="lg:col-span-7 bg-[#15121D] border border-[#2D283B] rounded-3xl p-3 sm:p-6 shadow-2xl">
           <div
             data-testid="grimoire-circle"
-            className="relative w-full aspect-square max-w-[580px] sm:max-w-[620px] mx-auto rounded-full bg-radial from-[#221C2F] via-[#171320] to-[#0E0C13] border-2 border-[#3E3752] shadow-2xl"
+            className="relative w-full aspect-square max-w-[620px] sm:max-w-[680px] mx-auto rounded-full bg-radial from-[#221C2F] via-[#171320] to-[#0E0C13] border-2 border-[#3E3752] shadow-2xl"
           >
             {/* Subtle clocktower compass ring */}
             <div className="absolute inset-[15%] rounded-full border-2 border-dashed border-[#D4AF37]/20 pointer-events-none" />
@@ -509,61 +509,98 @@ export default function GrimoireBoard({
             {/* Selected Seat Inspector Card */}
             {selectedPlayer && (
               <div className="bg-[#181520] border border-[#2A2636] rounded-2xl p-5 space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative w-14 h-14 rounded-full overflow-hidden shrink-0 border-2 border-[#D4AF37]/60 filter drop-shadow">
+                {/* Header: Token + Big Role & Player Details */}
+                <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#2C263B]">
+                  <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
+                    {/* Enlarged Authentic Token Medallion */}
+                    <div className="relative w-18 h-18 sm:w-22 sm:h-22 rounded-full overflow-hidden shrink-0 border-[3px] border-[#D4AF37] ring-2 ring-[#D4AF37]/40 shadow-2xl bg-[#14111B]">
                       <img
                         src={`/tokens/${selectedPlayer.perceivedRoleId}.png`}
                         alt={selectedPlayer.perceivedRoleId}
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-contain filter drop-shadow"
                       />
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 text-xs text-[#A8A092]">
-                        <span className="font-mono tabular-nums">
+
+                    {/* Prominent Role & Player Info */}
+                    <div className="min-w-0 flex-1 space-y-1">
+                      {/* Seat Badge & Alive Status */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-md bg-[#251F33] border border-[#3C3450] font-mono text-xs font-black text-[#D4AF37]">
                           Kursi {selectedPlayer.seatIndex + 1}
                         </span>
-                        <span aria-hidden="true">·</span>
                         <span
-                          className={
-                            !selectedPlayer.isAlive
-                              ? selectedPlayer.deathCause === 'demon'
-                                ? 'text-[#FCA5A5] font-semibold'
-                                : selectedPlayer.deathCause === 'execution'
-                                ? 'text-[#FDE68A] font-semibold'
-                                : 'text-[#F87171] font-semibold'
-                              : 'text-[#86EFAC]'
-                          }
+                          className={`px-2 py-0.5 rounded-md text-xs font-black uppercase tracking-wider border ${
+                            selectedPlayer.isAlive
+                              ? 'bg-[#142A20] border-[#10B981]/60 text-[#6EE7B7]'
+                              : selectedPlayer.deathCause === 'demon'
+                              ? 'bg-[#450A0A] border-[#EF4444]/70 text-[#FECACA]'
+                              : selectedPlayer.deathCause === 'execution'
+                              ? 'bg-[#3A2508] border-[#F59E0B]/70 text-[#FDE68A]'
+                              : 'bg-[#1F1F23] border-[#52525B] text-[#D4D4D8]'
+                          }`}
                         >
                           {selectedPlayer.isAlive
                             ? 'Masih Hidup'
                             : selectedPlayer.deathCause === 'demon'
-                            ? 'Mati: Dibunuh Demon (Malam)'
+                            ? 'Mati: Dibunuh Demon'
                             : selectedPlayer.deathCause === 'execution'
-                            ? 'Mati: Digantung (Eksekusi Siang)'
+                            ? 'Mati: Digantung'
                             : selectedPlayer.deathCause === 'slayer'
                             ? 'Mati: Ditembak Slayer'
                             : 'Telah Mati'}
                         </span>
+                        <span className="text-xs font-bold text-[#A8A092] truncate">
+                          Nama: <strong className="text-white">{selectedPlayer.name}</strong>
+                        </span>
                       </div>
-                      <h3 className="font-display text-lg font-bold text-[#F5EFE6] truncate">
-                        {selectedPlayer.name}
-                      </h3>
-                      <p className="text-xs text-[#D4AF37] font-medium">
-                        {selectedPlayer.trueRoleId === 'drunk' ? (
-                          <>
-                            Asli: <strong>Drunk</strong> · Mengira:{' '}
-                            <strong>
+
+                      {/* Giant, High-Contrast Role Title */}
+                      {selectedPlayer.trueRoleId === 'drunk' ? (
+                        <div className="space-y-1 pt-0.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-display text-xl sm:text-2xl font-black text-[#F59E0B] tracking-wide uppercase bg-[#3D2008] border-2 border-[#F59E0B] px-2.5 py-0.5 rounded-lg shadow-md">
+                              ASLI: THE DRUNK
+                            </span>
+                            <span className="text-sm font-bold text-[#FDE68A]">
+                              (Pemabuk)
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-[#075985] text-[#BAE6FD] text-[10px] font-black uppercase tracking-wider">
+                              Outsider
+                            </span>
+                          </div>
+                          <p className="text-xs sm:text-sm font-semibold text-[#93C5FD]">
+                            Peran Samaran / Mengira:{' '}
+                            <strong className="text-white text-sm font-black uppercase">
                               {ROLE_MAP[selectedPlayer.perceivedRoleId]?.name}
-                            </strong>
-                          </>
-                        ) : (
-                          <>
-                            {ROLE_MAP[selectedPlayer.trueRoleId]?.name} (
-                            {ROLE_MAP[selectedPlayer.trueRoleId]?.indonesianName})
-                          </>
-                        )}
-                      </p>
+                            </strong>{' '}
+                            ({ROLE_MAP[selectedPlayer.perceivedRoleId]?.indonesianName})
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-0.5 pt-0.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-display text-xl sm:text-2xl font-black text-white tracking-wide uppercase">
+                              {ROLE_MAP[selectedPlayer.trueRoleId]?.name}
+                            </span>
+                            <span className="text-base sm:text-lg font-bold text-[#FDE68A]">
+                              ({ROLE_MAP[selectedPlayer.trueRoleId]?.indonesianName})
+                            </span>
+                            <span
+                              className={`px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                                ROLE_MAP[selectedPlayer.trueRoleId]?.team === 'townsfolk'
+                                  ? 'bg-[#1E3A8A] text-[#BFDBFE] border border-[#3B82F6]'
+                                  : ROLE_MAP[selectedPlayer.trueRoleId]?.team === 'outsider'
+                                  ? 'bg-[#075985] text-[#BAE6FD] border border-[#0284C7]'
+                                  : ROLE_MAP[selectedPlayer.trueRoleId]?.team === 'minion'
+                                  ? 'bg-[#7F1D1D] text-[#FECACA] border border-[#DC2626]'
+                                  : 'bg-[#450A0A] text-[#FCA5A5] border border-[#EF4444]'
+                              }`}
+                            >
+                              {ROLE_MAP[selectedPlayer.trueRoleId]?.team}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -590,9 +627,15 @@ export default function GrimoireBoard({
                   </div>
                 </div>
 
-                <p className="text-xs text-[#CEC6B8] leading-relaxed">
-                  {ROLE_MAP[selectedPlayer.trueRoleId]?.ability}
-                </p>
+                {/* Role Ability Box */}
+                <div className="p-3.5 rounded-xl bg-[#120F1A] border border-[#2B253D] space-y-1">
+                  <div className="text-[11px] font-bold text-[#A8A092] uppercase tracking-wider">
+                    Kemampuan Karakter:
+                  </div>
+                  <p className="text-xs sm:text-sm text-[#F5EFE6] leading-relaxed">
+                    {ROLE_MAP[selectedPlayer.trueRoleId]?.ability}
+                  </p>
+                </div>
 
                 {/* Intip Kartu Rahasia Pemain Ini */}
                 <button
@@ -780,8 +823,8 @@ export default function GrimoireBoard({
                             }
                             className="min-h-[36px] px-2.5 py-1 rounded-lg bg-[#242031] hover:bg-[#351D22] border border-[#39334B] text-xs text-[#EDE7DB] flex items-center gap-1.5 cursor-pointer"
                           >
-                            <RoleGlyph roleId={def.roleId} className="w-3.5 h-3.5 text-[#D4AF37]" />
-                            <span>{def.indonesianLabel}</span>
+                            <RoleGlyph roleId={def.roleId} className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
+                            <span className="font-semibold">{def.indonesianLabel}</span>
                             <Trash2 className="w-3 h-3 text-[#F87171] ml-0.5" />
                           </button>
                         );
