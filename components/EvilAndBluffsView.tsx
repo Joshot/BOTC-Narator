@@ -226,7 +226,16 @@ export default function EvilAndBluffsView({
                   <span className="text-xs font-mono text-[#D4AF37]">
                     OPSI BLUFF 0{idx + 1}
                   </span>
-                  <CharacterToken roleId={role.id} size="lg" showIndonesianSubtitle />
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden filter drop-shadow-[0_0_15px_rgba(212,175,55,0.4)] my-1">
+                    <img
+                      src={`/tokens/${role.id}.png`}
+                      alt={role.name}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <h4 className="font-display text-base font-bold text-white">
+                    {role.name} ({role.indonesianName})
+                  </h4>
                   <p className="text-xs sm:text-sm text-[#DED7CA] leading-relaxed">
                     {role.ability}
                   </p>

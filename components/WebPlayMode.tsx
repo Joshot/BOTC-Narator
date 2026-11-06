@@ -441,9 +441,13 @@ export default function WebPlayMode({
           {isDrunkActive && (
             <div className="p-4 rounded-2xl bg-[#28180A] border border-[#F59E0B] space-y-3 shadow-md">
               <div className="flex items-start gap-2.5">
-                <span className="p-1.5 rounded-lg bg-[#3D250C] border border-[#D97706] text-[#FDE68A]">
-                  <RoleGlyph roleId="drunk" className="w-4 h-4 text-[#F59E0B]" />
-                </span>
+                <div className="w-7 h-7 rounded-full overflow-hidden border border-[#D97706] shrink-0 filter drop-shadow">
+                  <img
+                    src="/tokens/drunk.png"
+                    alt="The Drunk"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
                 <div>
                   <h3 className="font-display text-sm font-bold text-[#FDE68A]">
                     Pengaturan The Drunk Aktif (+1 Peran Townsfolk Palsu)
@@ -495,13 +499,17 @@ export default function WebPlayMode({
                           key={role.id}
                           type="button"
                           onClick={() => handleToggleRole(role.id)}
-                          className={`min-h-[50px] p-2 rounded-xl border flex items-center gap-2 text-left cursor-pointer transition-all ${
+                          className={`min-h-[54px] p-2 rounded-xl border flex items-center gap-2.5 text-left cursor-pointer transition-all ${
                             isSelected
                               ? 'bg-[#292238] border-[#D4AF37] text-white shadow-md'
                               : 'bg-[#15121C] border-[#292436] text-[#A8A092] hover:border-[#3D3750]'
                           }`}
                         >
-                          <RoleGlyph roleId={role.id} className="w-4 h-4 shrink-0 text-[#D4AF37]" />
+                          <img
+                            src={`/tokens/${role.id}.png`}
+                            alt={role.name}
+                            className="w-7 h-7 rounded-full object-contain shrink-0 filter drop-shadow"
+                          />
                           <div className="min-w-0">
                             <span className="block text-xs font-bold truncate leading-tight">
                               {role.name}
@@ -648,14 +656,14 @@ export default function WebPlayMode({
                   transition={{ duration: 0.5, ease: 'easeOut' }}
                   className="w-full flex flex-col items-center space-y-5"
                 >
-                  {/* Revealed Character Token */}
+                  {/* Revealed Authentic Character Token Medallion from PDF */}
                   {displayRole && (
-                    <div className="flex flex-col items-center space-y-3">
-                      <div className="p-2 rounded-full bg-[#181520] border-2 border-[#D4AF37] shadow-[0_0_30px_rgba(212,175,55,0.4)]">
-                        <CharacterToken
-                          roleId={displayRole.id}
-                          size="xl"
-                          showIndonesianSubtitle={false}
+                    <div className="flex flex-col items-center space-y-4">
+                      <div className="relative w-60 h-60 sm:w-72 sm:h-72 select-none filter drop-shadow-[0_0_35px_rgba(212,175,55,0.55)] transition-transform hover:scale-105">
+                        <img
+                          src={`/tokens/${displayRole.id}.png`}
+                          alt={displayRole.name}
+                          className="w-full h-full object-contain pointer-events-none rounded-full"
                         />
                       </div>
 

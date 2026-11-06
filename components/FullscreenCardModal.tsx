@@ -98,12 +98,23 @@ export default function FullscreenCardModal({
                 return (
                   <div
                     key={id}
-                    className="flex flex-col items-center max-w-[220px] bg-[#1A1721] border border-[#2E293A] rounded-2xl p-5 gap-3"
+                    className="flex flex-col items-center max-w-[280px] bg-[#1A1721] border border-[#2E293A] rounded-2xl p-5 gap-3 shadow-2xl"
                   >
-                    <CharacterToken roleId={id} size="lg" showIndonesianSubtitle />
-                    <p className="text-xs sm:text-sm text-[#D6CFC2] leading-relaxed">
-                      {role.ability}
-                    </p>
+                    <div className="w-44 h-44 sm:w-52 sm:h-52 select-none filter drop-shadow-[0_0_25px_rgba(212,175,55,0.5)] transition-transform hover:scale-105">
+                      <img
+                        src={`/tokens/${id}.png`}
+                        alt={role.name}
+                        className="w-full h-full object-contain rounded-full pointer-events-none"
+                      />
+                    </div>
+                    <div className="text-center space-y-1">
+                      <h3 className="font-display text-lg font-bold text-white">
+                        {role.name} ({role.indonesianName})
+                      </h3>
+                      <p className="text-xs sm:text-sm text-[#D6CFC2] leading-relaxed">
+                        {role.ability}
+                      </p>
+                    </div>
                   </div>
                 );
               })}

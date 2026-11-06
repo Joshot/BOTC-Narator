@@ -771,9 +771,10 @@ export default function SetupWizard({
                           : 'bg-[#14121B] hover:bg-[#1D1926] border-[#292336] text-[#A8A092]'
                       }`}
                     >
-                      <RoleGlyph
-                        roleId={role.id}
-                        className={`w-6 h-6 shrink-0 ${isSelected ? 'text-[#93C5FD]' : 'text-[#7D7588]'}`}
+                      <img
+                        src={`/tokens/${role.id}.png`}
+                        alt={role.name}
+                        className="w-8 h-8 rounded-full object-contain shrink-0 filter drop-shadow"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="font-bold text-xs truncate text-white">{role.name}</div>
@@ -811,9 +812,10 @@ export default function SetupWizard({
                           : 'bg-[#14121B] hover:bg-[#1D1926] border-[#292336] text-[#A8A092]'
                       }`}
                     >
-                      <RoleGlyph
-                        roleId={role.id}
-                        className={`w-6 h-6 shrink-0 ${isSelected ? 'text-[#7DD3FC]' : 'text-[#7D7588]'}`}
+                      <img
+                        src={`/tokens/${role.id}.png`}
+                        alt={role.name}
+                        className="w-8 h-8 rounded-full object-contain shrink-0 filter drop-shadow"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="font-bold text-xs truncate text-white">{role.name}</div>
@@ -851,9 +853,10 @@ export default function SetupWizard({
                           : 'bg-[#14121B] hover:bg-[#1D1926] border-[#292336] text-[#A8A092]'
                       }`}
                     >
-                      <RoleGlyph
-                        roleId={role.id}
-                        className={`w-6 h-6 shrink-0 ${isSelected ? 'text-[#FCA5A5]' : 'text-[#7D7588]'}`}
+                      <img
+                        src={`/tokens/${role.id}.png`}
+                        alt={role.name}
+                        className="w-8 h-8 rounded-full object-contain shrink-0 filter drop-shadow"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="font-bold text-xs truncate text-white">{role.name}</div>
@@ -877,7 +880,11 @@ export default function SetupWizard({
 
               <div className="p-3.5 rounded-2xl bg-[#351418] border-2 border-[#DC2626] flex items-center justify-between text-white max-w-sm">
                 <div className="flex items-center gap-3">
-                  <RoleGlyph roleId="imp" className="w-6 h-6 text-[#F87171]" />
+                  <img
+                    src="/tokens/imp.png"
+                    alt="Imp"
+                    className="w-8 h-8 rounded-full object-contain shrink-0 filter drop-shadow"
+                  />
                   <div>
                     <div className="font-bold text-sm text-white">Imp</div>
                     <div className="text-[10px] text-[#A8A092]">Iblis Utama Trouble Brewing</div>
@@ -1022,9 +1029,11 @@ export default function SetupWizard({
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-black/30 border border-white/10 flex items-center justify-center shrink-0">
-                          <RoleGlyph roleId={seat.roleId} className="w-5 h-5 text-[#FDE68A]" />
-                        </div>
+                        <img
+                          src={`/tokens/${seat.roleId}.png`}
+                          alt={role?.name || ''}
+                          className="w-8 h-8 rounded-full object-contain shrink-0 filter drop-shadow"
+                        />
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-xs sm:text-sm truncate">
@@ -1147,7 +1156,11 @@ export default function SetupWizard({
                               : 'bg-[#181423] hover:bg-[#231D31] border-[#2C243A]'
                           }`}
                         >
-                          <RoleGlyph roleId={r.id} className="w-6 h-6 text-[#FDE68A] shrink-0" />
+                          <img
+                            src={`/tokens/${r.id}.png`}
+                            alt={r.name}
+                            className="w-8 h-8 rounded-full object-contain shrink-0 filter drop-shadow"
+                          />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-1">
                               <span className="font-bold text-xs sm:text-sm text-white truncate">

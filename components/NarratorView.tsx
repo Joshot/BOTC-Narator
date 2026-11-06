@@ -254,9 +254,10 @@ export default function NarratorView({
                   <div className="flex items-center gap-3.5">
                     <div className="w-12 h-12 rounded-2xl bg-[#231E30] border border-[#3B3450] flex items-center justify-center shrink-0">
                       {currentStep.roleId ? (
-                        <RoleGlyph
-                          roleId={currentStep.roleId}
-                          className="w-6 h-6 text-[#D4AF37]"
+                        <img
+                          src={`/tokens/${currentStep.roleId}.png`}
+                          alt={currentStep.roleId}
+                          className="w-10 h-10 rounded-full object-contain filter drop-shadow shrink-0"
                         />
                       ) : currentStep.order === 999 ? (
                         <Sunrise className="w-6 h-6 text-[#FBBF24]" />

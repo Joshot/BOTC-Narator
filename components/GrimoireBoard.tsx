@@ -511,13 +511,13 @@ export default function GrimoireBoard({
               <div className="bg-[#181520] border border-[#2A2636] rounded-2xl p-5 space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <CharacterToken
-                      roleId={selectedPlayer.perceivedRoleId}
-                      size="sm"
-                      isDead={!selectedPlayer.isAlive}
-                      deathCause={selectedPlayer.deathCause}
-                      isDrunkSecret={selectedPlayer.trueRoleId === 'drunk'}
-                    />
+                    <div className="relative w-14 h-14 rounded-full overflow-hidden shrink-0 border-2 border-[#D4AF37]/60 filter drop-shadow">
+                      <img
+                        src={`/tokens/${selectedPlayer.perceivedRoleId}.png`}
+                        alt={selectedPlayer.perceivedRoleId}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 text-xs text-[#A8A092]">
                         <span className="font-mono tabular-nums">
