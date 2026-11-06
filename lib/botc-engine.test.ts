@@ -254,3 +254,54 @@ test('physical Drunk bag representation (+1 Townsfolk chosen at start) validates
   assert.equal(validation.counts.outsiders, 0);
 });
 
+test('multiple players can be dead by execution and executed reminder tokens are purged', () => {
+  const seats: PlayerSeat[] = [
+    {
+      id: 'p1',
+      seatIndex: 0,
+      name: 'Player 1',
+      trueRoleId: 'chef',
+      perceivedRoleId: 'chef',
+      isAlive: false,
+      deathCause: 'execution',
+      hasGhostVote: true,
+      reminders: [{ instanceId: 'r-exec-1', reminderId: 'executed' }],
+    },
+    {
+      id: 'p2',
+      seatIndex: 1,
+      name: 'Player 2',
+      trueRoleId: 'empath',
+      perceivedRoleId: 'empath',
+      isAlive: false,
+      deathCause: 'execution',
+      hasGhostVote: true,
+      reminders: [{ instanceId: 'r-exec-2', reminderId: 'executed' }],
+    },
+    {
+      id: 'p3',
+      seatIndex: 2,
+      name: 'Player 3',
+      trueRoleId: 'imp',
+      perceivedRoleId: 'imp',
+      isAlive: false,
+      deathCause: 'demon',
+      hasGhostVote: true,
+      reminders: [],
+    },
+  ];
+
+  const sanitized = sanitizePlayerSeats(seats);
+  // Both p1 and p2 remain dead with deathCause = 'execution'
+  assert.equal(sanitized[0].isAlive, false);
+  assert.equal(sanitized[0].deathCause, 'execution');
+  assert.equal(sanitized[1].isAlive, false);
+  assert.equal(sanitized[1].deathCause, 'execution');
+  assert.equal(sanitized[2].isAlive, false);
+  assert.equal(sanitized[2].deathCause, 'demon');
+
+  // Any 'executed' reminder tokens must be completely purged
+  assert.equal(sanitized[0].reminders.some((r) => r.reminderId === 'executed'), false);
+  assert.equal(sanitized[1].reminders.some((r) => r.reminderId === 'executed'), false);
+});
+

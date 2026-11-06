@@ -29,6 +29,7 @@ import {
   computeSafeDemonBluffs,
   getBaseCharacterCounts,
   getEffectiveCharacterCounts,
+  validateRoleBag,
   validateRoleSelection,
 } from '@/lib/botc-engine';
 import { CharacterToken, RoleGlyph } from './TokenArtwork';
@@ -45,7 +46,7 @@ interface WebPlayModeProps {
   }) => void;
 }
 
-type WebPlaySubStep = 'setup' | 'rolling' | 'countdown';
+type WebPlaySubStep = 'setup' | 'rolling' | 'drunk_assign' | 'countdown';
 
 interface RolledSeatData {
   seatIndex: number;
@@ -149,13 +150,8 @@ export default function WebPlayMode({
   }, [isDrunkActive, drunkFakeRoleId, selectedTownsfolk]);
 
   const validation = useMemo(() => {
-    return validateRoleSelection(
-      playerCount,
-      selectedRoleIds,
-      effectiveDrunkFakeRoleId,
-      isDrunkActive
-    );
-  }, [playerCount, selectedRoleIds, effectiveDrunkFakeRoleId, isDrunkActive]);
+    return validateRoleBag(playerCount, selectedRoleIds, isDrunkActive);
+  }, [playerCount, selectedRoleIds, isDrunkActive]);
 
   // Role toggling for setup
   const handleToggleRole = (roleId: string) => {
@@ -199,6 +195,10 @@ export default function WebPlayMode({
   const [rollError, setRollError] = useState<string | null>(null);
   const [assignedSeats, setAssignedSeats] = useState<RolledSeatData[]>([]);
 
+  // Post-roll Drunk assignment state
+  const [selectedDrunkSeatIndex, setSelectedDrunkSeatIndex] = useState<number | null>(null);
+  const [drunkAssignError, setDrunkAssignError] = useState<string | null>(null);
+
   // Start the rolling phase after setup validation
   const handleStartRolling = () => {
     if (!validation.isValid) {
@@ -206,14 +206,11 @@ export default function WebPlayMode({
       return;
     }
 
-    // Build the secret deck
-    const deckItems = selectedRoleIds.map((trueId) => {
-      const isThisDrunk = isDrunkActive && trueId === effectiveDrunkFakeRoleId;
-      return {
-        trueRoleId: isThisDrunk ? 'drunk' : trueId,
-        perceivedRoleId: trueId,
-      };
-    });
+    // Build the secret deck with physical chosen roles
+    const deckItems = selectedRoleIds.map((trueId) => ({
+      trueRoleId: trueId,
+      perceivedRoleId: trueId,
+    }));
 
     // Cryptographic-grade random shuffle
     for (let i = deckItems.length - 1; i > 0; i--) {
@@ -228,6 +225,8 @@ export default function WebPlayMode({
     setPlayerNameInput('');
     setRollError(null);
     setAssignedSeats([]);
+    setSelectedDrunkSeatIndex(null);
+    setDrunkAssignError(null);
     setSubStep('rolling');
   };
 
@@ -244,7 +243,7 @@ export default function WebPlayMode({
     }, 1200);
   };
 
-  // Complete current player seat and advance to next seat or countdown
+  // Complete current player seat and advance to next seat or Drunk picker / countdown
   const handleNextPlayer = () => {
     const trimmed = playerNameInput.trim();
     if (!trimmed) {
@@ -274,10 +273,52 @@ export default function WebPlayMode({
       setPlayerNameInput('');
       setRollError(null);
     } else {
-      // All players have rolled! Advance to countdown
-      setCountdownSeconds(3);
-      setSubStep('countdown');
+      // All players have rolled!
+      if (isDrunkActive) {
+        // Find all candidates who rolled Townsfolk roles
+        const townsfolkCandidates = nextAssigned.filter(
+          (s) => ROLE_MAP[s.perceivedRoleId]?.team === 'townsfolk'
+        );
+        setSelectedDrunkSeatIndex(
+          townsfolkCandidates.length > 0 ? townsfolkCandidates[0].seatIndex : null
+        );
+        setDrunkAssignError(null);
+        setSubStep('drunk_assign');
+      } else {
+        setCountdownSeconds(3);
+        setSubStep('countdown');
+      }
     }
+  };
+
+  // Confirm designated Drunk candidate and start countdown
+  const handleConfirmDrunkAndStart = () => {
+    if (selectedDrunkSeatIndex === null) {
+      setDrunkAssignError('Pilih salah satu pemain Townsfolk di bawah ini untuk menjadi The Drunk.');
+      return;
+    }
+
+    const updatedSeats = assignedSeats.map((s) => {
+      if (s.seatIndex === selectedDrunkSeatIndex) {
+        return {
+          ...s,
+          trueRoleId: 'drunk',
+        };
+      }
+      return {
+        ...s,
+        trueRoleId: s.perceivedRoleId,
+      };
+    });
+
+    const drunkSeat = updatedSeats.find((s) => s.seatIndex === selectedDrunkSeatIndex);
+    if (drunkSeat) {
+      setDrunkFakeRoleId(drunkSeat.perceivedRoleId);
+    }
+
+    setAssignedSeats(updatedSeats);
+    setCountdownSeconds(3);
+    setSubStep('countdown');
   };
 
   // ================= STEP 3: 3-SECOND COUNTDOWN STATE =================
@@ -351,11 +392,14 @@ export default function WebPlayMode({
           ? [...selectedRoleIds, 'drunk']
           : selectedRoleIds;
 
+      const drunkSeat = finalSeats.find((s) => s.trueRoleId === 'drunk');
+      const finalDrunkFakeRoleId = drunkSeat ? drunkSeat.perceivedRoleId : null;
+
       onCompleteWebPlay({
         playerCount,
         selectedRoleIds: finalSelectedRoles,
         isDrunkActive,
-        drunkFakeRoleId: effectiveDrunkFakeRoleId,
+        drunkFakeRoleId: finalDrunkFakeRoleId,
         demonBluffIds: recommendedBluffs,
         players: finalSeats,
       });
@@ -470,7 +514,7 @@ export default function WebPlayMode({
                       )}
                     </div>
                     <p className="text-xs text-[#E5D7B7] mt-1 leading-relaxed">
-                      Karena Drunk mengira dirinya adalah Townsfolk asli, <strong>jumlah Townsfolk yang Anda pilih BERTAMBAH +1</strong> (misal dari {effectiveCounts.townsfolk} menjadi {effectiveCounts.bagTownsfolk} Townsfolk). Anda memilih semua {effectiveCounts.bagTownsfolk} Townsfolk langsung di daftar Townsfolk di bawah!
+                      Karena Drunk mengira dirinya adalah Townsfolk asli, <strong>jumlah Townsfolk yang Anda pilih BERTAMBAH +1</strong> (misal dari {effectiveCounts.townsfolk} menjadi {effectiveCounts.bagTownsfolk} Townsfolk). Anda memilih semua {effectiveCounts.bagTownsfolk} Townsfolk langsung di daftar Townsfolk di bawah. Nantinya setelah semua pemain selesai memutar koin dan memasukkan nama, Anda akan memilih siapa pemain yang sebenarnya menjadi The Drunk sebelum permainan dimulai!
                     </p>
                   </div>
                 </div>
@@ -488,46 +532,6 @@ export default function WebPlayMode({
                   <span>{isDrunkActive ? 'Drunk Aktif' : 'Aktifkan Drunk'}</span>
                 </button>
               </div>
-
-              {/* Designated Drunk Role Selector from the selected Townsfolk */}
-              {isDrunkActive && selectedTownsfolk.length > 0 && (
-                <div className="pt-3 border-t border-[#D97706]/30 space-y-2">
-                  <span className="text-xs text-[#FDE68A] font-semibold block">
-                    Peran Townsfolk yang sebenarnya adalah The Drunk:
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedTownsfolk.map((tfId) => {
-                      const r = ROLE_MAP[tfId];
-                      if (!r) return null;
-                      const isDesignated = tfId === effectiveDrunkFakeRoleId;
-                      return (
-                        <button
-                          key={tfId}
-                          type="button"
-                          onClick={() => setDrunkFakeRoleId(tfId)}
-                          className={`min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all border ${
-                            isDesignated
-                              ? 'bg-[#D97706] text-[#121016] border-[#FDE68A] shadow-md scale-105'
-                              : 'bg-[#1F1710] text-[#E5D7B7] border-[#78350F] hover:bg-[#2B1F16]'
-                          }`}
-                        >
-                          <img
-                            src={`/tokens/${r.id}.png`}
-                            alt={r.name}
-                            className="w-5 h-5 rounded-full object-contain shrink-0"
-                          />
-                          <span>{r.name}</span>
-                          {isDesignated && (
-                            <span className="text-[10px] uppercase font-black px-1.5 py-0.5 rounded bg-black/30 text-white">
-                              Adalah Drunk
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Official Character Counts Badge */}
@@ -875,6 +879,8 @@ export default function WebPlayMode({
                       <span>
                         {currentSeatIndex + 1 < playerCount
                           ? `Simpan & Lanjut ke Kursi ${currentSeatIndex + 2}`
+                          : isDrunkActive
+                          ? 'Selesai & Lanjut Tentukan The Drunk'
                           : 'Selesai & Mulai Permainan'}
                       </span>
                       <ArrowRight className="w-4 h-4 ml-1" />
@@ -901,6 +907,129 @@ export default function WebPlayMode({
               <span>{isRolling ? 'Koin Sedang Berputar...' : 'Putar Koin Sekarang (Roll)'}</span>
             </button>
           )}
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* SUB-STEP: PENENTUAN THE DRUNK SETELAH SEMUA ROLL SELESAI */}
+      {/* ======================================================== */}
+      {subStep === 'drunk_assign' && (
+        <div className="space-y-6 max-w-3xl mx-auto py-4">
+          {/* Header */}
+          <div className="p-6 rounded-3xl bg-gradient-to-r from-[#2B1B10] via-[#211624] to-[#161220] border-2 border-[#D97706] space-y-2 shadow-xl">
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full bg-[#D97706] text-[#121016] text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+                <Beer className="w-3.5 h-3.5" />
+                <span>Langkah Terakhir Narator</span>
+              </span>
+              <span className="text-xs text-[#A8A092]">·</span>
+              <span className="text-xs text-[#FDE68A] font-semibold">Semua Koin Telah Diundi</span>
+            </div>
+            <h2 className="font-display text-2xl sm:text-3xl font-bold text-white">
+              Tentukan Siapa yang Sebenarnya Adalah The Drunk
+            </h2>
+            <p className="text-xs sm:text-sm text-[#E5D7B7] leading-relaxed">
+              Semua {playerCount} pemain telah selesai memutar koin dan memasukkan nama masing-masing. Karena karakter The Drunk aktif (+1 Townsfolk), pilih 1 pemain di bawah ini yang akan diam-diam dijadikan The Drunk oleh Narator. Pemain tersebut tetap melihat dirinya sebagai Townsfolk, namun kekuatannya tidak berfungsi.
+            </p>
+          </div>
+
+          {/* List of Townsfolk Candidates */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-xs font-semibold px-1 text-[#A8A092]">
+              <span>Pilih salah satu pemain pemegang peran Townsfolk:</span>
+              <span className="text-[#FDE68A]">
+                {assignedSeats.filter((s) => ROLE_MAP[s.perceivedRoleId]?.team === 'townsfolk').length} Pemain Townsfolk Tersedia
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {assignedSeats
+                .filter((s) => ROLE_MAP[s.perceivedRoleId]?.team === 'townsfolk')
+                .map((seat) => {
+                  const role = ROLE_MAP[seat.perceivedRoleId];
+                  const isSelected = selectedDrunkSeatIndex === seat.seatIndex;
+                  return (
+                    <button
+                      key={seat.seatIndex}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDrunkSeatIndex(seat.seatIndex);
+                        setDrunkAssignError(null);
+                      }}
+                      className={`p-4 rounded-2xl border text-left cursor-pointer transition-all flex items-center justify-between gap-3 ${
+                        isSelected
+                          ? 'bg-gradient-to-r from-[#382312] to-[#25181D] border-[#F59E0B] shadow-[0_0_25px_rgba(245,158,11,0.4)] scale-[1.02]'
+                          : 'bg-[#181424] border-[#312842] hover:border-[#D4AF37]/60 hover:bg-[#201A2E]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-[#D4AF37] shrink-0 shadow">
+                          <img
+                            src={`/tokens/${seat.perceivedRoleId}.png`}
+                            alt={role?.name || ''}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-mono font-bold text-[#D4AF37]">
+                              Kursi {seat.seatIndex + 1}
+                            </span>
+                            {isSelected && (
+                              <span className="px-1.5 py-0.2 rounded bg-[#D97706] text-[#121016] text-[9px] font-black uppercase">
+                                Adalah Drunk
+                              </span>
+                            )}
+                          </div>
+                          <span className="block text-base font-bold text-white truncate">
+                            {seat.name}
+                          </span>
+                          <span className="block text-xs text-[#93C5FD] truncate">
+                            {role?.name} ({role?.indonesianName})
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0">
+                        <div
+                          className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${
+                            isSelected
+                              ? 'bg-[#F59E0B] border-[#F59E0B] text-[#121016]'
+                              : 'border-[#4A3F5E] bg-[#14101E]'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+
+          {/* Error notice if needed */}
+          {drunkAssignError && (
+            <div className="p-3.5 rounded-xl bg-[#2B1418] border border-[#EF4444] text-xs text-[#FECACA] flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-[#F87171] shrink-0" />
+              <span>{drunkAssignError}</span>
+            </div>
+          )}
+
+          {/* Confirm Button */}
+          <div className="pt-4 border-t border-[#2D263B] flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span className="text-xs text-[#A8A092]">
+              Pemain yang dipilih akan mendapatkan status Drunk asli di Grimoire.
+            </span>
+
+            <button
+              type="button"
+              onClick={handleConfirmDrunkAndStart}
+              className="w-full sm:w-auto min-h-[50px] px-8 py-3 rounded-xl font-display text-base font-bold bg-gradient-to-r from-[#D4AF37] to-[#F59E0B] hover:brightness-110 text-[#121016] shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-all"
+            >
+              <span>Mulai Permainan (Jeda 3 Detik)</span>
+              <ArrowRight className="w-5 h-5 ml-1" />
+            </button>
+          </div>
         </div>
       )}
 

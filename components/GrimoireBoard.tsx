@@ -38,6 +38,9 @@ interface GrimoireBoardProps {
   onSetDrunkPlayer?: (playerId: string) => void;
   onSwapSeats: (fromIndex: number, toIndex: number) => void;
   onMoveSeat: (seatIndex: number, direction: 'cw' | 'ccw') => void;
+  onKillPlayer?: (playerId: string, cause: 'demon' | 'execution' | 'slayer') => void;
+  onResurrectPlayer?: (playerId: string) => void;
+  onChangeDeathCause?: (playerId: string, cause: 'demon' | 'execution' | 'slayer') => void;
   onToggleAlive: (playerId: string, cause?: 'demon' | 'execution' | 'slayer') => void;
   onToggleGhostVote: (playerId: string) => void;
   onAddReminder: (playerId: string, reminderId: string) => void;
@@ -57,6 +60,9 @@ export default function GrimoireBoard({
   onSetDrunkPlayer,
   onSwapSeats,
   onMoveSeat,
+  onKillPlayer,
+  onResurrectPlayer,
+  onChangeDeathCause,
   onToggleAlive,
   onToggleGhostVote,
   onAddReminder,
@@ -342,7 +348,9 @@ export default function GrimoireBoard({
               const isDrunk = player.trueRoleId === 'drunk';
               const isPoisoned = player.reminders.some((r) => r.reminderId === 'poisoned');
               const displayRoleId = spyCleanMode ? player.trueRoleId : player.perceivedRoleId;
-              const nonDrunkReminders = player.reminders.filter((r) => r.reminderId !== 'is_the_drunk');
+              const nonDrunkReminders = player.reminders.filter(
+                (r) => r.reminderId !== 'is_the_drunk' && r.reminderId !== 'executed'
+              );
 
               return (
                 <React.Fragment key={player.id}>
@@ -512,13 +520,26 @@ export default function GrimoireBoard({
                 {/* Header: Token + Big Role & Player Details */}
                 <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#2C263B]">
                   <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
-                    {/* Enlarged Authentic Token Medallion */}
-                    <div className="relative w-18 h-18 sm:w-22 sm:h-22 rounded-full overflow-hidden shrink-0 border-[3px] border-[#D4AF37] ring-2 ring-[#D4AF37]/40 shadow-2xl bg-[#14111B]">
+                    {/* Enlarged Authentic Token Medallion - turns dark black when dead */}
+                    <div
+                      className={`relative w-18 h-18 sm:w-22 sm:h-22 rounded-full overflow-hidden shrink-0 shadow-2xl bg-[#14111B] ${
+                        !selectedPlayer.isAlive
+                          ? 'border-[3px] border-[#22202A] ring-2 ring-black/90'
+                          : 'border-[3px] border-[#D4AF37] ring-2 ring-[#D4AF37]/40'
+                      }`}
+                    >
                       <img
                         src={`/tokens/${selectedPlayer.perceivedRoleId}.png`}
                         alt={selectedPlayer.perceivedRoleId}
-                        className="w-full h-full object-contain filter drop-shadow"
+                        className={`w-full h-full object-contain filter drop-shadow ${
+                          !selectedPlayer.isAlive
+                            ? 'grayscale-[95%] brightness-[0.35] contrast-[1.25]'
+                            : ''
+                        }`}
                       />
+                      {!selectedPlayer.isAlive && (
+                        <div className="absolute inset-0 bg-black/60 pointer-events-none" />
+                      )}
                     </div>
 
                     {/* Prominent Role & Player Info */}
@@ -533,9 +554,9 @@ export default function GrimoireBoard({
                             selectedPlayer.isAlive
                               ? 'bg-[#142A20] border-[#10B981]/60 text-[#6EE7B7]'
                               : selectedPlayer.deathCause === 'demon'
-                              ? 'bg-[#450A0A] border-[#EF4444]/70 text-[#FECACA]'
+                              ? 'bg-[#35070A] border-[#EF4444]/70 text-[#FECACA]'
                               : selectedPlayer.deathCause === 'execution'
-                              ? 'bg-[#3A2508] border-[#F59E0B]/70 text-[#FDE68A]'
+                              ? 'bg-[#291B06] border-[#D4AF37]/80 text-[#FDE68A]'
                               : 'bg-[#1F1F23] border-[#52525B] text-[#D4D4D8]'
                           }`}
                         >
@@ -550,7 +571,14 @@ export default function GrimoireBoard({
                             : 'Telah Mati'}
                         </span>
                         <span className="text-xs font-bold text-[#A8A092] truncate">
-                          Nama: <strong className="text-white">{selectedPlayer.name}</strong>
+                          Nama:{' '}
+                          <strong
+                            className={`text-white ${
+                              !selectedPlayer.isAlive ? 'line-through text-[#9CA3AF]' : ''
+                            }`}
+                          >
+                            {selectedPlayer.name}
+                          </strong>
                         </span>
                       </div>
 
@@ -663,13 +691,17 @@ export default function GrimoireBoard({
                   </div>
                 )}
 
-                {/* Primary Status Action Buttons */}
+                {/* Primary Status Action Buttons - Both hanging and demon kills mark the player DEAD & BLACK */}
                 <div className="grid grid-cols-2 gap-2.5">
                   {selectedPlayer.isAlive ? (
                     <>
                       <button
                         type="button"
-                        onClick={() => onToggleAlive(selectedPlayer.id, 'demon')}
+                        onClick={() =>
+                          onKillPlayer
+                            ? onKillPlayer(selectedPlayer.id, 'demon')
+                            : onToggleAlive(selectedPlayer.id, 'demon')
+                        }
                         className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-[#2C1619] hover:bg-[#3D1E22] border border-[#EF4444]/60 text-[#FECACA]"
                       >
                         <Swords className="w-4 h-4 text-[#F87171] shrink-0" />
@@ -678,10 +710,11 @@ export default function GrimoireBoard({
 
                       <button
                         type="button"
-                        onClick={() => {
-                          onMarkExecutedToday(selectedPlayer.id);
-                          onToggleAlive(selectedPlayer.id, 'execution');
-                        }}
+                        onClick={() =>
+                          onKillPlayer
+                            ? onKillPlayer(selectedPlayer.id, 'execution')
+                            : onToggleAlive(selectedPlayer.id, 'execution')
+                        }
                         className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-[#2B2011] hover:bg-[#3A2C18] border border-[#F59E0B]/60 text-[#FDE68A]"
                       >
                         <Gavel className="w-4 h-4 text-[#F59E0B] shrink-0" />
@@ -692,7 +725,11 @@ export default function GrimoireBoard({
                     <>
                       <button
                         type="button"
-                        onClick={() => onToggleAlive(selectedPlayer.id)}
+                        onClick={() =>
+                          onResurrectPlayer
+                            ? onResurrectPlayer(selectedPlayer.id)
+                            : onToggleAlive(selectedPlayer.id)
+                        }
                         className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-[#142922] hover:bg-[#1B382E] border border-[#10B981]/50 text-[#A7F3D0]"
                       >
                         <HeartPulse className="w-4 h-4 text-[#34D399] shrink-0" />
@@ -704,11 +741,10 @@ export default function GrimoireBoard({
                         onClick={() => {
                           const nextCause =
                             selectedPlayer.deathCause === 'demon' ? 'execution' : 'demon';
-                          onToggleAlive(selectedPlayer.id, nextCause);
-                          if (nextCause === 'execution') {
-                            onMarkExecutedToday(selectedPlayer.id);
-                          } else if (executedTodayPlayerId === selectedPlayer.id) {
-                            onMarkExecutedToday(null);
+                          if (onChangeDeathCause) {
+                            onChangeDeathCause(selectedPlayer.id, nextCause);
+                          } else {
+                            onToggleAlive(selectedPlayer.id, nextCause);
                           }
                         }}
                         className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-[#231F30] hover:bg-[#2F2A40] border border-[#38324C] text-[#EDE7DB]"
@@ -805,13 +841,15 @@ export default function GrimoireBoard({
                   <div className="text-xs font-medium text-[#B8B0A2]">
                     Token Pengingat di Kursi {selectedPlayer.name}:
                   </div>
-                  {selectedPlayer.reminders.length === 0 ? (
+                  {selectedPlayer.reminders.filter((r) => r.reminderId !== 'executed').length === 0 ? (
                     <p className="text-xs text-[#7D758A]">
                       Belum ada token pengingat menempel di kursi ini.
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      {selectedPlayer.reminders.map((rem) => {
+                      {selectedPlayer.reminders
+                        .filter((r) => r.reminderId !== 'executed')
+                        .map((rem) => {
                         const def = REMINDER_MAP[rem.reminderId];
                         if (!def) return null;
                         return (

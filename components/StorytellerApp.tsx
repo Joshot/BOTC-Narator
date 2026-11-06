@@ -390,21 +390,168 @@ export default function StorytellerApp({
     setPlayers((prev) => movePlayerSeat(prev, seatIdx, dir));
   };
 
-  const handleToggleAlive = (playerId: string, cause?: 'demon' | 'execution' | 'slayer') => {
+  // Robust Death & Execution Handlers
+  // Both hanging and demon kills mark the player DEAD and BLACK.
+  // Multiple players can die by execution across multiple days.
+  const handleKillPlayer = (
+    playerId: string,
+    cause: 'demon' | 'execution' | 'slayer'
+  ) => {
+    const target = players.find((p) => p.id === playerId);
+    if (!target) return;
+
+    const aliveBeforeDeath = players.filter((p) => p.isAlive).length;
+
+    if (cause === 'execution') {
+      setExecutedTodayPlayerId(playerId);
+
+      // Saint execution loss: If Saint is executed while healthy, Evil wins immediately
+      if (target.trueRoleId === 'saint' && !isPlayerPoisoned(target)) {
+        setPlayers((prev) => {
+          const next = prev.map((p) => {
+            const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
+            if (p.id !== playerId) return { ...p, reminders: cleaned };
+            return {
+              ...p,
+              isAlive: false,
+              deathCause: 'execution' as const,
+              hasGhostVote: true,
+              reminders: cleaned,
+            };
+          });
+          return sanitizePlayerSeats(next);
+        });
+        setGameAlertBanner(
+          `SAINT DIEKSEKUSI! ${target.name} adalah Saint asli yang sehat. Sesuai aturan, TIM EVIL LANGSUNG MENANG!`
+        );
+        return;
+      }
+
+      // Demon execution & Scarlet Woman check:
+      // If Demon is executed, alive count before >= 5, and healthy SW exists, SW becomes new Imp
+      const isTargetDemon = ROLE_MAP[target.trueRoleId]?.team === 'demon';
+      const healthyScarletWoman = players.find(
+        (p) =>
+          p.isAlive &&
+          p.id !== playerId &&
+          p.trueRoleId === 'scarlet_woman' &&
+          !isPlayerPoisoned(p)
+      );
+
+      if (isTargetDemon && aliveBeforeDeath >= 5 && healthyScarletWoman) {
+        setPlayers((prev) => {
+          const next = prev.map((p) => {
+            const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
+            if (p.id === playerId) {
+              return {
+                ...p,
+                isAlive: false,
+                deathCause: 'execution' as const,
+                hasGhostVote: true,
+                reminders: cleaned,
+              };
+            }
+            if (p.id === healthyScarletWoman.id) {
+              return {
+                ...p,
+                trueRoleId: 'imp',
+                perceivedRoleId: 'imp',
+                reminders: [
+                  ...cleaned,
+                  { instanceId: `rem-sw-demon-${Date.now()}`, reminderId: 'is_demon_sw' },
+                ],
+              };
+            }
+            return { ...p, reminders: cleaned };
+          });
+          return sanitizePlayerSeats(next);
+        });
+        setGameAlertBanner(
+          `SCARLET WOMAN AKTIF! Demon (${target.name}) dieksekusi saat ada ${aliveBeforeDeath} pemain hidup. ${healthyScarletWoman.name} otomatis berubah menjadi IMP baru!`
+        );
+        return;
+      }
+    }
+
+    // Standard kill: marks player dead, retains any other dead players
     setPlayers((prev) => {
       const next = prev.map((p) => {
-        if (p.id !== playerId) return p;
-        const willBeAlive = !p.isAlive;
+        const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
+        if (p.id !== playerId) return { ...p, reminders: cleaned };
         return {
           ...p,
-          isAlive: willBeAlive,
-          deathCause: willBeAlive ? undefined : (cause ?? (p.deathCause ?? ('demon' as const))),
-          hasGhostVote: !willBeAlive ? true : p.hasGhostVote,
+          isAlive: false,
+          deathCause: cause,
+          hasGhostVote: true,
+          reminders: cleaned,
         };
       });
       evaluateWinConditions(next);
-      return next;
+      return sanitizePlayerSeats(next);
     });
+  };
+
+  const handleResurrectPlayer = (playerId: string) => {
+    setPlayers((prev) => {
+      const next = prev.map((p) => {
+        if (p.id !== playerId) return p;
+        return {
+          ...p,
+          isAlive: true,
+          deathCause: undefined,
+        };
+      });
+      evaluateWinConditions(next);
+      return sanitizePlayerSeats(next);
+    });
+    if (executedTodayPlayerId === playerId) {
+      setExecutedTodayPlayerId(null);
+    }
+  };
+
+  const handleChangeDeathCause = (
+    playerId: string,
+    cause: 'demon' | 'execution' | 'slayer'
+  ) => {
+    setPlayers((prev) => {
+      const next = prev.map((p) => {
+        const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
+        if (p.id !== playerId) return { ...p, reminders: cleaned };
+        return {
+          ...p,
+          isAlive: false,
+          deathCause: cause,
+          reminders: cleaned,
+        };
+      });
+      evaluateWinConditions(next);
+      return sanitizePlayerSeats(next);
+    });
+
+    if (cause === 'execution') {
+      setExecutedTodayPlayerId(playerId);
+      const target = players.find((p) => p.id === playerId);
+      if (target?.trueRoleId === 'saint' && !isPlayerPoisoned(target)) {
+        setGameAlertBanner(
+          `SAINT DIEKSEKUSI! ${target.name} adalah Saint asli yang sehat. Sesuai aturan, TIM EVIL LANGSUNG MENANG!`
+        );
+      }
+    } else if (executedTodayPlayerId === playerId) {
+      setExecutedTodayPlayerId(null);
+    }
+  };
+
+  const handleToggleAlive = (
+    playerId: string,
+    cause?: 'demon' | 'execution' | 'slayer'
+  ) => {
+    const target = players.find((p) => p.id === playerId);
+    if (!target) return;
+    if (target.isAlive) {
+      handleKillPlayer(playerId, cause ?? 'demon');
+    } else {
+      handleResurrectPlayer(playerId);
+    }
   };
 
   const handleToggleGhostVote = (playerId: string) => {
@@ -665,7 +812,7 @@ export default function StorytellerApp({
   const handleExecutePlayerInDay = (playerId: string | null) => {
     if (!playerId) {
       setExecutedTodayPlayerId(null);
-      // Mayor win check
+      // Mayor win check: 3 alive, no execution today, healthy Mayor
       const alive = players.filter((p) => p.isAlive);
       const healthyMayor = alive.find(
         (p) => p.trueRoleId === 'mayor' && !isPlayerPoisoned(p)
@@ -678,97 +825,7 @@ export default function StorytellerApp({
       return;
     }
 
-    const aliveBeforeExecution = players.filter((p) => p.isAlive).length;
-    const target = players.find((p) => p.id === playerId);
-    if (!target) return;
-
-    setExecutedTodayPlayerId(playerId);
-
-    // Saint execution loss
-    if (target.trueRoleId === 'saint' && !isPlayerPoisoned(target)) {
-      setPlayers((prev) =>
-        prev.map((p) => {
-          const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
-          if (p.id !== playerId) return { ...p, reminders: cleaned };
-          return {
-            ...p,
-            isAlive: false,
-            deathCause: 'execution' as const,
-            reminders: [
-              ...cleaned,
-              { instanceId: `rem-exec-${Date.now()}`, reminderId: 'executed' },
-            ],
-          };
-        })
-      );
-      setGameAlertBanner(
-        `SAINT DIEKSEKUSI! ${target.name} adalah Saint asli yang sehat. Sesuai aturan, TIM EVIL LANGSUNG MENANG!`
-      );
-      return;
-    }
-
-    // Demon execution & Scarlet Woman check
-    const isTargetDemon = ROLE_MAP[target.trueRoleId]?.team === 'demon';
-    const healthyScarletWoman = players.find(
-      (p) =>
-        p.isAlive &&
-        p.id !== playerId &&
-        p.trueRoleId === 'scarlet_woman' &&
-        !isPlayerPoisoned(p)
-    );
-
-    if (isTargetDemon && aliveBeforeExecution >= 5 && healthyScarletWoman) {
-      setPlayers((prev) =>
-        prev.map((p) => {
-          const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
-          if (p.id === playerId) {
-            return {
-              ...p,
-              isAlive: false,
-              deathCause: 'execution' as const,
-              reminders: [
-                ...cleaned,
-                { instanceId: `rem-exec-${Date.now()}`, reminderId: 'executed' },
-              ],
-            };
-          }
-          if (p.id === healthyScarletWoman.id) {
-            return {
-              ...p,
-              trueRoleId: 'imp',
-              perceivedRoleId: 'imp',
-              reminders: [
-                ...cleaned,
-                { instanceId: `rem-sw-demon-${Date.now()}`, reminderId: 'is_demon_sw' },
-              ],
-            };
-          }
-          return { ...p, reminders: cleaned };
-        })
-      );
-      setGameAlertBanner(
-        `SCARLET WOMAN AKTIF! Demon (${target.name}) dieksekusi saat ada ${aliveBeforeExecution} pemain hidup. ${healthyScarletWoman.name} otomatis berubah menjadi IMP baru!`
-      );
-      return;
-    }
-
-    setPlayers((prev) => {
-      const next = prev.map((p) => {
-        const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
-        if (p.id !== playerId) return { ...p, reminders: cleaned };
-        return {
-          ...p,
-          isAlive: false,
-          deathCause: 'execution' as const,
-          reminders: [
-            ...cleaned,
-            { instanceId: `rem-exec-${Date.now()}`, reminderId: 'executed' },
-          ],
-        };
-      });
-      evaluateWinConditions(next);
-      return next;
-    });
+    handleKillPlayer(playerId, 'execution');
   };
 
   // Day -> Next Night Resolution
@@ -1190,6 +1247,9 @@ export default function StorytellerApp({
                 onSetDrunkPlayer={handleSetDrunkPlayer}
                 onSwapSeats={handleSwapSeats}
                 onMoveSeat={handleMoveSeat}
+                onKillPlayer={handleKillPlayer}
+                onResurrectPlayer={handleResurrectPlayer}
+                onChangeDeathCause={handleChangeDeathCause}
                 onToggleAlive={handleToggleAlive}
                 onToggleGhostVote={handleToggleGhostVote}
                 onAddReminder={handleAddReminder}

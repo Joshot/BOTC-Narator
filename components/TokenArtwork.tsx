@@ -177,7 +177,7 @@ export function CharacterToken({
         sizeMap.circle
       } ${
         isDead
-          ? 'border-[3.5px] border-[#52525B] ring-2 ring-[#71717A]/40 shadow-[0_0_12px_rgba(82,82,91,0.5)]'
+          ? 'border-[3.5px] border-[#22202A] ring-2 ring-black/90 shadow-[0_0_16px_rgba(0,0,0,0.95)]'
           : styles.ring
       }`}
     >
@@ -206,7 +206,7 @@ export function CharacterToken({
           onError={() => setImageError(true)}
           className={`w-full h-full object-contain rounded-full select-none pointer-events-none filter drop-shadow transition-all duration-200 ${
             isDead
-              ? 'grayscale-[85%] brightness-[0.55] contrast-[1.15]'
+              ? 'grayscale-[95%] brightness-[0.35] contrast-[1.25]'
               : ''
           }`}
         />
@@ -226,35 +226,40 @@ export function CharacterToken({
         </div>
       )}
 
+      {/* Deep Black Death Shroud Overlay for Dead Tokens */}
+      {isDead && (
+        <div className="absolute inset-0 rounded-full bg-black/60 pointer-events-none z-10" />
+      )}
+
       {/* Differentiated Death Shroud Ribbon: Demon Kill vs Execution */}
       {isDead && (
         deathCause === 'demon' ? (
           <div
-            className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-20 bg-[#3B070B] border-2 border-[#EF4444] rounded-md px-1.5 py-0.5 flex items-center justify-center gap-1 shadow-xl whitespace-nowrap"
+            className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-20 bg-[#2C0609] border-2 border-[#EF4444] rounded-md px-2 py-0.5 flex items-center justify-center gap-1 shadow-2xl whitespace-nowrap"
             title="Mati: Dibunuh Demon Malam Hari"
           >
-            <Swords className="w-3 h-3 text-[#FCA5A5]" />
+            <Swords className="w-3.5 h-3.5 text-[#FCA5A5]" />
             <span className="text-[7.5px] sm:text-[8.5px] font-black text-[#FECACA] uppercase tracking-wider">
-              DEMON KILL
+              DIBUNUH DEMON
             </span>
           </div>
         ) : deathCause === 'execution' ? (
           <div
-            className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-20 bg-[#291B07] border-2 border-[#D4AF37] rounded-md px-1.5 py-0.5 flex items-center justify-center gap-1 shadow-xl whitespace-nowrap"
+            className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-20 bg-[#241705] border-2 border-[#D4AF37] rounded-md px-2 py-0.5 flex items-center justify-center gap-1 shadow-2xl whitespace-nowrap"
             title="Mati: Digantung / Eksekusi Siang Hari"
           >
-            <Gavel className="w-3 h-3 text-[#FDE68A]" />
+            <Gavel className="w-3.5 h-3.5 text-[#FDE68A]" />
             <span className="text-[7.5px] sm:text-[8.5px] font-black text-[#FDE68A] uppercase tracking-wider">
-              GANTUNG
+              DIGANTUNG
             </span>
           </div>
         ) : (
           <div
-            className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-20 bg-[#09090B] border-2 border-[#E4E4E7] rounded-md px-1.5 py-0.5 flex items-center justify-center gap-1 shadow-md whitespace-nowrap"
+            className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-20 bg-[#121118] border-2 border-[#71717A] rounded-md px-2 py-0.5 flex items-center justify-center gap-1 shadow-2xl whitespace-nowrap"
             title="Pemain Telah Mati"
           >
-            <Skull className="w-3 h-3 text-white" />
-            <span className="text-[7.5px] sm:text-[8.5px] font-black text-white uppercase tracking-wider">
+            <Skull className="w-3.5 h-3.5 text-[#E4E4E7]" />
+            <span className="text-[7.5px] sm:text-[8.5px] font-black text-[#E4E4E7] uppercase tracking-wider">
               MATI
             </span>
           </div>

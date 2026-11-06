@@ -542,7 +542,7 @@ export function sanitizePlayerSeats(players: PlayerSeat[]): PlayerSeat[] {
     const seatSeen = new Set<string>();
 
     for (const r of p.reminders || []) {
-      if (!r || !r.reminderId) continue;
+      if (!r || !r.reminderId || r.reminderId === 'executed') continue;
 
       // Deduplicate per seat: only 1 instance of any reminder token per player
       if (seatSeen.has(r.reminderId)) continue;
