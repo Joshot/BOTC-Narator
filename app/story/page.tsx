@@ -179,21 +179,21 @@ export default function StoryPage() {
       <InGameHeader />
 
       {/* Main Page Title & Top Actions Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-[#14141B] border border-white/[0.08] shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] shadow-xl">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#1C1C26] border border-white/[0.08] flex items-center justify-center text-[#D4AF37] shrink-0 shadow-inner">
+          <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-[#1C1C26] border border-purple-200 dark:border-white/[0.08] flex items-center justify-center text-[#D4AF37] shrink-0 shadow-inner">
             <History className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[10px] font-mono font-bold text-[#FDE68A] uppercase">
+              <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-[#D4AF37]/20 text-[10px] font-mono font-bold text-amber-800 dark:text-[#FDE68A] uppercase">
                 Kronologi Lengkap
               </span>
-              <span className="text-xs text-[#8E8A9E] font-mono">
+              <span className="text-xs text-slate-500 dark:text-[#8E8A9E] font-mono">
                 {activeRoom.name}
               </span>
             </div>
-            <h1 className="font-display text-xl sm:text-2xl font-bold text-[#EDEAF0]">
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-slate-900 dark:text-[#EDEAF0]">
               Kisah & Riwayat Permainan
             </h1>
           </div>
@@ -203,16 +203,16 @@ export default function StoryPage() {
           <button
             type="button"
             onClick={handleCopyStory}
-            className="px-4 py-2.5 rounded-xl bg-[#222230] hover:bg-[#2C2C3E] border border-white/[0.08] text-xs font-semibold text-[#EDEAF0] flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95"
+            className="px-4 py-2.5 rounded-xl bg-purple-50 dark:bg-[#222230] hover:bg-purple-100 dark:hover:bg-[#2C2C3E] border border-purple-200 dark:border-white/[0.08] text-xs font-semibold text-purple-900 dark:text-[#EDEAF0] flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95"
           >
             {copied ? (
               <>
-                <Check className="w-4 h-4 text-[#34D399]" />
-                <span className="text-[#34D399] font-bold">Kisah Tersalin!</span>
+                <Check className="w-4 h-4 text-emerald-600 dark:text-[#34D399]" />
+                <span className="text-emerald-700 dark:text-[#34D399] font-bold">Kisah Tersalin!</span>
               </>
             ) : (
               <>
-                <Copy className="w-4 h-4 text-[#A6A2B2]" />
+                <Copy className="w-4 h-4 text-slate-500 dark:text-[#A6A2B2]" />
                 <span>Salin Seluruh Kisah</span>
               </>
             )}
@@ -282,10 +282,10 @@ export default function StoryPage() {
             return (
               <div
                 key={player.id}
-                className="p-3.5 rounded-2xl bg-[#14141B] border border-white/[0.08] hover:border-[#D4AF37]/50 transition-all space-y-2 group"
+                className="p-3.5 rounded-2xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] hover:border-[#D4AF37]/60 transition-all space-y-2 group shadow-sm"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="px-2 py-0.5 rounded-md bg-[#1C1C26] border border-white/[0.06] text-[10px] font-mono text-[#D4AF37]">
+                  <span className="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-[#1C1C26] border border-purple-200 dark:border-white/[0.06] text-[10px] font-mono text-amber-700 dark:text-[#D4AF37]">
                     Kursi #{player.seatIndex + 1}
                   </span>
                   <span
@@ -298,15 +298,15 @@ export default function StoryPage() {
                 </div>
 
                 <div>
-                  <div className="text-xs text-[#8E8A9E] font-medium">Nama Pemain:</div>
-                  <div className="font-display text-base font-bold text-[#EDEAF0] truncate group-hover:text-[#D4AF37] transition-colors">
+                  <div className="text-xs text-slate-500 dark:text-[#8E8A9E] font-medium">Nama Pemain:</div>
+                  <div className="font-display text-base font-bold text-slate-900 dark:text-[#EDEAF0] truncate group-hover:text-[#D4AF37] transition-colors">
                     {player.name}
                   </div>
                 </div>
 
-                <div className="pt-1 border-t border-white/[0.06] flex items-center justify-between text-xs">
-                  <span className="text-[#8E8A9E]">Peran Awal:</span>
-                  <span className="font-bold text-[#EDEAF0] font-mono">
+                <div className="pt-1 border-t border-purple-100 dark:border-white/[0.06] flex items-center justify-between text-xs">
+                  <span className="text-slate-500 dark:text-[#8E8A9E]">Peran Awal:</span>
+                  <span className="font-bold text-slate-900 dark:text-[#EDEAF0] font-mono">
                     {role?.name || player.roleId}
                   </span>
                 </div>
@@ -317,10 +317,10 @@ export default function StoryPage() {
 
         {/* Demon Bluff Cards if configured */}
         {demonBluffIds && demonBluffIds.length > 0 && (
-          <div className="p-4 rounded-2xl bg-[#14141B] border border-[#EF4444]/25 space-y-2 mt-2">
+          <div className="p-4 rounded-2xl bg-red-50/60 dark:bg-[#14141B] border border-red-200 dark:border-[#EF4444]/25 space-y-2 mt-2">
             <div className="flex items-center gap-2">
-              <Swords className="w-4 h-4 text-[#EF4444]" />
-              <span className="text-xs font-bold text-[#FCA5A5] uppercase tracking-wider font-mono">
+              <Swords className="w-4 h-4 text-red-600 dark:text-[#EF4444]" />
+              <span className="text-xs font-bold text-red-800 dark:text-[#FCA5A5] uppercase tracking-wider font-mono">
                 Peran Bluff Demon (Tidak Ada di Permainan):
               </span>
             </div>
@@ -330,7 +330,7 @@ export default function StoryPage() {
                 return (
                   <span
                     key={bid}
-                    className="px-3 py-1 rounded-xl bg-[#2A1216] border border-[#EF4444]/40 text-xs font-semibold text-[#FCA5A5]"
+                    className="px-3 py-1 rounded-xl bg-red-100 dark:bg-[#2A1216] border border-red-300 dark:border-[#EF4444]/40 text-xs font-semibold text-red-900 dark:text-[#FCA5A5]"
                   >
                     {r?.name || bid}
                   </span>
@@ -359,7 +359,7 @@ export default function StoryPage() {
               className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-colors ${
                 filterCategory === 'all'
                   ? 'bg-[#D4AF37] text-[#0C0C10] font-bold'
-                  : 'bg-[#1C1C26] text-[#A6A2B2] hover:text-[#EDEAF0]'
+                  : 'bg-purple-50 dark:bg-[#1C1C26] text-purple-900 dark:text-[#A6A2B2] hover:bg-purple-100 dark:hover:text-[#EDEAF0]'
               }`}
             >
               Semua
@@ -370,7 +370,7 @@ export default function StoryPage() {
               className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-colors ${
                 filterCategory === 'deaths'
                   ? 'bg-[#EF4444] text-white font-bold'
-                  : 'bg-[#1C1C26] text-[#A6A2B2] hover:text-[#EDEAF0]'
+                  : 'bg-purple-50 dark:bg-[#1C1C26] text-purple-900 dark:text-[#A6A2B2] hover:bg-purple-100 dark:hover:text-[#EDEAF0]'
               }`}
             >
               Kematian & Bunuh Diri
@@ -381,7 +381,7 @@ export default function StoryPage() {
               className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-colors ${
                 filterCategory === 'execution'
                   ? 'bg-[#F59E0B] text-[#0C0C10] font-bold'
-                  : 'bg-[#1C1C26] text-[#A6A2B2] hover:text-[#EDEAF0]'
+                  : 'bg-purple-50 dark:bg-[#1C1C26] text-purple-900 dark:text-[#A6A2B2] hover:bg-purple-100 dark:hover:text-[#EDEAF0]'
               }`}
             >
               Eksekusi
@@ -392,7 +392,7 @@ export default function StoryPage() {
               className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition-colors ${
                 filterCategory === 'starpass'
                   ? 'bg-[#A855F7] text-white font-bold'
-                  : 'bg-[#1C1C26] text-[#A6A2B2] hover:text-[#EDEAF0]'
+                  : 'bg-purple-50 dark:bg-[#1C1C26] text-purple-900 dark:text-[#A6A2B2] hover:bg-purple-100 dark:hover:text-[#EDEAF0]'
               }`}
             >
               Starpass
@@ -402,9 +402,9 @@ export default function StoryPage() {
 
         {/* Timeline Event Cards */}
         {filteredHistory.length === 0 ? (
-          <div className="py-12 text-center rounded-3xl bg-[#14141B] border border-white/[0.08] p-6 space-y-2">
+          <div className="py-12 text-center rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] p-6 space-y-2">
             <History className="w-8 h-8 mx-auto text-[#4A4756]" />
-            <p className="text-xs text-[#8E8A9E]">
+            <p className="text-xs text-slate-500 dark:text-[#8E8A9E]">
               Tidak ada peristiwa cerita yang sesuai dengan filter yang dipilih.
             </p>
           </div>
@@ -418,10 +418,10 @@ export default function StoryPage() {
                   key={entry.id || idx}
                   className={`p-4 sm:p-5 rounded-2xl border transition-colors space-y-2 ${
                     isStarpass
-                      ? 'bg-[#21162B] border-[#A855F7]/40 shadow-lg shadow-purple-950/20'
+                      ? 'bg-purple-50 dark:bg-[#21162B] border-purple-300 dark:border-[#A855F7]/40 shadow-sm'
                       : entry.category === 'death'
-                      ? 'bg-[#1E1418] border-[#EF4444]/25'
-                      : 'bg-[#14141B] border-white/[0.08]'
+                      ? 'bg-red-50/70 dark:bg-[#1E1418] border-red-200 dark:border-[#EF4444]/25'
+                      : 'bg-white dark:bg-[#14141B] border-purple-200 dark:border-white/[0.08]'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -432,12 +432,12 @@ export default function StoryPage() {
                         {badge.icon}
                         <span>{badge.label}</span>
                       </span>
-                      <span className="font-display text-xs sm:text-sm font-bold text-[#D4AF37]">
+                      <span className="font-display text-xs sm:text-sm font-bold text-amber-700 dark:text-[#D4AF37]">
                         {entry.round}
                       </span>
                     </div>
 
-                    <span className="text-[10px] text-[#716D80] font-mono">
+                    <span className="text-[10px] text-slate-500 dark:text-[#716D80] font-mono">
                       {new Date(entry.timestamp).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit',
@@ -446,7 +446,7 @@ export default function StoryPage() {
                     </span>
                   </div>
 
-                  <p className="text-xs sm:text-sm text-[#EDEAF0] leading-relaxed font-sans">
+                  <p className="text-xs sm:text-sm text-slate-800 dark:text-[#EDEAF0] leading-relaxed font-sans">
                     {entry.text}
                   </p>
                 </div>

@@ -8,65 +8,219 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
-/* Light Mode: Pastel Mint Green & Lavender Purple theme requested by user */
+/* ========================================================
+   LIGHT MODE: 100% COMPREHENSIVE PASTEL GREEN & SOFT PURPLE
+   Designed for maximum legibility, zero clashing colors.
+   ======================================================== */
+
 html.light body {
-  background-color: #F1F7F3 !important;
+  background-color: #F1F8F4 !important;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(209, 250, 229, 0.7) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(237, 233, 254, 0.8) 0px, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(243, 232, 255, 0.4) 0px, transparent 50%) !important;
+    radial-gradient(at 0% 0%, rgba(209, 250, 229, 0.8) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(237, 233, 254, 0.9) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(243, 232, 255, 0.5) 0px, transparent 55%) !important;
   background-attachment: fixed !important;
   color: #1E1B4B !important;
 }
 
+/* Header & Navbar in Light Mode */
 html.light header {
-  background-color: rgba(255, 255, 255, 0.94) !important;
-  border-bottom-color: rgba(139, 92, 246, 0.15) !important;
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.18) !important;
+  box-shadow: 0 2px 12px rgba(139, 92, 246, 0.05) !important;
 }
 
+/* All Outer Containers & Cards */
 html.light .bg-\[\#0C0C10\] {
-  background-color: #F1F7F3 !important;
+  background-color: #F1F8F4 !important;
 }
 
-html.light .bg-\[\#14141B\] {
+html.light .bg-\[\#14141B\],
+html.light .bg-\[\#181822\],
+html.light .bg-\[\#181520\] {
   background-color: #FFFFFF !important;
-  border-color: rgba(139, 92, 246, 0.15) !important;
-  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.05);
-}
-
-html.light .bg-\[\#181822\] {
-  background-color: #FDFBFF !important;
-  border-color: rgba(139, 92, 246, 0.12) !important;
+  border-color: rgba(139, 92, 246, 0.16) !important;
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.06) !important;
 }
 
 html.light .bg-\[\#1C1C26\] {
-  background-color: #F7F5FC !important;
-  border-color: rgba(16, 185, 129, 0.18) !important;
+  background-color: #FAF8FE !important;
+  border-color: rgba(16, 185, 129, 0.2) !important;
 }
 
+/* Inner Sections, Bars & Strips */
+html.light .bg-\[\#221E2E\],
+html.light .bg-\[\#2E293E\],
+html.light .bg-\[\#251F33\],
+html.light .bg-\[\#2A2636\],
+html.light .bg-\[\#2C263B\],
+html.light .bg-\[\#3C3450\] {
+  background-color: #F5F2FC !important;
+  border-color: rgba(139, 92, 246, 0.18) !important;
+  color: #1E1B4B !important;
+}
+
+/* Secondary Button Backgrounds in Light Mode */
+html.light .bg-\[\#1E1E28\],
+html.light .bg-\[\#282838\] {
+  background-color: #EDE9FE !important;
+  color: #5B21B6 !important;
+  border-color: rgba(139, 92, 246, 0.3) !important;
+}
+
+html.light .bg-\[\#1E1E28\]:hover,
+html.light .bg-\[\#282838\]:hover {
+  background-color: #DDD6FE !important;
+  color: #4C1D95 !important;
+}
+
+/* Quick Pills & Badges */
 html.light .bg-\[\#222230\] {
   background-color: #EDE9FE !important;
+  color: #5B21B6 !important;
+  border-color: rgba(139, 92, 246, 0.25) !important;
+}
+
+html.light .bg-\[\#222230\]:hover {
+  background-color: #DDD6FE !important;
   color: #4C1D95 !important;
 }
 
 html.light .bg-\[\#252533\] {
   background-color: #E0E7FF !important;
   color: #3730A3 !important;
+  border-color: rgba(99, 102, 241, 0.25) !important;
 }
 
-html.light .text-\[\#EDEAF0\] {
+/* ========================================================
+   GRIMOIRE CIRCLE TABLE: LIGHT PARCHMENT / STONE ARENA
+   ======================================================== */
+html.light [data-testid="grimoire-circle"] {
+  background: radial-gradient(circle at 50% 50%, #FCFBF9 0%, #F5F0E8 55%, #E9E1D4 100%) !important;
+  border: 3px solid #D4AF37 !important;
+  box-shadow: 0 12px 40px rgba(180, 140, 60, 0.16), inset 0 0 60px rgba(215, 200, 175, 0.35) !important;
+}
+
+/* Inner dashed compass guide in circular table */
+html.light [data-testid="grimoire-circle"] .border-dashed {
+  border-color: rgba(212, 175, 55, 0.5) !important;
+}
+
+/* Center Clocktower Hub inside circle */
+html.light [data-testid="grimoire-circle"] .rounded-full.border-2 {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  border-color: #D4AF37 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+}
+
+html.light [data-testid="grimoire-circle"] .text-\[\#EDEAF0\] {
+  color: #1E1B4B !important;
+}
+
+/* Player Seat Labels in Circle */
+html.light [data-testid="grimoire-circle"] .font-display {
+  color: #1E1B4B !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Seat index badge in circle */
+html.light [data-testid="grimoire-circle"] .bg-\[\#0C0C10\]\/90 {
+  background-color: #FFFFFF !important;
+  border: 1px solid #D4AF37 !important;
+  color: #B45309 !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12) !important;
+}
+
+/* ========================================================
+   INSPECTOR PANEL & BUTTON CONTRAST IN LIGHT MODE
+   ======================================================== */
+html.light .bg-\[\#3D2008\],
+html.light .bg-\[\#2D1B08\],
+html.light .bg-\[\#3D250C\],
+html.light .bg-\[\#291B06\] {
+  background-color: #FEF3C7 !important;
+  border-color: #F59E0B !important;
+  color: #92400E !important;
+}
+
+/* Demon Kill Button */
+html.light .bg-\[\#EF4444\]\/20,
+html.light .bg-\[\#35070A\] {
+  background-color: #FEE2E2 !important;
+  border-color: #F87171 !important;
+  color: #991B1B !important;
+}
+html.light .bg-\[\#EF4444\]\/20:hover {
+  background-color: #FECACA !important;
+}
+
+/* Execution Button */
+html.light .bg-\[\#991B1B\] {
+  background-color: #DC2626 !important;
+  color: #FFFFFF !important;
+}
+
+/* Alive / Health Badges */
+html.light .bg-\[\#142A20\] {
+  background-color: #D1FAE5 !important;
+  border-color: #10B981 !important;
+  color: #065F46 !important;
+}
+
+/* Character Ability Box in Inspector */
+html.light .bg-\[\#14111B\],
+html.light .bg-\[\#1A1724\] {
+  background-color: #F6F3FC !important;
+  border-color: rgba(139, 92, 246, 0.2) !important;
+  color: #2E1065 !important;
+}
+
+/* Reminder Tokens Tray */
+html.light .bg-\[\#100E17\] {
+  background-color: #F5F2FB !important;
+  border-color: rgba(139, 92, 246, 0.15) !important;
+}
+
+/* Typography Overrides */
+html.light .text-\[\#EDEAF0\],
+html.light .text-\[\#F5EFE6\],
+html.light .text-\[\#EDE7DB\] {
   color: #1E1B4B !important;
 }
 
 html.light .text-\[\#8E8A9E\],
 html.light .text-\[\#A6A2B2\],
-html.light .text-\[\#716D80\] {
-  color: #524A60 !important;
+html.light .text-\[\#716D80\],
+html.light .text-\[\#C8C0B3\],
+html.light .text-\[\#B8B0A2\] {
+  color: #4B5563 !important;
 }
 
+/* Borders */
 html.light .border-white\/\[0\.08\],
 html.light .border-white\/\[0\.06\],
 html.light .border-white\/\[0\.1\],
-html.light .border-white\/\[0\.12\] {
-  border-color: rgba(139, 92, 246, 0.15) !important;
+html.light .border-white\/\[0\.12\],
+html.light .border-\[\#2A2636\],
+html.light .border-\[\#363049\],
+html.light .border-\[\#2C263B\],
+html.light .border-\[\#3A334C\] {
+  border-color: rgba(139, 92, 246, 0.18) !important;
+}
+
+/* Dashboard Action Buttons Override */
+html.light .dashboard-action-btn {
+  background-color: #EDE9FE !important;
+  color: #5B21B6 !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+}
+html.light .dashboard-action-btn:hover {
+  background-color: #DDD6FE !important;
+  color: #4C1D95 !important;
+}
+
+/* Modals Overlay */
+html.light .fixed.bg-black\/80 {
+  background-color: rgba(15, 23, 42, 0.5) !important;
 }

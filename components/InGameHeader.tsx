@@ -45,7 +45,7 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
   return (
     <div className="space-y-4 mb-6">
       {/* ================= IN-GAME SUB-NAVIGATION TABS ================= */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 p-2 bg-[#14141B] border border-white/[0.08] rounded-2xl shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 p-2 bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] rounded-2xl shadow-sm">
         <nav aria-label="Menu Sesi Storyteller" className="flex flex-wrap items-center gap-1.5">
           {tabs.map((tab) => {
             const isActive = currentTab ? currentTab === tab.id : pathname === tab.href;
@@ -56,7 +56,7 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
                 className={`min-h-[38px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap ${
                   isActive
                     ? 'bg-[#991B1B] text-white shadow-md'
-                    : 'bg-[#1C1C26] hover:bg-[#252533] text-[#A6A2B2] hover:text-[#EDEAF0]'
+                    : 'bg-purple-50 dark:bg-[#1C1C26] hover:bg-purple-100 dark:hover:bg-[#252533] text-purple-900 dark:text-[#A6A2B2] hover:text-purple-950 dark:hover:text-[#EDEAF0]'
                 }`}
               >
                 <tab.icon
@@ -81,7 +81,7 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
           <button
             type="button"
             onClick={() => setIsStoryModalOpen(true)}
-            className="min-h-[38px] px-3 py-2 rounded-xl text-xs font-semibold bg-[#1C1C26] hover:bg-[#252533] text-[#EDEAF0] border border-white/[0.06] hover:border-[#D4AF37]/50 flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
+            className="min-h-[38px] px-3 py-2 rounded-xl text-xs font-semibold bg-purple-50 dark:bg-[#1C1C26] hover:bg-purple-100 dark:hover:bg-[#252533] text-purple-900 dark:text-[#EDEAF0] border border-purple-200 dark:border-white/[0.06] hover:border-[#D4AF37]/50 flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
             title="Buka Catatan Riwayat Cerita Permainan"
           >
             <History className="w-4 h-4 text-[#D4AF37]" />
@@ -96,7 +96,7 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
           <button
             type="button"
             onClick={() => setIsRefModalOpen(true)}
-            className="min-h-[38px] px-3 py-2 rounded-xl text-xs font-semibold bg-[#1C1C26] hover:bg-[#252533] text-[#A6A2B2] hover:text-[#EDEAF0] border border-white/[0.06] flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
+            className="min-h-[38px] px-3 py-2 rounded-xl text-xs font-semibold bg-purple-50 dark:bg-[#1C1C26] hover:bg-purple-100 dark:hover:bg-[#252533] text-purple-900 dark:text-[#A6A2B2] hover:text-purple-950 dark:hover:text-[#EDEAF0] border border-purple-200 dark:border-white/[0.06] flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
             title="Buka Panduan Skrip Trouble Brewing"
           >
             <BookMarked className="w-4 h-4 text-[#D4AF37]" />
@@ -171,14 +171,14 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
           )}
 
           {/* Quick Manual Phase Selector (Zero confirm dialogs) */}
-          <div className="flex items-center gap-1 p-1 bg-[#0C0C10] border border-white/[0.08] rounded-xl text-xs font-semibold">
+          <div className="flex items-center gap-1 p-1 bg-purple-100 dark:bg-[#0C0C10] border border-purple-200 dark:border-white/[0.08] rounded-xl text-xs font-semibold">
             <button
               type="button"
               onClick={() => setPhase('first_night')}
               className={`px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors ${
                 phase === 'first_night'
                   ? 'bg-[#991B1B] text-white font-bold'
-                  : 'text-[#8E8A9E] hover:text-[#EDEAF0]'
+                  : 'text-slate-600 dark:text-[#8E8A9E] hover:text-purple-900 dark:hover:text-[#EDEAF0]'
               }`}
             >
               M1
@@ -189,7 +189,7 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
               className={`px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors ${
                 phase === 'day'
                   ? 'bg-[#D4AF37] text-[#0C0C10] font-bold'
-                  : 'text-[#8E8A9E] hover:text-[#EDEAF0]'
+                  : 'text-slate-600 dark:text-[#8E8A9E] hover:text-purple-900 dark:hover:text-[#EDEAF0]'
               }`}
             >
               Siang
@@ -200,7 +200,7 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
               className={`px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors ${
                 phase === 'other_night'
                   ? 'bg-[#991B1B] text-white font-bold'
-                  : 'text-[#8E8A9E] hover:text-[#EDEAF0]'
+                  : 'text-slate-600 dark:text-[#8E8A9E] hover:text-purple-900 dark:hover:text-[#EDEAF0]'
               }`}
             >
               Malam

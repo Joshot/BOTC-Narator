@@ -217,16 +217,16 @@ export default function GrimoireBoard({
       )}
 
       {/* Top Toolbar above Grimoire */}
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-[#181520] border border-[#2A2636] rounded-2xl px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2 text-xs text-[#C8C0B3]">
-          <span className="font-semibold text-[#F5EFE6]">{phaseLabel}</span>
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-white dark:bg-[#181520] border border-purple-200 dark:border-[#2A2636] rounded-2xl px-4 py-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700 dark:text-[#C8C0B3]">
+          <span className="font-semibold text-slate-900 dark:text-[#F5EFE6]">{phaseLabel}</span>
           <span aria-hidden="true">·</span>
           <span className="font-mono tabular-nums">
-            Hidup: <strong className="text-[#6EE7B7]">{voteStats.aliveCount}</strong>/{voteStats.totalPlayers}
+            Hidup: <strong className="text-emerald-700 dark:text-[#6EE7B7]">{voteStats.aliveCount}</strong>/{voteStats.totalPlayers}
           </span>
           <span aria-hidden="true">·</span>
           <span className="font-mono tabular-nums">
-            Ambang Eksekusi: <strong className="text-[#FDE68A]">{voteStats.votesNeeded} suara</strong>
+            Ambang Eksekusi: <strong className="text-amber-700 dark:text-[#FDE68A]">{voteStats.votesNeeded} suara</strong>
           </span>
           <span aria-hidden="true">·</span>
           <span className="font-mono tabular-nums">
@@ -240,9 +240,9 @@ export default function GrimoireBoard({
             <button
               type="button"
               onClick={() => setIsDrunkModalOpen(true)}
-              className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-[#2D1B08] hover:bg-[#3D250C] border border-[#F59E0B] text-[#FDE68A] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md transition-colors whitespace-nowrap"
+              className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-amber-100 dark:bg-[#2D1B08] hover:bg-amber-200 dark:hover:bg-[#3D250C] border border-amber-400 dark:border-[#F59E0B] text-amber-900 dark:text-[#FDE68A] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors whitespace-nowrap"
             >
-              <Beer className="w-4 h-4 text-[#F59E0B]" />
+              <Beer className="w-4 h-4 text-amber-600 dark:text-[#F59E0B]" />
               <span>
                 {currentDrunkPlayer ? `Drunk: ${currentDrunkPlayer.name}` : 'Tentukan Drunk'}
               </span>
@@ -252,7 +252,7 @@ export default function GrimoireBoard({
           <button
             type="button"
             onClick={() => setDisplayMode((prev) => (prev === 'circle' ? 'cards' : 'circle'))}
-            className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-[#1E1E28] hover:bg-[#282838] border border-white/[0.1] text-xs font-semibold text-[#EDEAF0] flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm whitespace-nowrap"
+            className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-purple-50 dark:bg-[#1E1E28] hover:bg-purple-100 dark:hover:bg-[#282838] border border-purple-200 dark:border-white/[0.1] text-xs font-semibold text-purple-900 dark:text-[#EDEAF0] flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm whitespace-nowrap"
           >
             {displayMode === 'circle' ? (
               <>
@@ -273,7 +273,7 @@ export default function GrimoireBoard({
               setPeekPlayerIndex(selectedPlayer ? selectedPlayer.seatIndex : 0);
               setIsPeekModalOpen(true);
             }}
-            className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F59E0B] hover:brightness-110 text-[#121016] text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-md transition-all whitespace-nowrap"
+            className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F59E0B] hover:brightness-105 text-[#121016] text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-md transition-all whitespace-nowrap"
           >
             <Eye className="w-4 h-4" />
             <span>Intip Kartu Pemain</span>
@@ -295,7 +295,7 @@ export default function GrimoireBoard({
             className={`min-h-[40px] px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap ${
               isSwapModeActive
                 ? 'bg-[#D4AF37] text-[#121016] border-[#D4AF37]'
-                : 'bg-[#221E2E] hover:bg-[#2E293E] text-[#EDE7DB] border-[#363049]'
+                : 'bg-purple-50 dark:bg-[#221E2E] hover:bg-purple-100 dark:hover:bg-[#2E293E] text-purple-900 dark:text-[#EDE7DB] border-purple-200 dark:border-[#363049]'
             }`}
           >
             <ArrowLeftRight className="w-3.5 h-3.5" />
@@ -309,7 +309,7 @@ export default function GrimoireBoard({
             className={`min-h-[40px] px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap ${
               spyCleanMode
                 ? 'bg-[#991B1B] text-white border-[#EF4444]'
-                : 'bg-[#221E2E] hover:bg-[#2E293E] text-[#EDE7DB] border-[#363049]'
+                : 'bg-purple-50 dark:bg-[#221E2E] hover:bg-purple-100 dark:hover:bg-[#2E293E] text-purple-900 dark:text-[#EDE7DB] border-purple-200 dark:border-[#363049]'
             }`}
           >
             {spyCleanMode ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -595,10 +595,10 @@ export default function GrimoireBoard({
                           {/* Player Name */}
                           <div className="flex flex-col items-center gap-1 mt-1.5">
                             <span
-                              className={`px-2.5 py-0.5 rounded-lg text-[10px] sm:text-xs font-black tracking-wide max-w-[90px] sm:max-w-[120px] truncate text-center shadow-lg border leading-tight ${
+                              className={`px-2.5 py-0.5 rounded-lg text-[10px] sm:text-xs font-black tracking-wide max-w-[90px] sm:max-w-[120px] truncate text-center shadow-md border leading-tight ${
                                 player.isAlive
-                                  ? 'bg-[#14141B]/95 text-white border-white/[0.1]'
-                                  : 'bg-[#0C0C10]/95 text-[#8E8A9E] border-white/[0.06] line-through'
+                                  ? 'bg-white dark:bg-[#14141B]/95 text-slate-900 dark:text-white border-purple-300 dark:border-white/[0.1]'
+                                  : 'bg-slate-100 dark:bg-[#0C0C10]/95 text-slate-500 dark:text-[#8E8A9E] border-slate-300 dark:border-white/[0.06] line-through'
                               }`}
                             >
                               {player.name}
@@ -817,11 +817,11 @@ export default function GrimoireBoard({
                 </div>
 
                 {/* Role Ability Box */}
-                <div className="p-3.5 rounded-xl bg-[#120F1A] border border-[#2B253D] space-y-1">
-                  <div className="text-[11px] font-bold text-[#A8A092] uppercase tracking-wider">
+                <div className="p-3.5 rounded-xl bg-purple-50/70 dark:bg-[#120F1A] border border-purple-200/80 dark:border-[#2B253D] space-y-1">
+                  <div className="text-[11px] font-bold text-slate-600 dark:text-[#A8A092] uppercase tracking-wider">
                     Kemampuan Karakter:
                   </div>
-                  <p className="text-xs sm:text-sm text-[#F5EFE6] leading-relaxed">
+                  <p className="text-xs sm:text-sm text-slate-800 dark:text-[#F5EFE6] leading-relaxed">
                     {ROLE_MAP[selectedPlayer.trueRoleId]?.ability}
                   </p>
                 </div>
@@ -833,18 +833,18 @@ export default function GrimoireBoard({
                     setPeekPlayerIndex(selectedPlayer.seatIndex);
                     setIsPeekModalOpen(true);
                   }}
-                  className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37]/25 to-[#F59E0B]/25 hover:from-[#D4AF37]/35 hover:to-[#F59E0B]/35 border border-[#D4AF37]/70 text-xs sm:text-sm font-bold text-[#FDE68A] flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-sm"
+                  className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-amber-100 hover:bg-amber-200 dark:bg-gradient-to-r dark:from-[#D4AF37]/25 dark:to-[#F59E0B]/25 dark:hover:from-[#D4AF37]/35 dark:hover:to-[#F59E0B]/35 border border-amber-400 dark:border-[#D4AF37]/70 text-xs sm:text-sm font-bold text-amber-950 dark:text-[#FDE68A] flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-sm"
                 >
-                  <Eye className="w-4 h-4 text-[#D4AF37]" />
+                  <Eye className="w-4 h-4 text-amber-700 dark:text-[#D4AF37]" />
                   <span>Intip Kartu Rahasia {selectedPlayer.name}</span>
                 </button>
 
                 {/* Drunk Alert Banner in Inspector */}
                 {selectedPlayer.trueRoleId === 'drunk' && (
-                  <div className="p-3 rounded-xl bg-[#281C10] border border-[#D97706]/70 text-xs text-[#FDE68A] flex items-start gap-2.5">
-                    <Beer className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5" />
+                  <div className="p-3 rounded-xl bg-amber-50 dark:bg-[#281C10] border border-amber-300 dark:border-[#D97706]/70 text-xs text-amber-950 dark:text-[#FDE68A] flex items-start gap-2.5">
+                    <Beer className="w-4 h-4 text-amber-600 dark:text-[#F59E0B] shrink-0 mt-0.5" />
                     <div>
-                      <strong className="block text-[#FDE68A]">Pemain Ini Adalah THE DRUNK!</strong>
+                      <strong className="block text-amber-900 dark:text-[#FDE68A]">Pemain Ini Adalah THE DRUNK!</strong>
                       <span className="leading-relaxed">
                         Pemain mengira dirinya adalah <strong>{ROLE_MAP[selectedPlayer.perceivedRoleId]?.name}</strong>. Kemampuannya tidak berfungsi nyata atau berikan info palsu.
                       </span>
@@ -859,18 +859,18 @@ export default function GrimoireBoard({
                       <button
                         type="button"
                         onClick={() => handleSafeKill(selectedPlayer.id, 'demon')}
-                        className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-[#2C1619] hover:bg-[#3D1E22] border border-[#EF4444]/60 text-[#FECACA]"
+                        className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-red-50 hover:bg-red-100 dark:bg-[#2C1619] dark:hover:bg-[#3D1E22] border border-red-300 dark:border-[#EF4444]/60 text-red-700 dark:text-[#FECACA]"
                       >
-                        <Swords className="w-4 h-4 text-[#F87171] shrink-0" />
+                        <Swords className="w-4 h-4 text-red-600 dark:text-[#F87171] shrink-0" />
                         <span>Mati Dibunuh Demon</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => handleSafeKill(selectedPlayer.id, 'execution')}
-                        className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-[#2B2011] hover:bg-[#3A2C18] border border-[#F59E0B]/60 text-[#FDE68A]"
+                        className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-amber-50 hover:bg-amber-100 dark:bg-[#2B2011] dark:hover:bg-[#3A2C18] border border-amber-300 dark:border-[#F59E0B]/60 text-amber-800 dark:text-[#FDE68A]"
                       >
-                        <Gavel className="w-4 h-4 text-[#F59E0B] shrink-0" />
+                        <Gavel className="w-4 h-4 text-amber-600 dark:text-[#F59E0B] shrink-0" />
                         <span>Mati Digantung</span>
                       </button>
                     </>
@@ -879,9 +879,9 @@ export default function GrimoireBoard({
                       <button
                         type="button"
                         onClick={() => handleSafeResurrect(selectedPlayer.id)}
-                        className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-[#142922] hover:bg-[#1B382E] border border-[#10B981]/50 text-[#A7F3D0]"
+                        className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-emerald-50 hover:bg-emerald-100 dark:bg-[#142922] dark:hover:bg-[#1B382E] border border-emerald-300 dark:border-[#10B981]/50 text-emerald-800 dark:text-[#A7F3D0]"
                       >
-                        <HeartPulse className="w-4 h-4 text-[#34D399] shrink-0" />
+                        <HeartPulse className="w-4 h-4 text-emerald-600 dark:text-[#34D399] shrink-0" />
                         <span>Hidupkan Kembali</span>
                       </button>
 
@@ -896,16 +896,16 @@ export default function GrimoireBoard({
                             onToggleAlive(selectedPlayer.id, nextCause);
                           }
                         }}
-                        className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-[#231F30] hover:bg-[#2F2A40] border border-[#38324C] text-[#EDE7DB]"
+                        className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-purple-50 hover:bg-purple-100 dark:bg-[#231F30] dark:hover:bg-[#2F2A40] border border-purple-200 dark:border-[#38324C] text-purple-900 dark:text-[#EDE7DB]"
                       >
                         {selectedPlayer.deathCause === 'demon' ? (
                           <>
-                            <Gavel className="w-4 h-4 text-[#F59E0B] shrink-0" />
+                            <Gavel className="w-4 h-4 text-amber-600 dark:text-[#F59E0B] shrink-0" />
                             <span>Ubah: Digantung</span>
                           </>
                         ) : (
                           <>
-                            <Swords className="w-4 h-4 text-[#F87171] shrink-0" />
+                            <Swords className="w-4 h-4 text-red-600 dark:text-[#F87171] shrink-0" />
                             <span>Ubah: Dibunuh Demon</span>
                           </>
                         )}

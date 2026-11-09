@@ -144,26 +144,26 @@ export default function DashboardView({
             </div>
 
             {/* Quick Action Navigation Links */}
-            <div className="flex flex-wrap items-center gap-2.5 pt-6 mt-4 border-t border-black/[0.08]">
+            <div className="flex flex-wrap items-center gap-2.5 pt-6 mt-4 border-t border-black/[0.08] dark:border-white/[0.08]">
               <Link
                 href="/grimoire"
-                className="px-5 py-2.5 rounded-full bg-[#0C0C10] hover:bg-[#1E1E28] text-[#EDEAF0] text-xs font-bold flex items-center gap-2 transition-colors shadow-md"
+                className="px-5 py-2.5 rounded-full bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] text-xs font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md"
               >
-                <Compass className="w-4 h-4 text-[#D4AF37]" />
+                <Compass className="w-4 h-4 fill-current" />
                 <span>Buka Grimoire</span>
               </Link>
               <Link
                 href="/narrator"
-                className="px-4 py-2.5 rounded-full bg-black/[0.06] hover:bg-black/[0.1] text-[#0C0C10] text-xs font-bold flex items-center gap-2 transition-colors"
+                className="px-4 py-2.5 rounded-full bg-[#EDE9FE] dark:bg-[#1E1E28] hover:bg-[#DDD6FE] dark:hover:bg-[#282838] text-[#5B21B6] dark:text-[#EDEAF0] border border-[#C4B5FD] dark:border-white/[0.1] text-xs font-bold flex items-center gap-2 transition-colors shadow-sm"
               >
-                <Moon className="w-4 h-4 text-[#1E3A8A]" />
+                <Moon className="w-4 h-4 text-[#7C3AED] dark:text-[#93C5FD]" />
                 <span>Urutan Narator</span>
               </Link>
               <Link
                 href="/evil"
-                className="px-4 py-2.5 rounded-full bg-black/[0.06] hover:bg-black/[0.1] text-[#0C0C10] text-xs font-bold flex items-center gap-2 transition-colors"
+                className="px-4 py-2.5 rounded-full bg-[#FEE2E2] dark:bg-[#2A1216] hover:bg-[#FECACA] dark:hover:bg-[#3D1A1E] text-[#991B1B] dark:text-[#FCA5A5] border border-[#F87171]/40 dark:border-[#EF4444]/30 text-xs font-bold flex items-center gap-2 transition-colors shadow-sm"
               >
-                <Swords className="w-4 h-4 text-[#A83232]" />
+                <Swords className="w-4 h-4 text-[#EF4444]" />
                 <span>Tim Evil & Bluff</span>
               </Link>
             </div>
@@ -185,7 +185,7 @@ export default function DashboardView({
 
             <Link
               href="/webplay"
-              className="w-full py-3 px-4 rounded-full bg-[#1E1E28] hover:bg-[#282838] border border-white/[0.1] text-xs font-bold text-[#EDEAF0] flex items-center justify-between transition-colors shadow-sm"
+              className="w-full py-3 px-4 rounded-full bg-[#EDE9FE] dark:bg-[#1E1E28] hover:bg-[#DDD6FE] dark:hover:bg-[#282838] border border-[#C4B5FD] dark:border-white/[0.1] text-xs font-bold text-[#5B21B6] dark:text-[#EDEAF0] flex items-center justify-between transition-colors shadow-sm"
             >
               <span className="flex items-center gap-2">
                 <Coins className="w-4 h-4 text-[#D4AF37]" />
@@ -217,7 +217,7 @@ export default function DashboardView({
 
           <Link
             href="/setup"
-            className="w-full py-3 px-5 rounded-full bg-[#1E1E28] hover:bg-[#282838] border border-white/[0.1] text-xs font-bold text-[#EDEAF0] flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            className="w-full py-3 px-5 rounded-full bg-[#EDE9FE] dark:bg-[#1E1E28] hover:bg-[#DDD6FE] dark:hover:bg-[#282838] border border-[#C4B5FD] dark:border-white/[0.1] text-xs font-bold text-[#5B21B6] dark:text-[#EDEAF0] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm"
           >
             <Play className="w-3.5 h-3.5 text-[#D4AF37] fill-current" />
             <span>Mulai Wizard Setup</span>
@@ -242,7 +242,7 @@ export default function DashboardView({
 
           <Link
             href="/webplay"
-            className="w-full py-3 px-5 rounded-full bg-[#1E1E28] hover:bg-[#282838] border border-white/[0.1] text-xs font-bold text-[#EDEAF0] flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            className="w-full py-3 px-5 rounded-full bg-[#EDE9FE] dark:bg-[#1E1E28] hover:bg-[#DDD6FE] dark:hover:bg-[#282838] border border-[#C4B5FD] dark:border-white/[0.1] text-xs font-bold text-[#5B21B6] dark:text-[#EDEAF0] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm"
           >
             <Coins className="w-3.5 h-3.5 text-[#D4AF37]" />
             <span>Buka Mode Roll Koin</span>
@@ -268,9 +268,9 @@ export default function DashboardView({
           <button
             type="button"
             onClick={onQuickStartDemo}
-            className="w-full py-3 px-5 rounded-full bg-[#0C0C10] hover:bg-[#1E1E28] border border-white/[0.1] text-xs font-bold text-[#EDEAF0] flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            className="w-full py-3 px-5 rounded-full bg-[#D1FAE5] dark:bg-[#0C0C10] hover:bg-[#A7F3D0] dark:hover:bg-[#1E1E28] border border-[#10B981]/40 dark:border-white/[0.1] text-xs font-bold text-[#065F46] dark:text-[#EDEAF0] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#34D399]" />
+            <Sparkles className="w-3.5 h-3.5 text-[#059669] dark:text-[#34D399]" />
             <span>Mulai Demo 8 Pemain</span>
           </button>
         </div>
