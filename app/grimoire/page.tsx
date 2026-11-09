@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Compass, Sparkles, Wrench } from 'lucide-react';
 import { useGameSession } from '@/context/GameContext';
 import GrimoireBoard from '@/components/GrimoireBoard';
+import InGameHeader from '@/components/InGameHeader';
 
 export default function GrimoirePage() {
   const {
@@ -68,6 +69,7 @@ export default function GrimoirePage() {
 
   return (
     <div className="space-y-6 py-2">
+      <InGameHeader currentTab="grimoire" />
       <GrimoireBoard
         players={players}
         phase={phase}

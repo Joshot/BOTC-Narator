@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Swords, Wrench } from 'lucide-react';
 import { useGameSession } from '@/context/GameContext';
 import EvilAndBluffsView from '@/components/EvilAndBluffsView';
+import InGameHeader from '@/components/InGameHeader';
 
 export default function EvilPage() {
   const {
@@ -44,7 +45,8 @@ export default function EvilPage() {
   }
 
   return (
-    <div className="py-2">
+    <div className="py-2 space-y-6">
+      <InGameHeader currentTab="evil" />
       <EvilAndBluffsView
         players={players}
         drunkFakeRoleId={drunkFakeRoleId}

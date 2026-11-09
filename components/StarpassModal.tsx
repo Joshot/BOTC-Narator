@@ -1,0 +1,107 @@
+'use client';
+
+import React from 'react';
+import { Crown, RefreshCw, Skull, Swords, X } from 'lucide-react';
+import { ROLE_MAP } from '@/lib/botc-data';
+import { StarpassPendingData } from '@/context/GameContext';
+
+interface StarpassModalProps {
+  pendingData: StarpassPendingData | null;
+  onChooseMinion: (minionId: string) => void;
+  onDismiss: () => void;
+}
+
+export default function StarpassModal({
+  pendingData,
+  onChooseMinion,
+  onDismiss,
+}: StarpassModalProps) {
+  if (!pendingData) return null;
+
+  const { dyingDemon, aliveMinions } = pendingData;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg rounded-3xl bg-[#14141B] border-2 border-[#EF4444]/60 p-6 shadow-2xl shadow-red-950/40 space-y-6">
+        {/* Close Button */}
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="absolute top-4 right-4 p-2 rounded-xl text-[#8E8A9E] hover:text-[#EDEAF0] hover:bg-white/[0.06] transition-colors cursor-pointer"
+          aria-label="Tutup Pilihan Starpass"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Header */}
+        <div className="flex items-start gap-4">
+          <div className="p-3 rounded-2xl bg-[#2A1216] border border-[#EF4444]/40 text-[#EF4444] shrink-0">
+            <RefreshCw className="w-6 h-6 animate-spin" style={{ animationDuration: '6s' }} />
+          </div>
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#EF4444]/20 border border-[#EF4444]/40 text-[10px] font-mono uppercase tracking-wider text-[#FCA5A5]">
+              Aturan Trouble Brewing: Starpass
+            </div>
+            <h3 className="font-display text-xl font-bold text-[#EDEAF0]">
+              Pilih Minion Menjadi Imp Baru
+            </h3>
+            <p className="text-xs text-[#A6A2B2] leading-relaxed">
+              Demon <strong className="text-white">{dyingDemon.name}</strong> (Kursi {dyingDemon.seatIndex + 1}) bunuh diri atau mati akibat serangan sesama Demon. Karena terdapat lebih dari 1 Minion hidup, pilih Minion yang mewarisi gelar IMP:
+            </p>
+          </div>
+        </div>
+
+        {/* Minion Candidate List */}
+        <div className="space-y-3">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#8E8A9E] px-1">
+            Daftar Minion Hidup ({aliveMinions.length})
+          </div>
+          <div className="grid grid-cols-1 gap-2.5 max-h-64 overflow-y-auto pr-1">
+            {aliveMinions.map((minion) => {
+              const role = ROLE_MAP[minion.trueRoleId];
+              return (
+                <div
+                  key={minion.id}
+                  className="p-3.5 rounded-2xl bg-[#1C1C26] border border-white/[0.08] hover:border-[#EF4444]/60 transition-all flex items-center justify-between gap-3 group"
+                >
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-md bg-[#252533] border border-white/[0.06] font-mono text-[10px] text-[#D4AF37]">
+                        Kursi #{minion.seatIndex + 1}
+                      </span>
+                      <span className="text-xs text-[#8E8A9E] font-medium">
+                        Peran Asal: {role?.name || minion.trueRoleId}
+                      </span>
+                    </div>
+                    {/* Player Name Displayed Prominently */}
+                    <div className="font-display text-base font-bold text-[#EDEAF0] group-hover:text-[#FCA5A5] transition-colors truncate">
+                      {minion.name}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onChooseMinion(minion.id)}
+                    className="px-4 py-2 rounded-xl bg-[#DC2626] hover:bg-[#EF4444] text-white text-xs font-bold flex items-center gap-1.5 shrink-0 transition-transform active:scale-95 shadow-md cursor-pointer"
+                  >
+                    <Crown className="w-3.5 h-3.5 text-[#FDE68A]" />
+                    <span>Jadikan Imp</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Footer Notes */}
+        <div className="p-3 rounded-2xl bg-[#0C0C10] border border-white/[0.06] text-[11px] text-[#8E8A9E] flex items-center gap-2">
+          <Swords className="w-4 h-4 text-[#EF4444] shrink-0" />
+          <span>
+            Begitu dipilih, peran Minion bersangkutan langsung berganti menjadi IMP dan token pengingat diperbarui otomatis.
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+

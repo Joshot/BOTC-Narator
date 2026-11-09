@@ -8,6 +8,7 @@ import {
   Check,
   ChevronDown,
   Compass,
+  Home,
   LayoutDashboard,
   Moon,
   Plus,
@@ -20,6 +21,8 @@ import {
 import { useGameSession, MAX_ROOMS } from '@/context/GameContext';
 import FullscreenCardModal from './FullscreenCardModal';
 import ReferenceSheetModal from './ReferenceSheetModal';
+import StarpassModal from './StarpassModal';
+import StoryRecapModal from './StoryRecapModal';
 
 export default function NavigationShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -35,8 +38,15 @@ export default function NavigationShell({ children }: { children: React.ReactNod
     gameAlertBanner,
     silentCard,
     isRefModalOpen,
+    isStoryModalOpen,
+    starpassPending,
+    storyHistory,
+    winner,
     setSilentCard,
     setIsRefModalOpen,
+    setIsStoryModalOpen,
+    handleChooseStarpassMinion,
+    handleDismissStarpassModal,
   } = useGameSession();
 
   const [isRoomMenuOpen, setIsRoomMenuOpen] = useState(false);
@@ -74,18 +84,28 @@ export default function NavigationShell({ children }: { children: React.ReactNod
       */}
       <header className="sticky top-0 z-40 bg-[#0C0C10]/95 backdrop-blur-md border-b border-white/[0.08] px-4 sm:px-6 py-2.5 transition-colors">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          {/* Minimal Brand Link */}
-          <Link
-            href="/"
-            className="flex items-center gap-2.5 focus:outline-none group cursor-pointer"
-          >
-            <div className="w-8 h-8 rounded-lg bg-[#14141B] border border-white/[0.1] flex items-center justify-center group-hover:border-[#D4AF37]/60 transition-colors shadow-inner">
-              <Compass className="w-4 h-4 text-[#D4AF37]" />
-            </div>
-            <span className="font-display text-base font-bold tracking-tight text-[#EDEAF0] group-hover:text-[#D4AF37] transition-colors">
-              Grimoire BOTC
-            </span>
-          </Link>
+          {/* Minimal Brand Link & Home Link */}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="flex items-center gap-2.5 focus:outline-none group cursor-pointer"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[#14141B] border border-white/[0.1] flex items-center justify-center group-hover:border-[#D4AF37]/60 transition-colors shadow-inner">
+                <Compass className="w-4 h-4 text-[#D4AF37]" />
+              </div>
+              <span className="font-display text-base font-bold tracking-tight text-[#EDEAF0] group-hover:text-[#D4AF37] transition-colors">
+                Grimoire BOTC
+              </span>
+            </Link>
+
+            <Link
+              href="/"
+              className="px-3 py-1 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs font-medium text-[#A6A2B2] hover:text-[#EDEAF0] transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <Home className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <span>Home</span>
+            </Link>
+          </div>
 
           {/* Right Header: Clean Room Switcher Pill (Max 3 Rooms) */}
           <div className="relative">
@@ -253,6 +273,18 @@ export default function NavigationShell({ children }: { children: React.ReactNod
       <ReferenceSheetModal
         isOpen={isRefModalOpen}
         onClose={() => setIsRefModalOpen(false)}
+      />
+      <StarpassModal
+        pendingData={starpassPending}
+        onChooseMinion={handleChooseStarpassMinion}
+        onDismiss={handleDismissStarpassModal}
+      />
+      <StoryRecapModal
+        isOpen={isStoryModalOpen}
+        onClose={() => setIsStoryModalOpen(false)}
+        storyHistory={storyHistory}
+        winner={winner}
+        activeRoomName={activeRoom.name}
       />
     </div>
   );

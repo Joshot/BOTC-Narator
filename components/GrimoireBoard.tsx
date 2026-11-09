@@ -175,20 +175,6 @@ export default function GrimoireBoard({
   ) => {
     const target = players.find((p) => p.id === playerId);
     if (!target) return;
-    const actionLabel =
-      cause === 'execution'
-        ? 'EKSEKUSI'
-        : cause === 'slayer'
-        ? 'TEMBAKAN SLAYER'
-        : 'SERANGAN DEMON';
-    if (
-      typeof window !== 'undefined' &&
-      !window.confirm(
-        `ALERT: Nyatakan ${target.name} (Kursi ${target.seatIndex + 1}) MATI akibat ${actionLabel}?`
-      )
-    ) {
-      return;
-    }
     if (onKillPlayer) onKillPlayer(playerId, cause);
     else onToggleAlive(playerId, cause);
   };
@@ -196,12 +182,6 @@ export default function GrimoireBoard({
   const handleSafeResurrect = (playerId: string) => {
     const target = players.find((p) => p.id === playerId);
     if (!target) return;
-    if (
-      typeof window !== 'undefined' &&
-      !window.confirm(`ALERT: Hidupkan kembali ${target.name} (Kursi ${target.seatIndex + 1})?`)
-    ) {
-      return;
-    }
     if (onResurrectPlayer) onResurrectPlayer(playerId);
     else onToggleAlive(playerId);
   };

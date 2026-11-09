@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Moon, Wrench } from 'lucide-react';
 import { useGameSession } from '@/context/GameContext';
 import NarratorView from '@/components/NarratorView';
+import InGameHeader from '@/components/InGameHeader';
 
 export default function NarratorPage() {
   const {
@@ -55,7 +56,8 @@ export default function NarratorPage() {
   }
 
   return (
-    <div className="py-2">
+    <div className="py-2 space-y-6">
+      <InGameHeader currentTab="narrator" />
       <NarratorView
         phase={phase}
         dayNumber={dayNumber}
