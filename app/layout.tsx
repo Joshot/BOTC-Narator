@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { GameProvider } from '@/context/GameContext';
+import NavigationShell from '@/components/NavigationShell';
 
 export const metadata: Metadata = {
   title: 'Grimoire Trouble Brewing - Narator BOTC Indonesia',
@@ -22,7 +24,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#121016',
+  themeColor: '#141A16',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -30,9 +32,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="id" className="dark">
       <body
         suppressHydrationWarning
-        className="bg-[#121016] text-[#EDE7DB] font-sans antialiased selection:bg-[#991B1B] selection:text-white min-h-screen"
+        className="bg-[#141A16] text-[#EDE7DB] font-sans antialiased selection:bg-[#2C3E32] selection:text-[#F4EFEA] min-h-screen"
       >
-        {children}
+        <GameProvider>
+          <NavigationShell>{children}</NavigationShell>
+        </GameProvider>
       </body>
     </html>
   );

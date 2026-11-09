@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import {
   BookMarked,
   Coins,
@@ -9,10 +10,11 @@ import {
   Play,
   Plus,
   RotateCcw,
-  ShieldAlert,
   Sparkles,
   Swords,
   Users,
+  ArrowRight,
+  ShieldCheck,
 } from 'lucide-react';
 import { GamePhase, PlayerSeat } from '@/lib/botc-engine';
 
@@ -53,211 +55,226 @@ export default function DashboardView({
       : `Malam ke-${dayNumber + 1}`;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8">
-      {/* Hero Welcome Banner */}
-      <div className="text-center space-y-3 max-w-2xl mx-auto">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#231A26] border border-[#D4AF37]/40 text-xs font-semibold text-[#FDE68A] tracking-wider uppercase">
-          Edisi Resmi Trouble Brewing · Bahasa Indonesia
-        </span>
-        <h1 className="font-display text-3xl sm:text-5xl font-bold tracking-tight text-[#F5EFE6] text-balance">
-          Digital Grimoire & Storyteller Assistant
-        </h1>
-        <p className="text-sm sm:text-base text-[#B8B0A2] leading-relaxed">
-          Asisten narator resmi untuk memandu permainan papan <em>Blood on the Clocktower</em>. Kelola pembagian peran rahasia, visualisasi kursi melingkar, token pengingat, dan urutan malam secara otomatis.
-        </p>
+    <div className="max-w-6xl mx-auto space-y-8 py-2">
+      {/* Editorial Hero Header (Inspired by Image 1 & 3) */}
+      <div className="relative rounded-3xl bg-[#1A251E] border border-white/[0.08] p-6 sm:p-10 overflow-hidden shadow-2xl">
+        <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-[#D4AF37]/5 blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-3 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141A16] border border-[#D4AF37]/30 text-[11px] font-mono font-semibold text-[#D4AF37] uppercase tracking-wider">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#D4AF37]" />
+              Trouble Brewing · Storyteller Assistant
+            </div>
+            <h1 className="font-display text-3xl sm:text-5xl font-bold tracking-tight text-[#F4EFEA] leading-[1.15]">
+              Grimoire. Narasi. Intuisi.
+            </h1>
+            <p className="text-sm sm:text-base text-[#9AA39C] leading-relaxed">
+              Asisten narator digital resmi untuk memandu sesi <em>Blood on the Clocktower</em>. Kelola pembagian peran rahasia, status racun, lingkaran kursi, serta panduan malam secara presisi.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={onOpenRulesReference}
+              className="px-4 py-2.5 rounded-full bg-[#243228] hover:bg-[#2E3F33] border border-white/[0.1] text-xs font-semibold text-[#F4EFEA] flex items-center gap-2 cursor-pointer transition-all shadow-sm"
+            >
+              <BookMarked className="w-4 h-4 text-[#D4AF37]" />
+              <span>Lembar Skrip</span>
+            </button>
+            {hasActiveGame && (
+              <button
+                type="button"
+                onClick={onResetSession}
+                className="px-4 py-2.5 rounded-full bg-white/[0.05] hover:bg-[#3D1A1E] border border-white/[0.08] hover:border-[#EF4444]/40 text-xs font-semibold text-[#9AA39C] hover:text-[#FECACA] flex items-center gap-2 cursor-pointer transition-all"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset Sesi</span>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Main Action Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Active Game Card (If present) */}
-        {hasActiveGame ? (
-          <div className="md:col-span-2 p-6 rounded-2xl bg-gradient-to-r from-[#22161A] via-[#1B1626] to-[#16202E] border-2 border-[#D4AF37] shadow-xl space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#3D354E]">
-              <div className="space-y-0.5">
-                <span className="text-xs font-mono font-bold text-[#D4AF37] uppercase tracking-wider">
-                  Sesi Permainan Sedang Berlangsung
+      {/* Active Game Bento Overview (When Active) */}
+      {hasActiveGame && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Main Status Bento Card - Bone White Surface (Inspired by Image 3 & 4) */}
+          <div className="lg:col-span-2 rounded-3xl bg-[#F4EFEA] text-[#141A16] p-6 sm:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="px-3 py-1 rounded-full bg-[#141A16] text-[#F4EFEA] text-[11px] font-mono font-bold tracking-wider uppercase">
+                  Sesi Aktif Berjalan
                 </span>
-                <h2 className="font-display text-xl sm:text-2xl font-bold text-[#F5EFE6]">
-                  {phaseLabel} · {playerCount} Pemain ({aliveCount} Hidup)
+                <span className="text-xs font-semibold text-[#546056] font-mono">
+                  {playerCount} Pemain Terdaftar
+                </span>
+              </div>
+
+              <div>
+                <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#141A16] tracking-tight">
+                  {phaseLabel}
                 </h2>
+                <p className="text-xs sm:text-sm text-[#4E5B50] mt-1">
+                  Status permainan tersimpan otomatis di perangkat. Meja lingkaran grimoire siap dikelola.
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 rounded-lg bg-[#14291F] border border-[#10B981]/50 text-xs font-semibold text-[#6EE7B7]">
-                  Tersimpan di LocalStorage
-                </span>
+
+              {/* Stats Row */}
+              <div className="grid grid-cols-3 gap-3 pt-2">
+                <div className="p-3 rounded-2xl bg-black/[0.04] border border-black/[0.06]">
+                  <span className="text-[11px] text-[#6E7A70] block font-medium">Hidup</span>
+                  <span className="font-display text-2xl font-bold text-[#141A16]">
+                    {aliveCount}
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-black/[0.04] border border-black/[0.06]">
+                  <span className="text-[11px] text-[#6E7A70] block font-medium">Tewas</span>
+                  <span className="font-display text-2xl font-bold text-[#A83232]">
+                    {playerCount - aliveCount}
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-black/[0.04] border border-black/[0.06]">
+                  <span className="text-[11px] text-[#6E7A70] block font-medium">Hari</span>
+                  <span className="font-display text-2xl font-bold text-[#141A16]">
+                    #{dayNumber}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <p className="text-xs sm:text-sm text-[#D6CFC2]">
-              Sesi permainan aktif Anda tersimpan utuh di perangkat ini. Anda dapat langsung membuka meja Grimoire, mengecek tim Evil & Bluff, atau menjalankan narasi urutan malam.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => onContinueGame('grimoire')}
-                className="min-h-[46px] px-6 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#E2BE46] text-[#121016] text-sm font-bold flex items-center gap-2 cursor-pointer transition-colors shadow-md"
+            {/* Quick Action Navigation Links */}
+            <div className="flex flex-wrap items-center gap-2.5 pt-6 mt-4 border-t border-black/[0.08]">
+              <Link
+                href="/grimoire"
+                className="px-5 py-2.5 rounded-full bg-[#141A16] hover:bg-[#243228] text-[#F4EFEA] text-xs font-bold flex items-center gap-2 transition-colors shadow-md"
               >
-                <Compass className="w-4 h-4" />
-                <span>Buka Meja Grimoire</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onContinueGame('narrator')}
-                className="min-h-[46px] px-5 py-2.5 rounded-xl bg-[#221E2E] hover:bg-[#312B42] border border-[#3D354E] text-[#EDE7DB] text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors"
+                <Compass className="w-4 h-4 text-[#D4AF37]" />
+                <span>Buka Grimoire</span>
+              </Link>
+              <Link
+                href="/narrator"
+                className="px-4 py-2.5 rounded-full bg-black/[0.06] hover:bg-black/[0.1] text-[#141A16] text-xs font-bold flex items-center gap-2 transition-colors"
               >
-                <Moon className="w-4 h-4 text-[#93C5FD]" />
-                <span>Buka Narator Malam</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onContinueGame('evil')}
-                className="min-h-[46px] px-5 py-2.5 rounded-xl bg-[#221E2E] hover:bg-[#312B42] border border-[#3D354E] text-[#EDE7DB] text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors"
+                <Moon className="w-4 h-4 text-[#1E3A8A]" />
+                <span>Urutan Narator</span>
+              </Link>
+              <Link
+                href="/evil"
+                className="px-4 py-2.5 rounded-full bg-black/[0.06] hover:bg-black/[0.1] text-[#141A16] text-xs font-bold flex items-center gap-2 transition-colors"
               >
-                <Swords className="w-4 h-4 text-[#F87171]" />
-                <span>Panel Evil & Bluff</span>
-              </button>
+                <Swords className="w-4 h-4 text-[#A83232]" />
+                <span>Tim Evil & Bluff</span>
+              </Link>
             </div>
           </div>
-        ) : null}
 
-        {/* Bermain Penuh di Web (Pass-and-Play Koin) Card */}
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-[#231A26] to-[#18131E] border-2 border-[#D4AF37] hover:border-[#F59E0B] transition-all flex flex-col justify-between space-y-4 shadow-xl group">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-[#2E201B] border border-[#D4AF37]/60 flex items-center justify-center text-[#F59E0B]">
-                <Coins className="w-6 h-6 animate-pulse" />
-              </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-[#1A1208] border border-[#F59E0B]/60 text-[11px] font-bold text-[#FDE68A] uppercase tracking-wider">
-                Mode Baru
+          {/* Quick Side Widget - Dark Bento Container */}
+          <div className="rounded-3xl bg-[#1A251E] border border-white/[0.08] p-6 sm:p-7 flex flex-col justify-between shadow-xl space-y-4">
+            <div className="space-y-3">
+              <span className="text-xs font-mono text-[#D4AF37] font-semibold uppercase tracking-wider block">
+                Mode Pemain
               </span>
+              <h3 className="font-display text-xl font-bold text-[#F4EFEA]">
+                Layar Rahasia Pemain
+              </h3>
+              <p className="text-xs text-[#9AA39C] leading-relaxed">
+                Gunakan mode HP untuk membagikan token rahasia secara bergantian (pass-and-play) tanpa memerlukan kartu fisik.
+              </p>
             </div>
-            <h2 className="font-display text-xl font-bold text-[#F5EFE6]">
-              Bermain Penuh di Web
-            </h2>
-            <p className="text-xs sm:text-sm text-[#D6CFC2] leading-relaxed">
-              Main langsung di HP atau web dengan sistem putar koin rahasia (Pass-and-Play). Pilih karakter, putar koin satu per satu untuk setiap pemain, masukkan nama secara manual tanpa nama bawaan, dan mulai malam pertama setelah jeda 3 detik.
-            </p>
+
+            <Link
+              href="/webplay"
+              className="w-full py-3 px-4 rounded-full bg-[#243228] hover:bg-[#2E3F33] border border-white/[0.1] text-xs font-bold text-[#F4EFEA] flex items-center justify-between transition-colors shadow-sm"
+            >
+              <span className="flex items-center gap-2">
+                <Coins className="w-4 h-4 text-[#D4AF37]" />
+                <span>Buka Layar HP</span>
+              </span>
+              <ArrowRight className="w-4 h-4 text-[#9AA39C]" />
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Main Bento Cards Grid (Action Hub) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Card 1: Setup Baru */}
+        <div className="rounded-3xl bg-[#1A251E] border border-white/[0.08] p-6 sm:p-7 flex flex-col justify-between space-y-5 hover:border-[#D4AF37]/50 transition-all shadow-lg group">
+          <div className="space-y-3">
+            <div className="w-11 h-11 rounded-2xl bg-[#141A16] border border-white/[0.08] flex items-center justify-center text-[#D4AF37] group-hover:scale-105 transition-transform">
+              <Plus className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-display text-xl font-bold text-[#F4EFEA]">
+                Setup Permainan Baru
+              </h3>
+              <p className="text-xs text-[#9AA39C] mt-1 leading-relaxed">
+                Atur 5–15 pemain, komposisi Townsfolk/Outsider/Minion/Demon, pilih karakter otomatis atau acak, serta beri nama kursi pemain.
+              </p>
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onStartWebPlay}
-            className="w-full min-h-[46px] px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F59E0B] hover:brightness-110 text-[#121016] text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md"
+          <Link
+            href="/setup"
+            className="w-full py-3 px-5 rounded-full bg-[#243228] hover:bg-[#2E3F33] border border-white/[0.1] text-xs font-bold text-[#F4EFEA] flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
-            <Coins className="w-4 h-4" />
-            <span>Mulai Bermain di Web (Roll Koin)</span>
-          </button>
+            <Play className="w-3.5 h-3.5 text-[#D4AF37] fill-current" />
+            <span>Mulai Wizard Setup</span>
+          </Link>
         </div>
 
-        {/* Start New Setup Card */}
-        <div className="p-6 rounded-2xl bg-[#181520] border border-[#2D283B] hover:border-[#D4AF37]/60 transition-all flex flex-col justify-between space-y-4 shadow-lg group">
-          <div className="space-y-2">
-            <div className="w-12 h-12 rounded-xl bg-[#231E2E] border border-[#3D354E] flex items-center justify-center text-[#D4AF37]">
-              <Plus className="w-6 h-6" />
+        {/* Card 2: Main di Web (Roll Koin) */}
+        <div className="rounded-3xl bg-[#1A251E] border border-white/[0.08] p-6 sm:p-7 flex flex-col justify-between space-y-5 hover:border-[#D4AF37]/50 transition-all shadow-lg group">
+          <div className="space-y-3">
+            <div className="w-11 h-11 rounded-2xl bg-[#141A16] border border-white/[0.08] flex items-center justify-center text-[#D4AF37] group-hover:scale-105 transition-transform">
+              <Coins className="w-5 h-5" />
             </div>
-            <h2 className="font-display text-xl font-bold text-[#F5EFE6]">
-              Setup Permainan Fisik / Grimoire Manual
-            </h2>
-            <p className="text-xs sm:text-sm text-[#A8A092] leading-relaxed">
-              Mulai konfigurasi baru untuk memandu permainan kartu fisik: tentukan 5–15 pemain, komposisi peran, nama kursi berurutan searah jarum jam, dan rahasia peran Drunk.
-            </p>
+            <div>
+              <h3 className="font-display text-xl font-bold text-[#F4EFEA]">
+                Bermain di Web (Roll Koin)
+              </h3>
+              <p className="text-xs text-[#9AA39C] mt-1 leading-relaxed">
+                Bermain langsung tanpa kartu fisik dengan koin rahasia satu per satu. Setiap pemain melihat peran dengan aman di layar.
+              </p>
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onStartNewSetup}
-            className="w-full min-h-[46px] px-5 py-2.5 rounded-xl bg-[#991B1B] hover:bg-[#B91C1C] text-white text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-md"
+          <Link
+            href="/webplay"
+            className="w-full py-3 px-5 rounded-full bg-[#243228] hover:bg-[#2E3F33] border border-white/[0.1] text-xs font-bold text-[#F4EFEA] flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
-            <Play className="w-4 h-4 fill-current" />
-            <span>Mulai Setup Manual</span>
-          </button>
+            <Coins className="w-3.5 h-3.5 text-[#D4AF37]" />
+            <span>Buka Mode Roll Koin</span>
+          </Link>
         </div>
 
-        {/* Quick Demo Session Card */}
-        <div className="p-6 rounded-2xl bg-[#181520] border border-[#2D283B] hover:border-[#38BDF8]/60 transition-all flex flex-col justify-between space-y-4 shadow-lg">
-          <div className="space-y-2">
-            <div className="w-12 h-12 rounded-xl bg-[#172230] border border-[#2A435E] flex items-center justify-center text-[#38BDF8]">
-              <Sparkles className="w-6 h-6" />
+        {/* Card 3: Demo Cepat */}
+        <div className="rounded-3xl bg-[#1A251E] border border-white/[0.08] p-6 sm:p-7 flex flex-col justify-between space-y-5 hover:border-white/[0.2] transition-all shadow-lg group">
+          <div className="space-y-3">
+            <div className="w-11 h-11 rounded-2xl bg-[#141A16] border border-white/[0.08] flex items-center justify-center text-[#6EE7B7] group-hover:scale-105 transition-transform">
+              <Sparkles className="w-5 h-5" />
             </div>
-            <h2 className="font-display text-xl font-bold text-[#F5EFE6]">
-              Muat Sesi Contoh (8 Pemain)
-            </h2>
-            <p className="text-xs sm:text-sm text-[#A8A092] leading-relaxed">
-              Ingin langsung mencoba atau mendemonstrasikan aplikasi? Muat sesi contoh lengkap dengan 8 pemain duduk melingkar, peran Drunk aktif, Poisoner, Monk, Spy, dan Imp.
-            </p>
+            <div>
+              <h3 className="font-display text-xl font-bold text-[#F4EFEA]">
+                Sesi Demo Instan (8 Pemain)
+              </h3>
+              <p className="text-xs text-[#9AA39C] mt-1 leading-relaxed">
+                Mulai langsung sesi simulasi 8 pemain siap pakai untuk mencoba fungsi meja grimoire, token status, dan urutan malam.
+              </p>
+            </div>
           </div>
 
           <button
             type="button"
             onClick={onQuickStartDemo}
-            className="w-full min-h-[46px] px-5 py-2.5 rounded-xl bg-[#1C2433] hover:bg-[#253247] border border-[#38BDF8]/50 text-[#BAE6FD] text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer transition-colors"
+            className="w-full py-3 px-5 rounded-full bg-[#141A16] hover:bg-[#243228] border border-white/[0.1] text-xs font-bold text-[#F4EFEA] flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
-            <Play className="w-4 h-4" />
-            <span>Muat Contoh Cepat</span>
+            <Sparkles className="w-3.5 h-3.5 text-[#6EE7B7]" />
+            <span>Mulai Demo 8 Pemain</span>
           </button>
-        </div>
-
-        {/* Rules & Reference Sheet Card */}
-        <div className="p-6 rounded-2xl bg-[#181520] border border-[#2D283B] hover:border-[#D4AF37]/60 transition-all flex flex-col justify-between space-y-4 shadow-lg">
-          <div className="space-y-2">
-            <div className="w-12 h-12 rounded-xl bg-[#231E2E] border border-[#3D354E] flex items-center justify-center text-[#D4AF37]">
-              <BookMarked className="w-6 h-6" />
-            </div>
-            <h2 className="font-display text-xl font-bold text-[#F5EFE6]">
-              Buku Panduan & Referensi Peran
-            </h2>
-            <p className="text-xs sm:text-sm text-[#A8A092] leading-relaxed">
-              Buka lembar panduan resmi Trouble Brewing berbahasa Indonesia. Berisi 22 deskripsi peran, urutan bangun malam, dan interaksi kemampuan khusus (Drunk, Slayer, Virgin, Imp Starpass).
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onOpenRulesReference}
-            className="w-full min-h-[46px] px-5 py-2.5 rounded-xl bg-[#221E2E] hover:bg-[#2E283E] border border-[#3D354E] text-[#EDE7DB] text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer transition-colors"
-          >
-            <BookMarked className="w-4 h-4 text-[#D4AF37]" />
-            <span>Buka Lembar Referensi</span>
-          </button>
-        </div>
-
-        {/* Official Rules & Count Specs Card */}
-        <div className="p-6 rounded-2xl bg-[#181520] border border-[#2D283B] flex flex-col justify-between space-y-4 shadow-lg">
-          <div className="space-y-2">
-            <div className="w-12 h-12 rounded-xl bg-[#231E2E] border border-[#3D354E] flex items-center justify-center text-[#D4AF37]">
-              <Users className="w-6 h-6" />
-            </div>
-            <h2 className="font-display text-xl font-bold text-[#F5EFE6]">
-              Tabel Komposisi Trouble Brewing
-            </h2>
-            <p className="text-xs sm:text-sm text-[#A8A092] leading-relaxed">
-              Mendukung penuh aturan standar 5 hingga 15 pemain: kalkulasi otomatis ambang batas suara eksekusi, suara hantu untuk pemain mati, dan efek Baron (+2 Outsiders, -2 Townsfolk).
-            </p>
-          </div>
-
-          <div className="text-xs text-[#8E8698] font-mono">
-            Kapasitas: 5 - 15 Warga · 22 Karakter Resmi · Mode Spy Bersih
-          </div>
         </div>
       </div>
-
-      {/* Danger Zone: Reset Existing Game if any */}
-      {hasActiveGame && (
-        <div className="pt-4 border-t border-[#292535] flex items-center justify-between text-xs text-[#8E8698]">
-          <span>Ingin menghapus sesi permainan aktif saat ini?</span>
-          <button
-            type="button"
-            onClick={onResetSession}
-            className="px-3 py-1.5 rounded-lg bg-[#24171A] hover:bg-[#361B20] text-[#FECACA] border border-[#EF4444]/40 font-medium cursor-pointer transition-colors flex items-center gap-1.5"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Hapus Sesi Aktif</span>
-          </button>
-        </div>
-      )}
     </div>
   );
 }
