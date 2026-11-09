@@ -2,23 +2,16 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import {
-  BookMarked,
   Check,
   ChevronDown,
   Compass,
-  History,
   Home,
-  LayoutDashboard,
   Moon,
   Plus,
   ShieldAlert,
-  Smartphone,
   Sun,
-  Swords,
   Trash2,
-  Wrench,
 } from 'lucide-react';
 import { useGameSession, MAX_ROOMS } from '@/context/GameContext';
 import { useAppTheme } from '@/context/ThemeContext';
@@ -29,7 +22,6 @@ import StoryRecapModal from './StoryRecapModal';
 import ThemeConfirmModal from './ThemeConfirmModal';
 
 export default function NavigationShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const {
     mounted,
     rooms,
@@ -66,16 +58,6 @@ export default function NavigationShell({ children }: { children: React.ReactNod
       </div>
     );
   }
-
-  const navItems = [
-    { href: '/', label: 'Home', icon: LayoutDashboard },
-    { href: '/setup', label: 'Setup', icon: Wrench },
-    { href: '/grimoire', label: 'Grimoire', icon: Compass, requireActive: true },
-    { href: '/evil', label: 'Evil', icon: Swords, requireActive: true },
-    { href: '/narrator', label: 'Narator', icon: Moon, requireActive: true },
-    { href: '/story', label: 'Kisah', icon: History, requireActive: true },
-    { href: '/webplay', label: 'Layar HP', icon: Smartphone, requireActive: true },
-  ];
 
   const handleCreateRoom = () => {
     setIsRoomMenuOpen(false);
@@ -241,57 +223,9 @@ export default function NavigationShell({ children }: { children: React.ReactNod
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 pb-24 md:pb-12">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 pb-12">
         {children}
       </main>
-
-      {/* Discreet Bottom Bar (Mobile & Quick Controls) */}
-      <nav
-        aria-label="Navigasi Menu Cepat"
-        className="fixed bottom-0 left-0 right-0 z-40 bg-[#0C0C10]/95 backdrop-blur-lg border-t border-white/[0.08] h-14 flex items-center justify-around px-2 max-w-lg mx-auto sm:rounded-t-2xl sm:border sm:border-b-0"
-      >
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          const isDisabled = item.requireActive && !hasActiveGame;
-
-          if (isDisabled) {
-            return (
-              <div
-                key={item.href}
-                className="flex flex-col items-center justify-center text-[#4A4756] cursor-not-allowed opacity-40 min-w-[48px]"
-                title="Perlu permainan aktif"
-              >
-                <item.icon className="w-4 h-4" />
-                <span className="text-[10px] mt-0.5">{item.label}</span>
-              </div>
-            );
-          }
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex flex-col items-center justify-center min-w-[48px] transition-colors cursor-pointer ${
-                isActive ? 'text-[#D4AF37] font-bold' : 'text-[#8E8A9E] hover:text-[#EDEAF0]'
-              }`}
-            >
-              <item.icon className="w-4 h-4" />
-              <span className="text-[10px] mt-0.5">{item.label}</span>
-            </Link>
-          );
-        })}
-
-        {/* Script Reference Trigger in bottom bar */}
-        <button
-          type="button"
-          onClick={() => setIsRefModalOpen(true)}
-          className="flex flex-col items-center justify-center min-w-[48px] text-[#8E8A9E] hover:text-[#D4AF37] cursor-pointer transition-colors"
-          title="Buka Referensi Skrip"
-        >
-          <BookMarked className="w-4 h-4" />
-          <span className="text-[10px] mt-0.5">Skrip</span>
-        </button>
-      </nav>
 
       {/* Global Modals */}
       <FullscreenCardModal
