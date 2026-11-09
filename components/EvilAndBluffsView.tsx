@@ -40,60 +40,54 @@ export default function EvilAndBluffsView({
     onUpdateBluffs(recommendedBluffs);
   };
 
-  const handleReplaceSingleBluff = (slotIdx: number, newRoleId: string) => {
-    const next = [...demonBluffIds];
-    const existingIdx = next.indexOf(newRoleId);
-    if (existingIdx !== -1 && existingIdx !== slotIdx) {
-      next[existingIdx] = next[slotIdx];
-    }
-    next[slotIdx] = newRoleId;
-    onUpdateBluffs(next);
-  };
+  const isUnder7 = players.length < 7;
 
   return (
     <div className="space-y-6">
       {/* Evil Team Coordination Panel */}
-      <div className="bg-[#181520] border border-[#2A2636] rounded-2xl p-5 sm:p-6 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#292535]">
+      <div className="bg-[#14141B] border border-white/[0.08] rounded-3xl p-5 sm:p-7 space-y-6 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/[0.08]">
           <div className="space-y-1">
-            <h2 className="font-display text-xl font-bold text-[#F5EFE6] flex items-center gap-2">
+            <h2 className="font-display text-xl font-bold text-[#EDEAF0] flex items-center gap-2">
               <Swords className="w-5 h-5 text-[#EF4444]" />
-              <span>Panel Rahasia Tim Evil (Demon & Minion)</span>
+              <span>Panel Tim Evil (Demon & Minion)</span>
             </h2>
-            <p className="text-xs sm:text-sm text-[#B8B0A2]">
-              Gunakan panel ini pada Malam Pertama agar Minion dan Demon saling mengenali rekan satu tim mereka tanpa suara.
+            <p className="text-xs sm:text-sm text-[#8E8A9E]">
+              {isUnder7
+                ? 'Permainan di bawah 7 pemain (Teensyville): Minion & Demon tidak saling mengenal.'
+                : 'Malam Pertama: Minion dan Demon saling mengenali rekan satu tim secara rahasia.'}
             </p>
           </div>
 
-          {demon && (
+          {demon && !isUnder7 && (
             <button
               type="button"
               onClick={() =>
                 onShowSilentCard({
                   heading: 'INI ADALAH DEMON ANDA',
-                  subheading: `${demon.name} · Duduk di Kursi ${demon.seatIndex + 1}`,
+                  subheading: `Duduk di Kursi ${demon.seatIndex + 1}`,
                   roleIds: [demon.trueRoleId],
                   footerNote:
                     'Tunjukkan layar ini kepada para Minion saat mereka bangun, sambil menunjuk ke arah tempat duduk Demon.',
                 })
               }
-              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#991B1B] hover:bg-[#B91C1C] text-white text-xs sm:text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0 transition-colors"
+              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs sm:text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0 transition-colors shadow-md"
             >
               <Eye className="w-4 h-4" />
-              <span>Kartu Tunjuk untuk Minion</span>
+              <span>Kartu Tunjuk Demon ke Minion</span>
             </button>
           )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Demon Box */}
-          <div className="p-4 rounded-xl bg-[#221418] border border-[#DC2626]/40 space-y-3">
-            <div className="text-xs text-[#FCA5A5] font-medium flex items-center gap-1.5">
+          <div className="p-4 rounded-2xl bg-[#1C1318] border border-[#DC2626]/30 space-y-3">
+            <div className="text-xs text-[#FCA5A5] font-semibold flex items-center gap-1.5 uppercase tracking-wider">
               <Swords className="w-4 h-4 text-[#F87171]" />
-              <span>DEMON UTAMA (1 ORANG)</span>
+              <span>Demon Utama</span>
             </div>
             {demon ? (
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-[#141019] border border-[#3E1A22]">
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-[#120E15] border border-[#3E1A22]">
                 <div className="shrink-0 mt-0.5">
                   <CharacterToken
                     roleId={demon.trueRoleId}
@@ -102,23 +96,22 @@ export default function EvilAndBluffsView({
                   />
                 </div>
                 <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs text-[#A8A092]">
+                  <div className="flex items-center gap-1.5 text-xs text-[#8E8A9E]">
                     <span className="font-mono tabular-nums text-[#D4AF37] font-bold">
                       Kursi {demon.seatIndex + 1}
                     </span>
                     <span aria-hidden="true">·</span>
-                    <span className={demon.isAlive ? 'text-[#86EFAC] font-semibold' : 'text-[#FCA5A5] font-semibold'}>
-                      {demon.isAlive ? 'Masih Hidup' : 'Sudah Mati'}
+                    <span className={demon.isAlive ? 'text-[#34D399] font-semibold' : 'text-[#F87171] font-semibold'}>
+                      {demon.isAlive ? 'Hidup' : 'Mati'}
                     </span>
                   </div>
-                  <div className="font-semibold text-sm text-[#F5EFE6] break-words">
+                  <div className="font-semibold text-sm text-[#EDEAF0] break-words">
                     <span className="text-white font-bold">{demon.name}</span> —{' '}
                     <span className="text-[#FDE68A] font-bold">
                       {ROLE_MAP[demon.trueRoleId]?.name}
-                    </span>{' '}
-                    ({ROLE_MAP[demon.trueRoleId]?.indonesianName})
+                    </span>
                   </div>
-                  <p className="text-xs text-[#C8C0B3] leading-relaxed break-words pt-0.5">
+                  <p className="text-xs text-[#8E8A9E] leading-relaxed pt-0.5">
                     {ROLE_MAP[demon.trueRoleId]?.ability}
                   </p>
                 </div>
@@ -129,72 +122,74 @@ export default function EvilAndBluffsView({
           </div>
 
           {/* Minions Box */}
-          <div className="p-4 rounded-xl bg-[#1D1622] border border-[#EF4444]/30 space-y-3">
-            <div className="text-xs text-[#FCA5A5] font-medium flex items-center gap-1.5">
+          <div className="p-4 rounded-2xl bg-[#181522] border border-white/[0.08] space-y-3">
+            <div className="text-xs text-[#C4B5FD] font-semibold flex items-center gap-1.5 uppercase tracking-wider">
               <Users className="w-4 h-4" />
-              <span>REKAN MINION ({minions.length} ORANG)</span>
+              <span>Rekan Minion ({minions.length} Orang)</span>
             </div>
             <div className="space-y-3">
-              {minions.map((m) => {
-                const role = ROLE_MAP[m.trueRoleId];
-                return (
-                  <div
-                    key={m.id}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-[#141019] border border-[#2C2436]"
-                  >
-                    <div className="shrink-0 mt-0.5">
-                      <CharacterToken
-                        roleId={m.trueRoleId}
-                        size="sm"
-                        isDead={!m.isAlive}
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs text-[#A8A092]">
-                        <span className="font-mono tabular-nums text-[#D4AF37] font-bold">
-                          Kursi {m.seatIndex + 1}
-                        </span>
-                        <span aria-hidden="true">·</span>
-                        <span className={m.isAlive ? 'text-[#86EFAC] font-semibold' : 'text-[#FCA5A5] font-semibold'}>
-                          {m.isAlive ? 'Hidup' : 'Mati'}
-                        </span>
+              {minions.length === 0 ? (
+                <p className="text-xs text-[#8E8A9E]">Tidak ada Minion dalam sesi ini.</p>
+              ) : (
+                minions.map((m) => {
+                  const role = ROLE_MAP[m.trueRoleId];
+                  return (
+                    <div
+                      key={m.id}
+                      className="flex items-start gap-3 p-3 rounded-xl bg-[#120E15] border border-white/[0.06]"
+                    >
+                      <div className="shrink-0 mt-0.5">
+                        <CharacterToken
+                          roleId={m.trueRoleId}
+                          size="sm"
+                          isDead={!m.isAlive}
+                        />
                       </div>
-                      <div className="font-semibold text-sm text-[#F5EFE6] break-words">
-                        <span className="text-white font-bold">{m.name}</span> —{' '}
-                        <span className="text-[#FDE68A] font-bold">{role?.name}</span>{' '}
-                        ({role?.indonesianName})
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs text-[#8E8A9E]">
+                          <span className="font-mono tabular-nums text-[#D4AF37] font-bold">
+                            Kursi {m.seatIndex + 1}
+                          </span>
+                          <span aria-hidden="true">·</span>
+                          <span className={m.isAlive ? 'text-[#34D399] font-semibold' : 'text-[#F87171] font-semibold'}>
+                            {m.isAlive ? 'Hidup' : 'Mati'}
+                          </span>
+                        </div>
+                        <div className="font-semibold text-sm text-[#EDEAF0] break-words">
+                          <span className="text-white font-bold">{m.name}</span> —{' '}
+                          <span className="text-[#FDE68A] font-bold">{role?.name}</span>
+                        </div>
+                        <p className="text-xs text-[#8E8A9E] leading-relaxed pt-0.5">
+                          {role?.ability}
+                        </p>
                       </div>
-                      <p className="text-xs text-[#C8C0B3] leading-relaxed break-words pt-0.5">
-                        {role?.ability}
-                      </p>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
 
         {/* Secret Drunk Summary Note for Storyteller */}
         {drunkPlayer && drunkFakeRoleId && (
-          <div className="p-3.5 rounded-xl bg-[#152130] border border-[#38BDF8]/40 text-xs sm:text-sm text-[#BAE6FD]">
+          <div className="p-3.5 rounded-2xl bg-[#131D2A] border border-[#38BDF8]/40 text-xs sm:text-sm text-[#BAE6FD]">
             Catatan Keamanan Bluff: <strong>{drunkPlayer.name}</strong> (Kursi{' '}
             {drunkPlayer.seatIndex + 1}) adalah <strong>Drunk</strong> yang mengira dirinya{' '}
-            <strong>{ROLE_MAP[drunkFakeRoleId]?.name}</strong>. Sistem telah mengecualikan{' '}
-            <strong>{ROLE_MAP[drunkFakeRoleId]?.name}</strong> dari daftar 3 Bluff Demon di bawah agar Demon tidak bertabrakan klaim dengan Drunk.
+            <strong>{ROLE_MAP[drunkFakeRoleId]?.name}</strong>. Sistem telah mengecualikan peran ini dari 3 Bluff Demon di bawah.
           </div>
         )}
       </div>
 
       {/* 3 Safe Demon Bluffs Panel */}
-      <div className="bg-[#181520] border border-[#2A2636] rounded-2xl p-5 sm:p-6 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#292535]">
+      <div className="bg-[#14141B] border border-white/[0.08] rounded-3xl p-5 sm:p-7 space-y-6 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/[0.08]">
           <div className="space-y-1">
-            <h2 className="font-display text-xl font-bold text-[#F5EFE6]">
+            <h2 className="font-display text-xl font-bold text-[#EDEAF0]">
               Rekomendasi 3 Bluff Aman untuk Demon
             </h2>
-            <p className="text-xs sm:text-sm text-[#B8B0A2]">
-              Ketiga karakter Townsfolk ini dipastikan <strong>tidak sedang dimainkan</strong> oleh pemain mana pun di meja saat ini.
+            <p className="text-xs sm:text-sm text-[#8E8A9E]">
+              Ketiga karakter Townsfolk ini dipastikan <strong>tidak sedang dimainkan</strong> oleh pemain mana pun.
             </p>
           </div>
 
@@ -202,7 +197,7 @@ export default function EvilAndBluffsView({
             <button
               type="button"
               onClick={handleRerollBluffs}
-              className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#231F30] hover:bg-[#302B42] border border-[#3A344E] text-xs font-semibold text-[#EDE7DB] flex items-center gap-1.5 cursor-pointer"
+              className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#1E1E28] hover:bg-[#282838] border border-white/[0.1] text-xs font-semibold text-[#EDEAF0] flex items-center gap-1.5 cursor-pointer transition-colors"
             >
               <Shuffle className="w-4 h-4 text-[#D4AF37]" />
               <span>Acak 3 Bluff Lain</span>
@@ -213,18 +208,17 @@ export default function EvilAndBluffsView({
               onClick={() =>
                 onShowSilentCard({
                   heading: '3 KARAKTER INI TIDAK DIMAINKAN',
-                  subheading:
-                    demon && minions.length > 0
-                      ? `Rekan Minion Anda: ${minions
-                          .map((m) => `${m.name} (Kursi ${m.seatIndex + 1})`)
-                          .join(', ')}`
-                      : 'Gunakan salah satu peran ini sebagai gertakan (Bluff) aman Anda',
+                  subheading: isUnder7
+                    ? 'Opsi Bluff Aman untuk Demon (Under 7: Info Minion Disembunyikan)'
+                    : minions.length > 0
+                    ? `Rekan Minion: Kursi ${minions.map((m) => m.seatIndex + 1).join(', ')}`
+                    : 'Gunakan peran ini sebagai gertakan (Bluff) aman Anda',
                   roleIds: demonBluffIds,
                   footerNote:
-                    'Tidak ada warga baik yang memegang 3 token ini. Anda juga boleh membagikan info bluff ini kepada Minion di siang hari.',
+                    'Tidak ada warga baik yang memegang 3 token ini. Anda dapat mengklaim peran ini dengan aman.',
                 })
               }
-              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#E2BE46] text-[#121016] text-xs sm:text-sm font-bold flex items-center gap-2 cursor-pointer transition-colors"
+              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] text-xs sm:text-sm font-bold flex items-center gap-2 cursor-pointer transition-colors shadow-md"
             >
               <Eye className="w-4 h-4" />
               <span>Tunjukkan 3 Bluff ke Demon (Layar Penuh)</span>
@@ -233,52 +227,47 @@ export default function EvilAndBluffsView({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {demonBluffIds.map((bluffId, idx) => {
-            const role = ROLE_MAP[bluffId];
+          {demonBluffIds.map((roleId, idx) => {
+            const role = ROLE_MAP[roleId];
             if (!role) return null;
-
             return (
               <div
-                key={`${bluffId}-${idx}`}
-                className="p-5 rounded-2xl bg-[#13111A] border border-[#2C283B] flex flex-col items-center text-center justify-between gap-4"
+                key={roleId}
+                className="p-4 rounded-2xl bg-[#1A1A24] border border-white/[0.08] flex flex-col justify-between space-y-3"
               >
-                <div className="space-y-3 flex flex-col items-center">
-                  <span className="text-xs font-mono text-[#D4AF37]">
-                    OPSI BLUFF 0{idx + 1}
-                  </span>
-                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden filter drop-shadow-[0_0_15px_rgba(212,175,55,0.4)] my-1">
-                    <img
-                      src={`/tokens/${role.id}.png`}
-                      alt={role.name}
-                      className="w-full h-full object-contain"
-                    />
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 mt-0.5">
+                    <CharacterToken roleId={roleId} size="sm" />
                   </div>
-                  <h4 className="font-display text-base font-bold text-white">
-                    {role.name} ({role.indonesianName})
-                  </h4>
-                  <p className="text-xs sm:text-sm text-[#DED7CA] leading-relaxed">
-                    {role.ability}
-                  </p>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <span className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-wider block">
+                      Bluff #{idx + 1}
+                    </span>
+                    <h3 className="font-bold text-sm text-[#EDEAF0]">{role.name}</h3>
+                    <p className="text-xs text-[#8E8A9E] leading-relaxed line-clamp-3">
+                      {role.ability}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="w-full pt-3 border-t border-[#262234]">
-                  <label
-                    htmlFor={`bluff-select-${idx}`}
-                    className="block text-[11px] text-[#9C9486] mb-1.5"
-                  >
-                    Ganti Opsi Bluff 0{idx + 1}:
-                  </label>
+                <div className="pt-2 border-t border-white/[0.06]">
                   <select
-                    id={`bluff-select-${idx}`}
-                    value={bluffId}
-                    onChange={(e) => handleReplaceSingleBluff(idx, e.target.value)}
-                    className="w-full min-h-[40px] rounded-lg bg-[#1D1928] border border-[#342E45] px-2.5 py-1.5 text-xs font-semibold text-[#EDE7DB]"
+                    value={roleId}
+                    onChange={(e) => {
+                      const next = [...demonBluffIds];
+                      next[idx] = e.target.value;
+                      onUpdateBluffs(next);
+                    }}
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-[#14141B] border border-white/[0.1] text-xs text-[#EDEAF0] font-medium cursor-pointer focus:outline-none"
                   >
-                    {allAvailableSafeGoodRoles.map((candidate) => (
-                      <option key={candidate.id} value={candidate.id}>
-                        {candidate.name} ({candidate.indonesianName})
-                      </option>
-                    ))}
+                    <option value={roleId}>{role.name} (Aktif)</option>
+                    {allAvailableSafeGoodRoles
+                      .filter((r) => !demonBluffIds.includes(r.id))
+                      .map((r) => (
+                        <option key={r.id} value={r.id}>
+                          Ganti ke: {r.name}
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>

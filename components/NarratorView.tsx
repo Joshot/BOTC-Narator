@@ -450,24 +450,30 @@ export default function NarratorView({
 
                   <div className="flex flex-wrap items-center gap-2">
                     {currentStep.id === 'first-minion-info' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const demon = players.find(
-                            (p) => ROLE_MAP[p.trueRoleId]?.team === 'demon'
-                          );
-                          if (!demon) return;
-                          onShowSilentCard({
-                            heading: 'INI ADALAH DEMON ANDA',
-                            subheading: `${demon.name} (Kursi ${demon.seatIndex + 1})`,
-                            roleIds: [demon.trueRoleId],
-                          });
-                        }}
-                        className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#991B1B] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Layar Info Demon</span>
-                      </button>
+                      players.length >= 7 ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const demon = players.find(
+                              (p) => ROLE_MAP[p.trueRoleId]?.team === 'demon'
+                            );
+                            if (!demon) return;
+                            onShowSilentCard({
+                              heading: 'INI ADALAH DEMON ANDA',
+                              subheading: `Kursi ${demon.seatIndex + 1}`,
+                              roleIds: [demon.trueRoleId],
+                            });
+                          }}
+                          className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Layar Info Demon</span>
+                        </button>
+                      ) : (
+                        <span className="text-xs text-[#FCA5A5] italic px-2 py-1 bg-[#1C1318] rounded-lg border border-[#DC2626]/30">
+                          Permainan di bawah 7 pemain: Minion tidak dibangunkan untuk info Demon.
+                        </span>
+                      )
                     )}
 
                     {currentStep.id === 'first-demon-info' && (
@@ -476,11 +482,14 @@ export default function NarratorView({
                         onClick={() =>
                           onShowSilentCard({
                             heading: '3 KARAKTER INI TIDAK DIMAINKAN',
-                            subheading: 'Opsi Bluff Aman untuk Demon',
+                            subheading:
+                              players.length < 7
+                                ? 'Opsi Bluff Aman untuk Demon (Under 7: Info Minion Disembunyikan)'
+                                : 'Opsi Bluff Aman untuk Demon',
                             roleIds: demonBluffIds,
                           })
                         }
-                        className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#D4AF37] text-[#121016] text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                        className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-md"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>Layar 3 Bluff Demon</span>

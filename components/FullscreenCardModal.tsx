@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Eye, X } from 'lucide-react';
+import { Eye, EyeOff, X } from 'lucide-react';
 import { ROLE_MAP } from '@/lib/botc-data';
 import { CharacterToken } from './TokenArtwork';
 
@@ -23,6 +23,7 @@ export default function FullscreenCardModal({
   onClose: () => void;
 }) {
   const [revealed, setRevealed] = useState(false);
+  const [showSecretName, setShowSecretName] = useState(false);
 
   if (!card) return null;
 
@@ -33,20 +34,21 @@ export default function FullscreenCardModal({
       role="dialog"
       aria-modal="true"
       aria-label={card.heading}
-      className="fixed inset-0 z-50 bg-[#0B0A0E] flex flex-col items-center justify-between p-6 sm:p-10 text-center"
+      className="fixed inset-0 z-50 bg-[#0C0C10] flex flex-col items-center justify-between p-6 sm:p-10 text-center animate-in fade-in duration-200"
     >
       <div className="w-full max-w-2xl flex items-center justify-between">
-        <span className="text-xs font-medium text-[#A69F91] tracking-wide">
+        <span className="text-xs font-mono uppercase tracking-wider text-[#8E8A9E]">
           Layar Tunjuk Bisu Storyteller
         </span>
         <button
           type="button"
           onClick={() => {
             setRevealed(false);
+            setShowSecretName(false);
             onClose();
           }}
           aria-label="Tutup layar kartu"
-          className="min-h-[44px] min-w-[44px] px-4 py-2 rounded-xl border border-[#322E3D] bg-[#1C1924] text-sm font-medium text-[#EDE7DB] hover:bg-[#272331] flex items-center gap-2 cursor-pointer"
+          className="min-h-[44px] min-w-[44px] px-4 py-2 rounded-xl border border-white/[0.1] bg-[#14141B] text-sm font-medium text-[#EDEAF0] hover:bg-[#1E1E28] flex items-center gap-2 cursor-pointer transition-colors"
         >
           <X className="w-4 h-4" />
           <span>Tutup</span>
@@ -55,35 +57,55 @@ export default function FullscreenCardModal({
 
       {isLocked ? (
         <div className="flex flex-col items-center justify-center max-w-md my-auto gap-6">
-          <p className="text-sm text-[#B8B0A2]">Berikan layar ini hanya kepada:</p>
-          <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#F5EFE6]">
-            {card.playerName}
-          </h2>
+          <p className="text-sm text-[#8E8A9E]">Tampilan Kartu Rahasia Pemain</p>
+
+          {/* Hidden Name Box (Per user requirement: always hide name to prevent leaks) */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="px-5 py-2.5 rounded-2xl bg-[#14141B] border border-white/[0.1] flex items-center gap-3">
+              <span className="font-display text-xl sm:text-2xl font-bold text-[#EDEAF0]">
+                {showSecretName && card.playerName ? card.playerName : '•••••••• (Nama Disembunyikan)'}
+              </span>
+              {card.playerName && (
+                <button
+                  type="button"
+                  onClick={() => setShowSecretName((prev) => !prev)}
+                  className="p-1 rounded text-[#8E8A9E] hover:text-[#D4AF37] cursor-pointer"
+                  title={showSecretName ? 'Sembunyikan Nama' : 'Tampilkan Nama'}
+                >
+                  {showSecretName ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              )}
+            </div>
+            <span className="text-[11px] text-[#6E6A7E]">
+              Nama pemain disembunyikan untuk mencegah kebocoran intipan
+            </span>
+          </div>
+
           <button
             type="button"
             onClick={() => setRevealed(true)}
-            className="min-h-[52px] px-8 py-3.5 rounded-xl bg-[#991B1B] hover:bg-[#B91C1C] text-white font-semibold text-base flex items-center gap-3 shadow-lg cursor-pointer transition-colors"
+            className="min-h-[52px] px-8 py-3.5 rounded-2xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] font-bold text-base flex items-center gap-3 shadow-xl cursor-pointer transition-colors"
           >
             <Eye className="w-5 h-5" />
             <span>Ketuk untuk Melihat Peran Rahasia</span>
           </button>
-          <p className="text-xs text-[#9C9486]">
-            Pastikan pemain di sebelah Anda tidak mengintip layar HP ini.
+          <p className="text-xs text-[#8E8A9E]">
+            Pastikan pemain di sebelah Anda tidak melihat layar saat kartu dibuka.
           </p>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center max-w-2xl my-auto gap-6 w-full">
           <div className="space-y-2">
-            <h2 className="font-display text-2xl sm:text-4xl font-bold text-[#F5EFE6] text-balance">
+            <h2 className="font-display text-2xl sm:text-4xl font-bold text-[#EDEAF0] text-balance">
               {card.heading}
             </h2>
             {card.subheading && (
-              <p className="text-base sm:text-lg text-[#C9C1B2]">{card.subheading}</p>
+              <p className="text-base sm:text-lg text-[#A6A2B2]">{card.subheading}</p>
             )}
           </div>
 
           {card.bigText && (
-            <div className="my-2 px-10 py-6 rounded-2xl border-2 border-[#D4AF37]/50 bg-[#1A1721]">
+            <div className="my-2 px-10 py-6 rounded-3xl border-2 border-[#D4AF37]/50 bg-[#14141B] shadow-2xl">
               <span className="font-mono text-6xl sm:text-8xl font-bold text-[#FDE68A] tabular-nums">
                 {card.bigText}
               </span>
@@ -98,23 +120,18 @@ export default function FullscreenCardModal({
                 return (
                   <div
                     key={id}
-                    className="flex flex-col items-center max-w-[280px] bg-[#1A1721] border border-[#2E293A] rounded-2xl p-5 gap-3 shadow-2xl"
+                    className="flex flex-col items-center gap-2 max-w-[170px] p-4 rounded-3xl bg-[#14141B] border border-white/[0.08] shadow-xl"
                   >
-                    <div className="w-44 h-44 sm:w-52 sm:h-52 select-none filter drop-shadow-[0_0_25px_rgba(212,175,55,0.5)] transition-transform hover:scale-105">
-                      <img
-                        src={`/tokens/${id}.png`}
-                        alt={role.name}
-                        className="w-full h-full object-contain rounded-full pointer-events-none"
-                      />
-                    </div>
-                    <div className="text-center space-y-1">
-                      <h3 className="font-display text-lg font-bold text-white">
-                        {role.name} ({role.indonesianName})
-                      </h3>
-                      <p className="text-xs sm:text-sm text-[#D6CFC2] leading-relaxed">
-                        {role.ability}
-                      </p>
-                    </div>
+                    <CharacterToken roleId={id} size="lg" />
+                    <span className="font-display text-base font-bold text-[#EDEAF0] mt-1">
+                      {role.name}
+                    </span>
+                    <span className="text-[11px] text-[#D4AF37] font-semibold">
+                      {role.indonesianName}
+                    </span>
+                    <p className="text-[11px] text-[#8E8A9E] leading-relaxed line-clamp-3">
+                      {role.ability}
+                    </p>
                   </div>
                 );
               })}
@@ -122,24 +139,15 @@ export default function FullscreenCardModal({
           )}
 
           {card.footerNote && (
-            <p className="text-sm sm:text-base text-[#B8B0A2] max-w-lg leading-relaxed">
+            <p className="text-xs text-[#8E8A9E] max-w-md leading-relaxed border-t border-white/[0.08] pt-3">
               {card.footerNote}
             </p>
           )}
         </div>
       )}
 
-      <div className="w-full max-w-md pb-2">
-        <button
-          type="button"
-          onClick={() => {
-            setRevealed(false);
-            onClose();
-          }}
-          className="w-full min-h-[48px] rounded-xl bg-[#252130] hover:bg-[#312C3F] border border-[#3E384F] text-[#F5EFE6] font-semibold text-sm cursor-pointer transition-colors"
-        >
-          Selesai & Sembunyikan Layar
-        </button>
+      <div className="text-[11px] text-[#5A5766] font-mono">
+        Tekan tombol Tutup di atas setelah pemain selesai melihat.
       </div>
     </div>
   );

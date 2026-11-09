@@ -21,7 +21,9 @@ import {
 } from '@/lib/botc-engine';
 import { SilentCardPayload } from '@/components/FullscreenCardModal';
 
-export const GAME_STORAGE_KEY = 'botc_tb_game_session_v2';
+export const ROOMS_STORAGE_KEY = 'botc_tb_rooms_v3';
+export const LEGACY_STORAGE_KEY = 'botc_tb_game_session_v2';
+export const MAX_ROOMS = 3;
 
 export interface PersistedGameSession {
   hasActiveGame: boolean;
@@ -38,8 +40,43 @@ export interface PersistedGameSession {
   gameAlertBanner: string | null;
 }
 
+export interface GameRoom {
+  id: string;
+  name: string;
+  createdAt: number;
+  lastActiveAt: number;
+  session: PersistedGameSession;
+}
+
+function createEmptySession(name = 'Game Baru'): PersistedGameSession {
+  return {
+    hasActiveGame: false,
+    playerCount: 8,
+    isDrunkActive: false,
+    selectedRoleIds: [],
+    drunkFakeRoleId: null,
+    demonBluffIds: [],
+    players: [],
+    phase: 'first_night',
+    dayNumber: 1,
+    executedTodayPlayerId: null,
+    lastNightDeaths: [],
+    gameAlertBanner: null,
+  };
+}
+
 export interface GameContextType {
   mounted: boolean;
+  // Rooms
+  rooms: GameRoom[];
+  activeRoomId: string;
+  activeRoom: GameRoom;
+  createNewRoom: (customName?: string) => string;
+  switchRoom: (roomId: string) => void;
+  deleteRoom: (roomId: string) => void;
+  renameRoom: (roomId: string, newName: string) => void;
+
+  // Active session data
   hasActiveGame: boolean;
   playerCount: number;
   isDrunkActive: boolean;
@@ -66,7 +103,7 @@ export interface GameContextType {
     demonBluffIds: string[];
     players: PlayerSeat[];
   }) => void;
-  setPhase: (phase: GamePhase) => void;
+  setPhase: (phase: GamePhase, skipAlert?: boolean) => void;
   setGameAlertBanner: (banner: string | null) => void;
   setDemonBluffIds: React.Dispatch<React.SetStateAction<string[]>>;
   setSilentCard: (card: SilentCardPayload | null) => void;
@@ -74,8 +111,8 @@ export interface GameContextType {
 
   handleSwapSeats: (fromIdx: number, toIdx: number) => void;
   handleMoveSeat: (seatIdx: number, dir: 'cw' | 'ccw') => void;
-  handleKillPlayer: (playerId: string, cause: 'demon' | 'execution' | 'slayer') => void;
-  handleResurrectPlayer: (playerId: string) => void;
+  handleKillPlayer: (playerId: string, cause: 'demon' | 'execution' | 'slayer', skipConfirm?: boolean) => void;
+  handleResurrectPlayer: (playerId: string, skipConfirm?: boolean) => void;
   handleChangeDeathCause: (playerId: string, cause: 'demon' | 'execution' | 'slayer') => void;
   handleToggleAlive: (playerId: string, cause?: 'demon' | 'execution' | 'slayer') => void;
   handleToggleGhostVote: (playerId: string) => void;
@@ -85,28 +122,77 @@ export interface GameContextType {
   handleChangePlayerTrueRole: (playerId: string, newTrueRoleId: string) => void;
   handleSetDrunkPlayer: (playerId: string) => void;
   handleResolveImpAttack: (targetPlayerId: string) => { outcomeMessage: string };
-  handleTransitionNightToDay: () => void;
-  handleTransitionDayToNextNight: () => void;
-  handleExecutePlayerInDay: (playerId: string | null) => void;
+  handleTransitionNightToDay: (skipConfirm?: boolean) => void;
+  handleTransitionDayToNextNight: (skipConfirm?: boolean) => void;
+  handleExecutePlayerInDay: (playerId: string | null, skipConfirm?: boolean) => void;
   handleTriggerSlayerShot: (slayerPlayerId: string, targetPlayerId: string) => string;
   handleTriggerVirginNomination: (virginPlayerId: string, nominatorPlayerId: string) => string;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
 
-function loadPersistedSession(): PersistedGameSession | null {
-  if (typeof window === 'undefined') return null;
+function loadPersistedRooms(): { rooms: GameRoom[]; activeRoomId: string } {
+  if (typeof window === 'undefined') {
+    const defaultRoom: GameRoom = {
+      id: 'room-1',
+      name: 'Room 1',
+      createdAt: Date.now(),
+      lastActiveAt: Date.now(),
+      session: createEmptySession('Room 1'),
+    };
+    return { rooms: [defaultRoom], activeRoomId: defaultRoom.id };
+  }
+
   try {
-    const raw = window.localStorage.getItem(GAME_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as PersistedGameSession;
-    if (parsed && Array.isArray(parsed.players) && parsed.players.length >= 5) {
-      return parsed;
+    const raw = window.localStorage.getItem(ROOMS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { rooms: GameRoom[]; activeRoomId: string };
+      if (parsed && Array.isArray(parsed.rooms) && parsed.rooms.length > 0) {
+        const validRooms = parsed.rooms.slice(0, MAX_ROOMS).map((r) => ({
+          ...r,
+          session: {
+            ...r.session,
+            players: sanitizePlayerSeats(r.session.players || []),
+          },
+        }));
+        const activeExists = validRooms.some((r) => r.id === parsed.activeRoomId);
+        return {
+          rooms: validRooms,
+          activeRoomId: activeExists ? parsed.activeRoomId : validRooms[0].id,
+        };
+      }
+    }
+
+    // Auto-migrate from legacy single session if present
+    const legacyRaw = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacyRaw) {
+      const legacyParsed = JSON.parse(legacyRaw) as PersistedGameSession;
+      if (legacyParsed && Array.isArray(legacyParsed.players)) {
+        const migratedRoom: GameRoom = {
+          id: 'room-1',
+          name: 'Room 1',
+          createdAt: Date.now(),
+          lastActiveAt: Date.now(),
+          session: {
+            ...legacyParsed,
+            players: sanitizePlayerSeats(legacyParsed.players),
+          },
+        };
+        return { rooms: [migratedRoom], activeRoomId: migratedRoom.id };
+      }
     }
   } catch {
-    // Ignore storage parse errors
+    // Ignore storage parse error
   }
-  return null;
+
+  const initialRoom: GameRoom = {
+    id: `room-${Date.now()}`,
+    name: 'Room 1',
+    createdAt: Date.now(),
+    lastActiveAt: Date.now(),
+    session: createEmptySession('Room 1'),
+  };
+  return { rooms: [initialRoom], activeRoomId: initialRoom.id };
 }
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
@@ -116,50 +202,21 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     () => false
   );
 
-  const initialSaved = useMemo(() => loadPersistedSession(), []);
+  const initialData = useMemo(() => loadPersistedRooms(), []);
+  const [rooms, setRooms] = useState<GameRoom[]>(initialData.rooms);
+  const [activeRoomId, setActiveRoomId] = useState<string>(initialData.activeRoomId);
 
-  const [hasActiveGame, setHasActiveGame] = useState<boolean>(() =>
-    initialSaved ? initialSaved.hasActiveGame : false
-  );
-  const [playerCount, setPlayerCount] = useState<number>(() =>
-    initialSaved ? initialSaved.playerCount : 8
-  );
-  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>(() =>
-    initialSaved ? initialSaved.selectedRoleIds : []
-  );
-  const [drunkFakeRoleId, setDrunkFakeRoleId] = useState<string | null>(() =>
-    initialSaved ? initialSaved.drunkFakeRoleId : null
-  );
-  const [isDrunkActive, setIsDrunkActive] = useState<boolean>(() => {
-    if (initialSaved) {
-      return Boolean(
-        initialSaved.isDrunkActive ??
-          initialSaved.players.some((p) => p.trueRoleId === 'drunk')
-      );
-    }
-    return false;
-  });
-  const [demonBluffIds, setDemonBluffIds] = useState<string[]>(() =>
-    initialSaved ? initialSaved.demonBluffIds : []
-  );
-  const [players, setPlayers] = useState<PlayerSeat[]>(() =>
-    initialSaved ? sanitizePlayerSeats(initialSaved.players) : []
-  );
-  const [phase, setPhase] = useState<GamePhase>(() =>
-    initialSaved ? initialSaved.phase : 'first_night'
-  );
-  const [dayNumber, setDayNumber] = useState<number>(() =>
-    initialSaved ? initialSaved.dayNumber : 1
-  );
-  const [executedTodayPlayerId, setExecutedTodayPlayerId] = useState<string | null>(() =>
-    initialSaved ? initialSaved.executedTodayPlayerId : null
-  );
-  const [lastNightDeaths, setLastNightDeaths] = useState<string[]>(() =>
-    initialSaved ? initialSaved.lastNightDeaths : []
-  );
-  const [gameAlertBanner, setGameAlertBanner] = useState<string | null>(() =>
-    initialSaved ? initialSaved.gameAlertBanner : null
-  );
+  const activeRoom = useMemo(() => {
+    return rooms.find((r) => r.id === activeRoomId) ?? rooms[0] ?? {
+      id: 'fallback',
+      name: 'Room 1',
+      createdAt: Date.now(),
+      lastActiveAt: Date.now(),
+      session: createEmptySession(),
+    };
+  }, [rooms, activeRoomId]);
+
+  const session = activeRoom.session;
 
   const [silentCard, setSilentCard] = useState<SilentCardPayload | null>(null);
   const [isRefModalOpen, setIsRefModalOpen] = useState<boolean>(false);
@@ -168,91 +225,164 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!mounted) return;
     try {
-      const payload: PersistedGameSession = {
-        hasActiveGame,
-        playerCount,
-        isDrunkActive,
-        selectedRoleIds,
-        drunkFakeRoleId,
-        demonBluffIds,
-        players,
-        phase,
-        dayNumber,
-        executedTodayPlayerId,
-        lastNightDeaths,
-        gameAlertBanner,
-      };
-      window.localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify(payload));
+      window.localStorage.setItem(
+        ROOMS_STORAGE_KEY,
+        JSON.stringify({ rooms, activeRoomId })
+      );
     } catch {
       // Ignore quota errors
     }
-  }, [
-    mounted,
-    hasActiveGame,
-    playerCount,
-    isDrunkActive,
-    selectedRoleIds,
-    drunkFakeRoleId,
-    demonBluffIds,
-    players,
-    phase,
-    dayNumber,
-    executedTodayPlayerId,
-    lastNightDeaths,
-    gameAlertBanner,
-  ]);
+  }, [mounted, rooms, activeRoomId]);
+
+  // Helper to update active room's session
+  const updateSession = useCallback(
+    (updater: (prev: PersistedGameSession) => PersistedGameSession) => {
+      setRooms((prevRooms) =>
+        prevRooms.map((r) => {
+          if (r.id !== activeRoomId) return r;
+          const nextSession = updater(r.session);
+          return {
+            ...r,
+            lastActiveAt: Date.now(),
+            session: nextSession,
+          };
+        })
+      );
+    },
+    [activeRoomId]
+  );
+
+  // Create new room (max 3: if >= 3, automatically delete the oldest room)
+  const createNewRoom = useCallback(
+    (customName?: string): string => {
+      const now = Date.now();
+      let roomCount = rooms.length;
+      let nextRooms = [...rooms];
+
+      // If at or exceeding max rooms, remove the oldest room (by createdAt ascending)
+      if (nextRooms.length >= MAX_ROOMS) {
+        nextRooms.sort((a, b) => a.createdAt - b.createdAt);
+        const removed = nextRooms.shift();
+        if (typeof window !== 'undefined' && removed) {
+          window.alert(
+            `Kapasitas maksimum 3 Room tercapai. Room terlama ("${removed.name}") otomatis dihapus.`
+          );
+        }
+      }
+
+      const newId = `room-${now}-${Math.random().toString(36).slice(2, 6)}`;
+      const roomNum = roomCount + 1;
+      const roomName = customName?.trim() || `Room ${roomNum > 3 ? 3 : roomNum}`;
+
+      const newRoom: GameRoom = {
+        id: newId,
+        name: roomName,
+        createdAt: now,
+        lastActiveAt: now,
+        session: createEmptySession(roomName),
+      };
+
+      nextRooms.push(newRoom);
+      setRooms(nextRooms);
+      setActiveRoomId(newId);
+      return newId;
+    },
+    [rooms]
+  );
+
+  const switchRoom = useCallback((targetRoomId: string) => {
+    setActiveRoomId(targetRoomId);
+    setRooms((prev) =>
+      prev.map((r) => (r.id === targetRoomId ? { ...r, lastActiveAt: Date.now() } : r))
+    );
+  }, []);
+
+  const deleteRoom = useCallback(
+    (targetRoomId: string) => {
+      if (rooms.length <= 1) {
+        if (typeof window !== 'undefined') {
+          window.alert('Minimal harus ada 1 Room aktif.');
+        }
+        return;
+      }
+      const targetRoom = rooms.find((r) => r.id === targetRoomId);
+      if (typeof window !== 'undefined') {
+        const confirmed = window.confirm(
+          `Apakah Anda yakin ingin menghapus "${targetRoom?.name || 'Room ini'}"?`
+        );
+        if (!confirmed) return;
+      }
+
+      const remaining = rooms.filter((r) => r.id !== targetRoomId);
+      setRooms(remaining);
+      if (activeRoomId === targetRoomId) {
+        setActiveRoomId(remaining[0].id);
+      }
+    },
+    [rooms, activeRoomId]
+  );
+
+  const renameRoom = useCallback((targetRoomId: string, newName: string) => {
+    if (!newName.trim()) return;
+    setRooms((prev) =>
+      prev.map((r) => (r.id === targetRoomId ? { ...r, name: newName.trim() } : r))
+    );
+  }, []);
 
   const evaluateWinConditions = useCallback((updatedPlayers: PlayerSeat[], contextMsg?: string) => {
     const alive = updatedPlayers.filter((p) => p.isAlive);
     const aliveDemons = alive.filter((p) => ROLE_MAP[p.trueRoleId]?.team === 'demon');
 
     if (contextMsg) {
-      setGameAlertBanner(contextMsg);
+      updateSession((s) => ({ ...s, gameAlertBanner: contextMsg }));
       return;
     }
 
     if (aliveDemons.length === 0) {
-      setGameAlertBanner(
-        'KONDISI KEMENANGAN TERCAPAI: Seluruh Demon telah mati dan tidak ada pengganti aktif. Umumkan TIM GOOD (WARGA BAIK) MENANG!'
-      );
+      updateSession((s) => ({
+        ...s,
+        gameAlertBanner:
+          'KONDISI KEMENANGAN TERCAPAI: Seluruh Demon telah mati dan tidak ada pengganti aktif. Umumkan TIM GOOD (WARGA BAIK) MENANG!',
+      }));
     } else if (alive.length <= 2) {
-      setGameAlertBanner(
-        'KONDISI KEMENANGAN TERCAPAI: Hanya tersisa 2 pemain hidup dan Demon masih bertahan. Umumkan TIM EVIL (JAHAT) MENANG!'
-      );
+      updateSession((s) => ({
+        ...s,
+        gameAlertBanner:
+          'KONDISI KEMENANGAN TERCAPAI: Hanya tersisa 2 pemain hidup dan Demon masih bertahan. Umumkan TIM EVIL (JAHAT) MENANG!',
+      }));
     } else {
-      setGameAlertBanner(null);
+      updateSession((s) => ({ ...s, gameAlertBanner: null }));
     }
-  }, []);
+  }, [updateSession]);
 
   const startDemoGame = useCallback(() => {
     const demo = createDemoSession(8);
-    setPlayerCount(demo.playerCount);
-    setSelectedRoleIds(demo.selectedRoleIds);
-    setDrunkFakeRoleId(demo.drunkFakeRoleId);
-    setDemonBluffIds(demo.demonBluffIds);
-    setPlayers(demo.players);
-    setPhase('first_night');
-    setDayNumber(1);
-    setExecutedTodayPlayerId(null);
-    setLastNightDeaths([]);
-    setGameAlertBanner(null);
-    setIsDrunkActive(demo.players.some((p) => p.trueRoleId === 'drunk'));
-    setHasActiveGame(true);
-  }, []);
+    updateSession(() => ({
+      hasActiveGame: true,
+      playerCount: demo.playerCount,
+      selectedRoleIds: demo.selectedRoleIds,
+      drunkFakeRoleId: demo.drunkFakeRoleId,
+      demonBluffIds: demo.demonBluffIds,
+      players: demo.players,
+      phase: 'first_night',
+      dayNumber: 1,
+      executedTodayPlayerId: null,
+      lastNightDeaths: [],
+      gameAlertBanner: null,
+      isDrunkActive: demo.players.some((p) => p.trueRoleId === 'drunk'),
+    }));
+  }, [updateSession]);
 
   const resetSession = useCallback(() => {
-    setHasActiveGame(false);
-    setExecutedTodayPlayerId(null);
-    setLastNightDeaths([]);
-    setGameAlertBanner(null);
-    try {
-      window.localStorage.removeItem(GAME_STORAGE_KEY);
-      window.localStorage.removeItem('botc_tb_wizard_draft_v2');
-      window.localStorage.removeItem('botc_tb_setup_v4');
-    } catch {
-      // Ignore
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm(
+        `PERINGATAN: Apakah Anda yakin ingin mereset permainan di "${activeRoom.name}"? Data ronde ini akan dihapus.`
+      );
+      if (!confirmed) return;
     }
-  }, []);
+
+    updateSession(() => createEmptySession(activeRoom.name));
+  }, [activeRoom.name, updateSession]);
 
   const completeSetup = useCallback(
     (payload: {
@@ -263,82 +393,115 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       demonBluffIds: string[];
       players: PlayerSeat[];
     }) => {
-      setPlayerCount(payload.playerCount);
-      setIsDrunkActive(payload.isDrunkActive);
-      setSelectedRoleIds(payload.selectedRoleIds);
-      setDrunkFakeRoleId(payload.drunkFakeRoleId);
-      setDemonBluffIds(payload.demonBluffIds);
-      setPlayers(sanitizePlayerSeats(payload.players));
-      setPhase('first_night');
-      setDayNumber(1);
-      setExecutedTodayPlayerId(null);
-      setLastNightDeaths([]);
-      setGameAlertBanner(null);
-      setHasActiveGame(true);
+      updateSession((s) => ({
+        ...s,
+        hasActiveGame: true,
+        playerCount: payload.playerCount,
+        isDrunkActive: payload.isDrunkActive,
+        selectedRoleIds: payload.selectedRoleIds,
+        drunkFakeRoleId: payload.drunkFakeRoleId,
+        demonBluffIds: payload.demonBluffIds,
+        players: sanitizePlayerSeats(payload.players),
+        phase: 'first_night',
+        dayNumber: 1,
+        executedTodayPlayerId: null,
+        lastNightDeaths: [],
+        gameAlertBanner: null,
+      }));
     },
-    []
+    [updateSession]
   );
 
-  const handleSwapSeats = useCallback((fromIdx: number, toIdx: number) => {
-    setPlayers((prev) => swapPlayerSeats(prev, fromIdx, toIdx));
-  }, []);
+  const handleSwapSeats = useCallback(
+    (fromIdx: number, toIdx: number) => {
+      updateSession((s) => ({
+        ...s,
+        players: swapPlayerSeats(s.players, fromIdx, toIdx),
+      }));
+    },
+    [updateSession]
+  );
 
-  const handleMoveSeat = useCallback((seatIdx: number, dir: 'cw' | 'ccw') => {
-    setPlayers((prev) => movePlayerSeat(prev, seatIdx, dir));
-  }, []);
+  const handleMoveSeat = useCallback(
+    (seatIdx: number, dir: 'cw' | 'ccw') => {
+      updateSession((s) => ({
+        ...s,
+        players: movePlayerSeat(s.players, seatIdx, dir),
+      }));
+    },
+    [updateSession]
+  );
 
-  const handleSetDrunkPlayer = useCallback((targetPlayerId: string) => {
-    setPlayers((prev) => {
-      const target = prev.find((p) => p.id === targetPlayerId);
-      const isAlreadyDrunk = target?.trueRoleId === 'drunk';
+  const handleSetDrunkPlayer = useCallback(
+    (targetPlayerId: string) => {
+      updateSession((s) => {
+        const target = s.players.find((p) => p.id === targetPlayerId);
+        const isAlreadyDrunk = target?.trueRoleId === 'drunk';
 
-      const next = prev.map((p) => {
-        const withoutDrunkRem = p.reminders.filter((r) => r.reminderId !== 'is_the_drunk');
-        if (p.id === targetPlayerId) {
-          if (isAlreadyDrunk) {
+        const next = s.players.map((p) => {
+          const withoutDrunkRem = p.reminders.filter((r) => r.reminderId !== 'is_the_drunk');
+          if (p.id === targetPlayerId) {
+            if (isAlreadyDrunk) {
+              return {
+                ...p,
+                trueRoleId: p.perceivedRoleId,
+                reminders: withoutDrunkRem,
+              };
+            } else {
+              return {
+                ...p,
+                trueRoleId: 'drunk',
+                reminders: [
+                  ...withoutDrunkRem,
+                  { instanceId: `rem-drunk-${Date.now()}`, reminderId: 'is_the_drunk' },
+                ],
+              };
+            }
+          }
+          if (!isAlreadyDrunk && p.trueRoleId === 'drunk') {
             return {
               ...p,
               trueRoleId: p.perceivedRoleId,
               reminders: withoutDrunkRem,
             };
-          } else {
-            return {
-              ...p,
-              trueRoleId: 'drunk',
-              reminders: [
-                ...withoutDrunkRem,
-                { instanceId: `rem-drunk-${Date.now()}`, reminderId: 'is_the_drunk' },
-              ],
-            };
           }
-        }
-        if (!isAlreadyDrunk && p.trueRoleId === 'drunk') {
-          return {
-            ...p,
-            trueRoleId: p.perceivedRoleId,
-            reminders: withoutDrunkRem,
-          };
-        }
-        return p;
+          return p;
+        });
+
+        return {
+          ...s,
+          players: sanitizePlayerSeats(next),
+          gameAlertBanner: null,
+        };
       });
-      return sanitizePlayerSeats(next);
-    });
-    setGameAlertBanner(null);
-  }, []);
+    },
+    [updateSession]
+  );
 
   const handleKillPlayer = useCallback(
-    (playerId: string, cause: 'demon' | 'execution' | 'slayer') => {
-      setPlayers((prev) => {
-        const target = prev.find((p) => p.id === playerId);
-        if (!target) return prev;
+    (playerId: string, cause: 'demon' | 'execution' | 'slayer', skipConfirm = false) => {
+      const target = session.players.find((p) => p.id === playerId);
+      if (!target) return;
 
-        const aliveBeforeDeath = prev.filter((p) => p.isAlive).length;
+      if (!skipConfirm && typeof window !== 'undefined') {
+        const actionLabel =
+          cause === 'execution'
+            ? 'EKSEKUSI'
+            : cause === 'slayer'
+            ? 'TEMBAKAN SLAYER'
+            : 'SERANGAN DEMON';
+        const ok = window.confirm(
+          `ALERT: Nyatakan ${target.name} (Kursi ${target.seatIndex + 1}) MATI akibat ${actionLabel}?`
+        );
+        if (!ok) return;
+      }
+
+      updateSession((s) => {
+        const aliveBefore = s.players.filter((p) => p.isAlive).length;
 
         if (cause === 'execution') {
-          setExecutedTodayPlayerId(playerId);
-
           if (target.trueRoleId === 'saint' && !isPlayerPoisoned(target)) {
-            const next = prev.map((p) => {
+            const next = s.players.map((p) => {
               const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
               if (p.id !== playerId) return { ...p, reminders: cleaned };
               return {
@@ -349,14 +512,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                 reminders: cleaned,
               };
             });
-            setGameAlertBanner(
-              `SAINT DIEKSEKUSI! ${target.name} adalah Saint asli yang sehat. Sesuai aturan, TIM EVIL LANGSUNG MENANG!`
-            );
-            return sanitizePlayerSeats(next);
+            return {
+              ...s,
+              executedTodayPlayerId: playerId,
+              players: sanitizePlayerSeats(next),
+              gameAlertBanner: `SAINT DIEKSEKUSI! ${target.name} adalah Saint asli yang sehat. Sesuai aturan, TIM EVIL LANGSUNG MENANG!`,
+            };
           }
 
           const isTargetDemon = ROLE_MAP[target.trueRoleId]?.team === 'demon';
-          const healthyScarletWoman = prev.find(
+          const healthySW = s.players.find(
             (p) =>
               p.isAlive &&
               p.id !== playerId &&
@@ -364,8 +529,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               !isPlayerPoisoned(p)
           );
 
-          if (isTargetDemon && aliveBeforeDeath >= 5 && healthyScarletWoman) {
-            const next = prev.map((p) => {
+          if (isTargetDemon && aliveBefore >= 5 && healthySW) {
+            const next = s.players.map((p) => {
               const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
               if (p.id === playerId) {
                 return {
@@ -376,7 +541,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                   reminders: cleaned,
                 };
               }
-              if (p.id === healthyScarletWoman.id) {
+              if (p.id === healthySW.id) {
                 return {
                   ...p,
                   trueRoleId: 'imp',
@@ -389,14 +554,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               }
               return { ...p, reminders: cleaned };
             });
-            setGameAlertBanner(
-              `SCARLET WOMAN AKTIF! Demon (${target.name}) dieksekusi saat ada ${aliveBeforeDeath} pemain hidup. ${healthyScarletWoman.name} otomatis berubah menjadi IMP baru!`
-            );
-            return sanitizePlayerSeats(next);
+
+            return {
+              ...s,
+              executedTodayPlayerId: playerId,
+              players: sanitizePlayerSeats(next),
+              gameAlertBanner: `SCARLET WOMAN AKTIF! Demon (${target.name}) dieksekusi saat ada ${aliveBefore} pemain hidup. ${healthySW.name} otomatis berubah menjadi IMP baru!`,
+            };
           }
         }
 
-        const next = prev.map((p) => {
+        const next = s.players.map((p) => {
           const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
           if (p.id !== playerId) return { ...p, reminders: cleaned };
           return {
@@ -407,17 +575,30 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             reminders: cleaned,
           };
         });
+
         evaluateWinConditions(next);
-        return sanitizePlayerSeats(next);
+        return {
+          ...s,
+          executedTodayPlayerId: cause === 'execution' ? playerId : s.executedTodayPlayerId,
+          players: sanitizePlayerSeats(next),
+        };
       });
     },
-    [evaluateWinConditions]
+    [evaluateWinConditions, session.players, updateSession]
   );
 
   const handleResurrectPlayer = useCallback(
-    (playerId: string) => {
-      setPlayers((prev) => {
-        const next = prev.map((p) => {
+    (playerId: string, skipConfirm = false) => {
+      const target = session.players.find((p) => p.id === playerId);
+      if (!target) return;
+
+      if (!skipConfirm && typeof window !== 'undefined') {
+        const ok = window.confirm(`ALERT: Hidupkan kembali ${target.name}?`);
+        if (!ok) return;
+      }
+
+      updateSession((s) => {
+        const next = s.players.map((p) => {
           if (p.id !== playerId) return p;
           return {
             ...p,
@@ -426,17 +607,21 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           };
         });
         evaluateWinConditions(next);
-        return sanitizePlayerSeats(next);
+        return {
+          ...s,
+          executedTodayPlayerId:
+            s.executedTodayPlayerId === playerId ? null : s.executedTodayPlayerId,
+          players: sanitizePlayerSeats(next),
+        };
       });
-      setExecutedTodayPlayerId((prev) => (prev === playerId ? null : prev));
     },
-    [evaluateWinConditions]
+    [evaluateWinConditions, session.players, updateSession]
   );
 
   const handleChangeDeathCause = useCallback(
     (playerId: string, cause: 'demon' | 'execution' | 'slayer') => {
-      setPlayers((prev) => {
-        const next = prev.map((p) => {
+      updateSession((s) => {
+        const next = s.players.map((p) => {
           const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
           if (p.id !== playerId) return { ...p, reminders: cleaned };
           return {
@@ -447,27 +632,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           };
         });
         evaluateWinConditions(next);
-        return sanitizePlayerSeats(next);
+        return {
+          ...s,
+          executedTodayPlayerId: cause === 'execution' ? playerId : s.executedTodayPlayerId,
+          players: sanitizePlayerSeats(next),
+        };
       });
-
-      if (cause === 'execution') {
-        setExecutedTodayPlayerId(playerId);
-        const target = players.find((p) => p.id === playerId);
-        if (target?.trueRoleId === 'saint' && !isPlayerPoisoned(target)) {
-          setGameAlertBanner(
-            `SAINT DIEKSEKUSI! ${target.name} adalah Saint asli yang sehat. Sesuai aturan, TIM EVIL LANGSUNG MENANG!`
-          );
-        }
-      } else {
-        setExecutedTodayPlayerId((prev) => (prev === playerId ? null : prev));
-      }
     },
-    [evaluateWinConditions, players]
+    [evaluateWinConditions, updateSession]
   );
 
   const handleToggleAlive = useCallback(
     (playerId: string, cause?: 'demon' | 'execution' | 'slayer') => {
-      const target = players.find((p) => p.id === playerId);
+      const target = session.players.find((p) => p.id === playerId);
       if (!target) return;
       if (target.isAlive) {
         handleKillPlayer(playerId, cause ?? 'demon');
@@ -475,16 +652,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         handleResurrectPlayer(playerId);
       }
     },
-    [handleKillPlayer, handleResurrectPlayer, players]
+    [handleKillPlayer, handleResurrectPlayer, session.players]
   );
 
-  const handleToggleGhostVote = useCallback((playerId: string) => {
-    setPlayers((prev) =>
-      prev.map((p) =>
-        p.id === playerId ? { ...p, hasGhostVote: !p.hasGhostVote } : p
-      )
-    );
-  }, []);
+  const handleToggleGhostVote = useCallback(
+    (playerId: string) => {
+      updateSession((s) => ({
+        ...s,
+        players: s.players.map((p) =>
+          p.id === playerId ? { ...p, hasGhostVote: !p.hasGhostVote } : p
+        ),
+      }));
+    },
+    [updateSession]
+  );
 
   const handleAddReminder = useCallback(
     (playerId: string, reminderId: string) => {
@@ -493,8 +674,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      setPlayers((prev) => {
-        const next = prev.map((p) => {
+      updateSession((s) => {
+        const next = s.players.map((p) => {
           if (p.id !== playerId) {
             if (
               reminderId === 'poisoned' ||
@@ -531,59 +712,67 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             ],
           };
         });
-        return sanitizePlayerSeats(next);
+        return {
+          ...s,
+          players: sanitizePlayerSeats(next),
+        };
       });
     },
-    [handleSetDrunkPlayer]
+    [handleSetDrunkPlayer, updateSession]
   );
 
-  const handleSetSingleReminderTarget = useCallback((reminderId: string, targetPlayerId: string) => {
-    setPlayers((prev) =>
-      prev.map((p) => {
-        const cleaned = p.reminders.filter((r) => r.reminderId !== reminderId);
-        if (p.id !== targetPlayerId) {
-          return { ...p, reminders: cleaned };
-        }
-        return {
-          ...p,
-          reminders: [
-            ...cleaned,
-            {
-              instanceId: `rem-${reminderId}-${Date.now()}`,
-              reminderId,
-            },
-          ],
-        };
-      })
-    );
-  }, []);
+  const handleSetSingleReminderTarget = useCallback(
+    (reminderId: string, targetPlayerId: string) => {
+      updateSession((s) => ({
+        ...s,
+        players: s.players.map((p) => {
+          const cleaned = p.reminders.filter((r) => r.reminderId !== reminderId);
+          if (p.id !== targetPlayerId) {
+            return { ...p, reminders: cleaned };
+          }
+          return {
+            ...p,
+            reminders: [
+              ...cleaned,
+              { instanceId: `rem-${reminderId}-${Date.now()}`, reminderId },
+            ],
+          };
+        }),
+      }));
+    },
+    [updateSession]
+  );
 
-  const handleRemoveReminder = useCallback((playerId: string, instanceId: string) => {
-    setPlayers((prev) =>
-      prev.map((p) =>
-        p.id === playerId
-          ? { ...p, reminders: p.reminders.filter((r) => r.instanceId !== instanceId) }
-          : p
-      )
-    );
-  }, []);
+  const handleRemoveReminder = useCallback(
+    (playerId: string, instanceId: string) => {
+      updateSession((s) => ({
+        ...s,
+        players: s.players.map((p) =>
+          p.id === playerId
+            ? { ...p, reminders: p.reminders.filter((r) => r.instanceId !== instanceId) }
+            : p
+        ),
+      }));
+    },
+    [updateSession]
+  );
 
   const handleChangePlayerTrueRole = useCallback(
     (playerId: string, newTrueRoleId: string) => {
-      if (newTrueRoleId === 'drunk') {
-        const existingDrunk = players.find(
-          (p) => p.id !== playerId && p.trueRoleId === 'drunk'
-        );
-        if (existingDrunk) {
-          setGameAlertBanner(
-            `ERROR: Hanya boleh ada 1 Drunk dalam permainan! Kursi ${existingDrunk.seatIndex + 1} (${existingDrunk.name}) sudah terdaftar sebagai Drunk.`
+      updateSession((s) => {
+        if (newTrueRoleId === 'drunk') {
+          const existing = s.players.find(
+            (p) => p.id !== playerId && p.trueRoleId === 'drunk'
           );
-          return;
+          if (existing) {
+            return {
+              ...s,
+              gameAlertBanner: `ERROR: Hanya boleh ada 1 Drunk! Kursi ${existing.seatIndex + 1} (${existing.name}) sudah terdaftar sebagai Drunk.`,
+            };
+          }
         }
-      }
 
-      setPlayers((prev) => {
-        const next = prev.map((p) => {
+        const next = s.players.map((p) => {
           if (p.id !== playerId) return p;
           return {
             ...p,
@@ -592,32 +781,33 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           };
         });
         evaluateWinConditions(next);
-        return next;
+        return { ...s, players: next };
       });
     },
-    [evaluateWinConditions, players]
+    [evaluateWinConditions, updateSession]
   );
 
   const handleResolveImpAttack = useCallback(
     (targetPlayerId: string): { outcomeMessage: string } => {
-      const impPlayer = players.find((p) => p.trueRoleId === 'imp' && p.isAlive);
-      const target = players.find((p) => p.id === targetPlayerId);
+      const impPlayer = session.players.find((p) => p.trueRoleId === 'imp' && p.isAlive);
+      const target = session.players.find((p) => p.id === targetPlayerId);
       if (!target) return { outcomeMessage: 'Target tidak ditemukan.' };
 
       if (impPlayer && isPlayerPoisoned(impPlayer)) {
-        setPlayers((prev) =>
-          prev.map((p) => ({
+        updateSession((s) => ({
+          ...s,
+          players: s.players.map((p) => ({
             ...p,
             reminders: p.reminders.filter((r) => r.reminderId !== 'die_imp'),
-          }))
-        );
+          })),
+        }));
         return {
-          outcomeMessage: `Imp (${impPlayer.name}) sedang terkena racun (Poisoned)! Serangan gagal, tidak ada yang mati malam ini.`,
+          outcomeMessage: `Imp (${impPlayer.name}) sedang terkena racun! Serangan gagal malam ini.`,
         };
       }
 
       if (impPlayer && target.id === impPlayer.id) {
-        const aliveMinions = players.filter(
+        const aliveMinions = session.players.filter(
           (p) => p.isAlive && ROLE_MAP[p.trueRoleId]?.team === 'minion'
         );
         const preferredMinion =
@@ -625,8 +815,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           aliveMinions[0] ??
           null;
 
-        setPlayers((prev) =>
-          prev.map((p) => {
+        updateSession((s) => ({
+          ...s,
+          players: s.players.map((p) => {
             const withoutDie = p.reminders.filter((r) => r.reminderId !== 'die_imp');
             if (p.id === impPlayer.id) {
               return {
@@ -649,47 +840,45 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               };
             }
             return { ...p, reminders: withoutDie };
-          })
-        );
+          }),
+        }));
 
         if (preferredMinion) {
           return {
             outcomeMessage: `STARPASS! ${impPlayer.name} bunuh diri. Minion ${preferredMinion.name} (Kursi ${
               preferredMinion.seatIndex + 1
-            }) otomatis menjadi IMP baru! Bangunkan ${
-              preferredMinion.name
-            } dan tunjukkan kartu "ANDA ADALAH IMP".`,
+            }) otomatis menjadi IMP baru!`,
           };
         }
         return {
-          outcomeMessage: `${impPlayer.name} bunuh diri tanpa ada Minion hidup tersisa! Setelah fajar, Tim Good akan menang.`,
+          outcomeMessage: `${impPlayer.name} bunuh diri tanpa Minion hidup tersisa! Setelah fajar, Tim Good akan menang.`,
         };
       }
 
-      const isProtectedByMonk = target.reminders.some(
-        (r) => r.reminderId === 'protected'
-      );
-      if (isProtectedByMonk) {
-        setPlayers((prev) =>
-          prev.map((p) => ({
+      const isProtected = target.reminders.some((r) => r.reminderId === 'protected');
+      if (isProtected) {
+        updateSession((s) => ({
+          ...s,
+          players: s.players.map((p) => ({
             ...p,
             reminders: p.reminders.filter((r) => r.reminderId !== 'die_imp'),
-          }))
-        );
+          })),
+        }));
         return {
-          outcomeMessage: `${target.name} AMAN karena dilindungi Monk (Protected)! Tidak ada token Mati dipasang.`,
+          outcomeMessage: `${target.name} AMAN karena dilindungi Monk (Protected)!`,
         };
       }
 
       if (target.trueRoleId === 'soldier' && !isPlayerPoisoned(target)) {
-        setPlayers((prev) =>
-          prev.map((p) => ({
+        updateSession((s) => ({
+          ...s,
+          players: s.players.map((p) => ({
             ...p,
             reminders: p.reminders.filter((r) => r.reminderId !== 'die_imp'),
-          }))
-        );
+          })),
+        }));
         return {
-          outcomeMessage: `${target.name} adalah SOLDIER asli yang sehat! Serangan Imp mental dan tidak ada yang mati malam ini.`,
+          outcomeMessage: `${target.name} adalah SOLDIER sehat! Serangan Imp gagal.`,
         };
       }
 
@@ -697,72 +886,103 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       return {
         outcomeMessage: `Token "Die" dipasang pada ${target.name} (Kursi ${
           target.seatIndex + 1
-        }). Ia akan diumumkan tewas saat Fajar.`,
+        }).`,
       };
     },
-    [handleSetSingleReminderTarget, players]
+    [handleSetSingleReminderTarget, session.players, updateSession]
   );
 
-  const handleTransitionNightToDay = useCallback(() => {
-    const victims = players.filter((p) =>
-      p.reminders.some((r) => r.reminderId === 'die_imp')
-    );
-    const victimNames = victims.map((v) => v.name);
-
-    setPlayers((prev) => {
-      const next = prev.map((p) => {
-        const diedTonight = p.reminders.some((r) => r.reminderId === 'die_imp');
-        const cleanedReminders = p.reminders.filter(
-          (r) =>
-            r.reminderId !== 'die_imp' &&
-            r.reminderId !== 'protected' &&
-            r.reminderId !== 'executed'
+  const handleTransitionNightToDay = useCallback(
+    (skipConfirm = false) => {
+      if (!skipConfirm && typeof window !== 'undefined') {
+        const ok = window.confirm(
+          'ALERT: Akhiri fase Malam dan umumkan Fajar/Siang Hari?'
         );
+        if (!ok) return;
+      }
+
+      updateSession((s) => {
+        const victims = s.players.filter((p) =>
+          p.reminders.some((r) => r.reminderId === 'die_imp')
+        );
+        const victimNames = victims.map((v) => v.name);
+
+        const next = s.players.map((p) => {
+          const diedTonight = p.reminders.some((r) => r.reminderId === 'die_imp');
+          const cleaned = p.reminders.filter(
+            (r) =>
+              r.reminderId !== 'die_imp' &&
+              r.reminderId !== 'protected' &&
+              r.reminderId !== 'executed'
+          );
+          return {
+            ...p,
+            isAlive: diedTonight ? false : p.isAlive,
+            deathCause: diedTonight ? ('demon' as const) : p.deathCause,
+            reminders: cleaned,
+          };
+        });
+
+        evaluateWinConditions(next);
         return {
-          ...p,
-          isAlive: diedTonight ? false : p.isAlive,
-          deathCause: diedTonight ? ('demon' as const) : p.deathCause,
-          reminders: cleanedReminders,
+          ...s,
+          phase: 'day',
+          executedTodayPlayerId: null,
+          lastNightDeaths: victimNames,
+          players: sanitizePlayerSeats(next),
         };
       });
-      evaluateWinConditions(next);
-      return next;
-    });
-
-    setLastNightDeaths(victimNames);
-    setExecutedTodayPlayerId(null);
-    setPhase('day');
-  }, [evaluateWinConditions, players]);
-
-  const handleExecutePlayerInDay = useCallback(
-    (playerId: string | null) => {
-      if (!playerId) {
-        setExecutedTodayPlayerId(null);
-        const alive = players.filter((p) => p.isAlive);
-        const healthyMayor = alive.find(
-          (p) => p.trueRoleId === 'mayor' && !isPlayerPoisoned(p)
-        );
-        if (alive.length === 3 && healthyMayor) {
-          setGameAlertBanner(
-            `KEMENANGAN MAYOR! Tersisa 3 pemain hidup tanpa eksekusi hari ini dan ${healthyMayor.name} adalah Mayor yang sehat. TIM GOOD MENANG!`
-          );
-        }
-        return;
-      }
-      handleKillPlayer(playerId, 'execution');
     },
-    [handleKillPlayer, players]
+    [evaluateWinConditions, updateSession]
   );
 
-  const handleTransitionDayToNextNight = useCallback(() => {
-    setDayNumber((prev) => prev + 1);
-    setPhase('other_night');
-  }, []);
+  const handleExecutePlayerInDay = useCallback(
+    (playerId: string | null, skipConfirm = false) => {
+      if (!playerId) {
+        updateSession((s) => {
+          const alive = s.players.filter((p) => p.isAlive);
+          const healthyMayor = alive.find(
+            (p) => p.trueRoleId === 'mayor' && !isPlayerPoisoned(p)
+          );
+          return {
+            ...s,
+            executedTodayPlayerId: null,
+            gameAlertBanner:
+              alive.length === 3 && healthyMayor
+                ? `KEMENANGAN MAYOR! Tersisa 3 pemain hidup tanpa eksekusi dan ${healthyMayor.name} adalah Mayor sehat. TIM GOOD MENANG!`
+                : s.gameAlertBanner,
+          };
+        });
+        return;
+      }
+
+      handleKillPlayer(playerId, 'execution', skipConfirm);
+    },
+    [handleKillPlayer, updateSession]
+  );
+
+  const handleTransitionDayToNextNight = useCallback(
+    (skipConfirm = false) => {
+      if (!skipConfirm && typeof window !== 'undefined') {
+        const ok = window.confirm(
+          `ALERT: Tutup siang hari dan mulai Malam ke-${session.dayNumber + 1}?`
+        );
+        if (!ok) return;
+      }
+
+      updateSession((s) => ({
+        ...s,
+        dayNumber: s.dayNumber + 1,
+        phase: 'other_night',
+      }));
+    },
+    [session.dayNumber, updateSession]
+  );
 
   const handleTriggerSlayerShot = useCallback(
     (slayerPlayerId: string, targetPlayerId: string): string => {
-      const shooter = players.find((p) => p.id === slayerPlayerId);
-      const target = players.find((p) => p.id === targetPlayerId);
+      const shooter = session.players.find((p) => p.id === slayerPlayerId);
+      const target = session.players.find((p) => p.id === targetPlayerId);
       if (!shooter || !target) return 'Pemain tidak ditemukan.';
 
       if (shooter.perceivedRoleId === 'slayer') {
@@ -777,8 +997,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const isDemonTarget = ROLE_MAP[target.trueRoleId]?.team === 'demon';
 
       if (isRealHealthySlayer && isDemonTarget) {
-        const aliveCountNow = players.filter((p) => p.isAlive).length;
-        const healthySW = players.find(
+        const aliveCountNow = session.players.filter((p) => p.isAlive).length;
+        const healthySW = session.players.find(
           (p) =>
             p.isAlive &&
             p.id !== target.id &&
@@ -786,8 +1006,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             !isPlayerPoisoned(p)
         );
 
-        setPlayers((prev) => {
-          const next = prev.map((p) => {
+        updateSession((s) => {
+          const next = s.players.map((p) => {
             if (p.id === target.id)
               return { ...p, isAlive: false, deathCause: 'slayer' as const };
             if (aliveCountNow >= 5 && healthySW && p.id === healthySW.id) {
@@ -806,24 +1026,24 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           evaluateWinConditions(
             next,
             aliveCountNow >= 5 && healthySW
-              ? `TEMBAKAN SLAYER TEPAT SASARAN! ${target.name} tewas, namun Scarlet Woman (${healthySW.name}) diam-diam menjadi Imp baru!`
+              ? `TEMBAKAN SLAYER BERHASIL! ${target.name} tewas, namun Scarlet Woman (${healthySW.name}) diam-diam menjadi Imp baru!`
               : undefined
           );
-          return next;
+          return { ...s, players: next };
         });
 
-        return `TEMBAKAN SLAYER BERHASIL! Umumkan kepada warga: "${target.name} tewas seketika!"`;
+        return `TEMBAKAN SLAYER BERHASIL! Umumkan: "${target.name} tewas seketika!"`;
       }
 
-      return `Tembakan tidak membuahkan hasil. Umumkan kepada warga: "Tidak terjadi apa-apa."`;
+      return `Tembakan tidak membuahkan hasil. Umumkan: "Tidak terjadi apa-apa."`;
     },
-    [evaluateWinConditions, handleAddReminder, players]
+    [evaluateWinConditions, handleAddReminder, session.players, updateSession]
   );
 
   const handleTriggerVirginNomination = useCallback(
     (virginPlayerId: string, nominatorPlayerId: string): string => {
-      const virgin = players.find((p) => p.id === virginPlayerId);
-      const nominator = players.find((p) => p.id === nominatorPlayerId);
+      const virgin = session.players.find((p) => p.id === virginPlayerId);
+      const nominator = session.players.find((p) => p.id === nominatorPlayerId);
       if (!virgin || !nominator) return 'Pemain tidak ditemukan.';
 
       handleAddReminder(virgin.id, 'used_virgin');
@@ -834,32 +1054,75 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         ROLE_MAP[nominator.trueRoleId]?.team === 'townsfolk';
 
       if (isRealHealthyVirgin && isNominatorRealTownsfolk) {
-        handleExecutePlayerInDay(nominator.id);
+        handleExecutePlayerInDay(nominator.id, true);
         return `KEMAMPUAN VIRGIN AKTIF! Karena ${nominator.name} adalah Townsfolk asli (${
           ROLE_MAP[nominator.trueRoleId]?.name
-        }), umumkan: "${nominator.name} langsung dieksekusi saat ini juga dan sidang siang hari berakhir!"`;
+        }), umumkan: "${nominator.name} langsung dieksekusi saat ini juga!"`;
       }
 
-      return `Kemampuan Virgin TIDAK terpicu (Virgin kini diberi token Used). Lanjutkan pemungutan suara terhadap ${virgin.name} seperti biasa.`;
+      return `Kemampuan Virgin TIDAK terpicu. Lanjutkan pemungutan suara seperti biasa.`;
     },
-    [handleAddReminder, handleExecutePlayerInDay, players]
+    [handleAddReminder, handleExecutePlayerInDay, session.players]
+  );
+
+  const setPhase = useCallback(
+    (newPhase: GamePhase, skipAlert = false) => {
+      if (!skipAlert && typeof window !== 'undefined') {
+        const phaseName =
+          newPhase === 'first_night'
+            ? 'Malam Pertama'
+            : newPhase === 'day'
+            ? 'Siang Hari'
+            : 'Malam Hari';
+        const ok = window.confirm(`ALERT: Ganti fase secara manual ke "${phaseName}"?`);
+        if (!ok) return;
+      }
+      updateSession((s) => ({ ...s, phase: newPhase }));
+    },
+    [updateSession]
+  );
+
+  const setGameAlertBanner = useCallback(
+    (banner: string | null) => {
+      updateSession((s) => ({ ...s, gameAlertBanner: banner }));
+    },
+    [updateSession]
+  );
+
+  const setDemonBluffIds = useCallback(
+    (action: React.SetStateAction<string[]>) => {
+      updateSession((s) => ({
+        ...s,
+        demonBluffIds:
+          typeof action === 'function' ? action(s.demonBluffIds) : action,
+      }));
+    },
+    [updateSession]
   );
 
   const value = useMemo<GameContextType>(
     () => ({
       mounted,
-      hasActiveGame,
-      playerCount,
-      isDrunkActive,
-      selectedRoleIds,
-      drunkFakeRoleId,
-      demonBluffIds,
-      players,
-      phase,
-      dayNumber,
-      executedTodayPlayerId,
-      lastNightDeaths,
-      gameAlertBanner,
+      rooms,
+      activeRoomId,
+      activeRoom,
+      createNewRoom,
+      switchRoom,
+      deleteRoom,
+      renameRoom,
+
+      hasActiveGame: session.hasActiveGame,
+      playerCount: session.playerCount,
+      isDrunkActive: Boolean(session.isDrunkActive),
+      selectedRoleIds: session.selectedRoleIds,
+      drunkFakeRoleId: session.drunkFakeRoleId,
+      demonBluffIds: session.demonBluffIds,
+      players: session.players,
+      phase: session.phase,
+      dayNumber: session.dayNumber,
+      executedTodayPlayerId: session.executedTodayPlayerId,
+      lastNightDeaths: session.lastNightDeaths,
+      gameAlertBanner: session.gameAlertBanner,
       silentCard,
       isRefModalOpen,
 
@@ -893,30 +1156,22 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       mounted,
-      hasActiveGame,
-      playerCount,
-      isDrunkActive,
-      selectedRoleIds,
-      drunkFakeRoleId,
-      demonBluffIds,
-      players,
-      phase,
-      dayNumber,
-      executedTodayPlayerId,
-      lastNightDeaths,
-      gameAlertBanner,
+      rooms,
+      activeRoomId,
+      activeRoom,
+      createNewRoom,
+      switchRoom,
+      deleteRoom,
+      renameRoom,
+      session,
       silentCard,
       isRefModalOpen,
-
       startDemoGame,
       resetSession,
       completeSetup,
       setPhase,
       setGameAlertBanner,
       setDemonBluffIds,
-      setSilentCard,
-      setIsRefModalOpen,
-
       handleSwapSeats,
       handleMoveSeat,
       handleKillPlayer,
@@ -948,4 +1203,3 @@ export function useGameSession(): GameContextType {
   }
   return ctx;
 }
-

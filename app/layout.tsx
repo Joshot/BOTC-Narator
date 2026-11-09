@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#141A16',
+  themeColor: '#0C0C10',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="id" className="dark">
       <body
         suppressHydrationWarning
-        className="bg-[#141A16] text-[#EDE7DB] font-sans antialiased selection:bg-[#2C3E32] selection:text-[#F4EFEA] min-h-screen"
+        className="bg-[#0C0C10] text-[#EDEAF0] font-sans antialiased selection:bg-[#3D3552] selection:text-[#FFFFFF] min-h-screen"
       >
         <GameProvider>
           <NavigationShell>{children}</NavigationShell>

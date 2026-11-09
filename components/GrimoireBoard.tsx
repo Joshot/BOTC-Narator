@@ -6,12 +6,14 @@ import {
   Beer,
   ChevronLeft,
   ChevronRight,
+  Compass,
   Eye,
   EyeOff,
   FlaskConical,
   Gavel,
   Ghost,
   HeartPulse,
+  LayoutGrid,
   Skull,
   Swords,
   Trash2,
@@ -78,6 +80,7 @@ export default function GrimoireBoard({
   const [isSwapModeActive, setIsSwapModeActive] = useState(false);
   const [activeBrushReminderId, setActiveBrushReminderId] = useState<string | null>(null);
   const [reminderFilter, setReminderFilter] = useState<'active' | 'all'>('active');
+  const [displayMode, setDisplayMode] = useState<'circle' | 'cards'>('circle');
   const [spyCleanMode, setSpyCleanMode] = useState(false);
   const [dragPayload, setDragPayload] = useState<
     | { type: 'seat'; seatIndex: number }
@@ -166,6 +169,43 @@ export default function GrimoireBoard({
     setSelectedPlayerId(player.id);
   };
 
+  const handleSafeKill = (
+    playerId: string,
+    cause: 'demon' | 'execution' | 'slayer'
+  ) => {
+    const target = players.find((p) => p.id === playerId);
+    if (!target) return;
+    const actionLabel =
+      cause === 'execution'
+        ? 'EKSEKUSI'
+        : cause === 'slayer'
+        ? 'TEMBAKAN SLAYER'
+        : 'SERANGAN DEMON';
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(
+        `ALERT: Nyatakan ${target.name} (Kursi ${target.seatIndex + 1}) MATI akibat ${actionLabel}?`
+      )
+    ) {
+      return;
+    }
+    if (onKillPlayer) onKillPlayer(playerId, cause);
+    else onToggleAlive(playerId, cause);
+  };
+
+  const handleSafeResurrect = (playerId: string) => {
+    const target = players.find((p) => p.id === playerId);
+    if (!target) return;
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(`ALERT: Hidupkan kembali ${target.name} (Kursi ${target.seatIndex + 1})?`)
+    ) {
+      return;
+    }
+    if (onResurrectPlayer) onResurrectPlayer(playerId);
+    else onToggleAlive(playerId);
+  };
+
   return (
     <div className="space-y-6">
       {/* Drunk Alert Banner if Drunk is active but no player designated yet */}
@@ -228,6 +268,24 @@ export default function GrimoireBoard({
               </span>
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => setDisplayMode((prev) => (prev === 'circle' ? 'cards' : 'circle'))}
+            className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-[#1E1E28] hover:bg-[#282838] border border-white/[0.1] text-xs font-semibold text-[#EDEAF0] flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm whitespace-nowrap"
+          >
+            {displayMode === 'circle' ? (
+              <>
+                <LayoutGrid className="w-4 h-4 text-[#D4AF37]" />
+                <span>Mode Daftar Kursi</span>
+              </>
+            ) : (
+              <>
+                <Compass className="w-4 h-4 text-[#D4AF37]" />
+                <span>Mode Meja Bundar</span>
+              </>
+            )}
+          </button>
 
           <button
             type="button"
@@ -310,204 +368,327 @@ export default function GrimoireBoard({
 
       {/* Main Split: Circular Grimoire Canvas + Inspector / Reminder Tray */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left/Center: Velvet Circular Grimoire Arena */}
-        <div className="lg:col-span-7 bg-[#15121D] border border-[#2D283B] rounded-3xl p-3 sm:p-6 shadow-2xl">
-          <div
-            data-testid="grimoire-circle"
-            className="relative w-full aspect-square max-w-[620px] sm:max-w-[680px] mx-auto rounded-full bg-radial from-[#221C2F] via-[#171320] to-[#0E0C13] border-2 border-[#3E3752] shadow-2xl"
-          >
-            {/* Subtle clocktower compass ring */}
-            <div className="absolute inset-[15%] rounded-full border-2 border-dashed border-[#D4AF37]/20 pointer-events-none" />
+        {/* Left/Center: Arena / Card View */}
+        <div className="lg:col-span-7 bg-[#14141B] border border-white/[0.08] rounded-3xl p-3 sm:p-6 shadow-2xl">
+          {displayMode === 'cards' ? (
+            /* Mode Daftar Kursi (Responsive Grid / Mobile Friendly) */
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
+                <span className="text-xs font-mono uppercase tracking-wider text-[#D4AF37] font-bold">
+                  Daftar Kursi Pemain ({voteStats.aliveCount} Hidup · {voteStats.totalPlayers - voteStats.aliveCount} Mati)
+                </span>
+                <span className="text-[11px] text-[#8E8A9E] font-mono">
+                  Ambang: {voteStats.votesNeeded} Suara
+                </span>
+              </div>
 
-            {/* Center Clocktower Hub with subtle floating animation */}
-            <motion.div
-              animate={{ scale: [1, 1.025, 1] }}
-              transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[26%] h-[26%] rounded-full bg-[#13101A]/95 border-2 border-[#38314A] flex flex-col items-center justify-center text-center p-2 pointer-events-none shadow-xl"
-            >
-              <span className="font-display text-[10px] sm:text-xs font-black tracking-widest text-[#D4AF37] leading-tight">
-                GRIMOIRE
-              </span>
-              <span className="text-[9px] sm:text-[11px] font-bold text-[#E2DCD2] mt-0.5 truncate max-w-full">
-                {phaseLabel}
-              </span>
-              <span className="font-mono text-[9px] sm:text-[11px] font-bold text-[#6EE7B7] mt-0.5 tabular-nums">
-                {voteStats.aliveCount}H · {voteStats.votesNeeded}V
-              </span>
-            </motion.div>
-
-            {/* Circular Player Seats & Inner-Ring Reminder Tokens */}
-            {players.map((player, index) => {
-              const angle = (index / totalSeats) * 2 * Math.PI - Math.PI / 2;
-              const leftPct = 50 + radiusPct * Math.cos(angle);
-              const topPct = 50 + radiusPct * Math.sin(angle);
-
-              const isSelected = !spyCleanMode && selectedPlayer?.id === player.id;
-              const isSwapSource = swapModeSourceIdx === index;
-              const isDragTarget = dragOverSeatIdx === index;
-              const isDrunk = player.trueRoleId === 'drunk';
-              const isPoisoned = player.reminders.some((r) => r.reminderId === 'poisoned');
-              const displayRoleId = spyCleanMode ? player.trueRoleId : player.perceivedRoleId;
-              const nonDrunkReminders = player.reminders.filter(
-                (r) => r.reminderId !== 'is_the_drunk' && r.reminderId !== 'executed'
-              );
-
-              return (
-                <React.Fragment key={player.id}>
-                  <div
-                    style={{
-                      left: `${leftPct}%`,
-                      top: `${topPct}%`,
-                    }}
-                    draggable={!spyCleanMode}
-                    onDragStart={(e) => {
-                      setDragPayload({ type: 'seat', seatIndex: index });
-                      e.dataTransfer.effectAllowed = 'move';
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      if (dragOverSeatIdx !== index) setDragOverSeatIdx(index);
-                    }}
-                    onDragLeave={() => {
-                      if (dragOverSeatIdx === index) setDragOverSeatIdx(null);
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setDragOverSeatIdx(null);
-                      if (!dragPayload) return;
-                      if (dragPayload.type === 'seat') {
-                        onSwapSeats(dragPayload.seatIndex, index);
-                      } else if (dragPayload.type === 'reminder') {
-                        onAddReminder(player.id, dragPayload.reminderId);
-                        setSelectedPlayerId(player.id);
-                      }
-                      setDragPayload(null);
-                    }}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-10"
-                  >
-                    <motion.div
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: index * 0.03, duration: 0.25 }}
-                      className="flex flex-col items-center"
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[640px] overflow-y-auto pr-1">
+                {players.map((player) => {
+                  const isSelected = selectedPlayer?.id === player.id;
+                  const role = ROLE_MAP[player.perceivedRoleId];
+                  const isDrunk = player.trueRoleId === 'drunk';
+                  return (
+                    <div
+                      key={player.id}
+                      onClick={() => handleSeatClick(player)}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                        isSelected
+                          ? 'bg-[#1E1E28] border-[#D4AF37] shadow-lg ring-1 ring-[#D4AF37]/50'
+                          : 'bg-[#0C0C10] border-white/[0.08] hover:border-white/[0.18]'
+                      } ${!player.isAlive ? 'opacity-80' : ''}`}
                     >
-                      <button
-                        type="button"
-                        onClick={() => handleSeatClick(player)}
-                        aria-label={`Kursi ${index + 1}: ${player.name}, peran ${
-                          ROLE_MAP[player.perceivedRoleId]?.name
-                        }${isDrunk ? ' (Sebenarnya Drunk)' : ''}, status ${
-                          player.isAlive ? 'Hidup' : 'Mati'
-                        }`}
-                        className={`group relative rounded-full p-0.5 transition-transform cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FBBF24] ${
-                          isSelected
-                            ? 'ring-[3.5px] ring-[#D4AF37] scale-105 shadow-[0_0_20px_rgba(212,175,55,0.45)]'
-                            : isSwapSource || isDragTarget
-                            ? 'ring-[3.5px] ring-[#38BDF8] scale-110 shadow-[0_0_20px_rgba(56,189,248,0.45)]'
-                            : 'hover:scale-105'
-                        }`}
-                      >
-                        <CharacterToken
-                          roleId={displayRoleId}
-                          size={tokenSize}
-                          isDead={!player.isAlive}
-                          deathCause={player.deathCause}
-                          isDrunkSecret={isDrunk && !spyCleanMode}
-                          isPoisoned={isPoisoned && !spyCleanMode}
-                        />
+                      <div className="flex items-start gap-3">
+                        <div className="shrink-0 mt-0.5">
+                          <CharacterToken
+                            roleId={player.perceivedRoleId}
+                            size="sm"
+                            isDead={!player.isAlive}
+                            isDrunkSecret={isDrunk}
+                          />
+                        </div>
 
-                        {/* Seat Number Tag - High contrast and bold */}
-                        <span className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#121018] border-2 border-[#D4AF37] font-mono text-[10px] sm:text-xs font-black text-[#FDE68A] flex items-center justify-center tabular-nums shadow-md z-20">
-                          {index + 1}
-                        </span>
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-mono text-[10px] font-bold text-[#D4AF37] uppercase">
+                              Kursi {player.seatIndex + 1}
+                            </span>
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                player.isAlive
+                                  ? 'bg-[#34D399]/20 text-[#34D399]'
+                                  : 'bg-[#EF4444]/20 text-[#EF4444]'
+                              }`}
+                            >
+                              {player.isAlive ? 'Hidup' : 'Mati'}
+                            </span>
+                          </div>
 
-                        {/* Ghost Vote Pip when Dead */}
-                        {!player.isAlive && player.hasGhostVote && (
-                          <span
-                            title="Suara Hantu masih tersedia"
-                            className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#1E293B] border-2 border-[#94A3B8] flex items-center justify-center shadow-md z-20"
-                          >
-                            <Ghost className="w-3 h-3 text-[#E2E8F0]" />
-                          </span>
-                        )}
-                      </button>
+                          <div className="font-bold text-sm text-[#EDEAF0] truncate">
+                            {player.name}
+                          </div>
 
-                      {/* Player Name, Status Badges, and Attached Reminder Tokens - Vertically stacked, zero overlaps! */}
-                      <div className="flex flex-col items-center gap-1 mt-1.5">
-                        {/* Name Pill */}
-                        <span
-                          className={`px-2.5 py-0.5 rounded-lg text-[10px] sm:text-xs font-black tracking-wide max-w-[90px] sm:max-w-[120px] truncate text-center shadow-lg border leading-tight ${
+                          <div className="text-xs text-[#8E8A9E] truncate">
+                            {role?.name} {isDrunk ? '(Drunk)' : ''}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Reminders chips */}
+                      {player.reminders.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1 border-t border-white/[0.06]">
+                          {player.reminders.map((rem) => (
+                            <ReminderTokenChip
+                              key={rem.instanceId}
+                              reminderId={rem.reminderId}
+                              size="xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRemoveReminder(player.id, rem.instanceId);
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Quick Actions row */}
+                      <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-white/[0.06]">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (player.isAlive) {
+                              handleSafeKill(player.id, 'execution');
+                            } else {
+                              handleSafeResurrect(player.id);
+                            }
+                          }}
+                          className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold transition-colors cursor-pointer ${
                             player.isAlive
-                              ? 'bg-[#15121F]/95 text-white border-[#4E4466]'
-                              : 'bg-[#100D16]/95 text-[#A1A1AA] border-[#3F3F46] line-through'
+                              ? 'bg-[#EF4444]/20 hover:bg-[#EF4444]/30 text-[#FECACA] border border-[#EF4444]/40'
+                              : 'bg-[#34D399]/20 hover:bg-[#34D399]/30 text-[#A7F3D0] border border-[#34D399]/40'
                           }`}
                         >
-                          {player.name}
-                        </span>
+                          {player.isAlive ? 'Gantung' : 'Hidupkan'}
+                        </button>
 
-                        {/* Distinct Status Badges: Dead / Drunk / Poisoned */}
-                        {!spyCleanMode && (
-                          <div className="flex flex-wrap items-center justify-center gap-1 max-w-[130px]">
-                            {!player.isAlive && (
-                              player.deathCause === 'demon' ? (
-                                <span className="text-[8px] sm:text-[9px] font-black text-[#FECACA] bg-[#450A0A] border border-[#DC2626] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
-                                  DIBUNUH DEMON
-                                </span>
-                              ) : player.deathCause === 'execution' ? (
-                                <span className="text-[8px] sm:text-[9px] font-black text-[#FDE68A] bg-[#3B2808] border border-[#D4AF37] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
-                                  DIGANTUNG
-                                </span>
-                              ) : (
-                                <span className="text-[8px] sm:text-[9px] font-black text-[#E4E4E7] bg-[#18181B] border border-[#52525B] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
-                                  MATI
-                                </span>
-                              )
-                            )}
-
-                            {isDrunk && (
-                              <span className="text-[8px] sm:text-[9px] font-black text-[#FDE68A] bg-[#451A03] border border-[#F59E0B] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow flex items-center gap-1">
-                                <Beer className="w-3 h-3 text-[#F59E0B]" />
-                                <span>ASLI: DRUNK</span>
-                              </span>
-                            )}
-
-                            {isPoisoned && (
-                              <span className="text-[8px] sm:text-[9px] font-black text-[#FECACA] bg-[#7F1D1D] border border-[#EF4444] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow flex items-center gap-1 animate-pulse">
-                                <FlaskConical className="w-3 h-3 text-[#F87171]" />
-                                <span>DIRACUN</span>
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Attached Reminder Tokens (Excluding is_the_drunk to prevent duplicate indicator) */}
-                        {!spyCleanMode && nonDrunkReminders.length > 0 && (
-                          <div className="flex flex-wrap items-center justify-center gap-1 max-w-[120px] mt-0.5">
-                            {nonDrunkReminders.map((rem) => (
-                              <ReminderTokenChip
-                                key={rem.instanceId}
-                                reminderId={rem.reminderId}
-                                size="xs"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onRemoveReminder(player.id, rem.instanceId);
-                                }}
-                              />
-                            ))}
-                          </div>
-                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPeekPlayerIndex(player.seatIndex);
+                            setIsPeekModalOpen(true);
+                          }}
+                          className="py-1.5 px-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-[11px] font-semibold text-[#EDEAF0] flex items-center gap-1 cursor-pointer"
+                        >
+                          <Eye className="w-3 h-3 text-[#D4AF37]" />
+                          <span>Intip</span>
+                        </button>
                       </div>
-                    </motion.div>
-                  </div>
-                </React.Fragment>
-              );
-            })}
-          </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            /* Mode Lingkaran Grimoire Klasik */
+            <>
+              <div
+                data-testid="grimoire-circle"
+                className="relative w-full aspect-square max-w-[620px] sm:max-w-[680px] mx-auto rounded-full bg-radial from-[#1A1A24] via-[#121217] to-[#0C0C10] border-2 border-white/[0.1] shadow-2xl"
+              >
+                {/* Subtle clocktower compass ring */}
+                <div className="absolute inset-[15%] rounded-full border-2 border-dashed border-[#D4AF37]/20 pointer-events-none" />
 
-          {!spyCleanMode && (
-            <p className="text-center text-[11px] text-[#9C9486] mt-3">
-              Tips: Seret (drag) kursi untuk menukar tempat duduk, atau seret token pengingat dari baki ke atas kursi pemain. Di layar HP, ketuk token pengingat lalu ketuk kursi pemain.
-            </p>
+                {/* Center Clocktower Hub with subtle floating animation */}
+                <motion.div
+                  animate={{ scale: [1, 1.025, 1] }}
+                  transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
+                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[26%] h-[26%] rounded-full bg-[#14141B]/95 border-2 border-white/[0.12] flex flex-col items-center justify-center text-center p-2 pointer-events-none shadow-xl"
+                >
+                  <span className="font-display text-[10px] sm:text-xs font-black tracking-widest text-[#D4AF37] leading-tight font-mono">
+                    GRIMOIRE
+                  </span>
+                  <span className="text-[9px] sm:text-[11px] font-bold text-[#EDEAF0] mt-0.5 truncate max-w-full">
+                    {phaseLabel}
+                  </span>
+                  <span className="font-mono text-[9px] sm:text-[11px] font-bold text-[#34D399] mt-0.5 tabular-nums">
+                    {voteStats.aliveCount}H · {voteStats.votesNeeded}V
+                  </span>
+                </motion.div>
+
+                {/* Circular Player Seats & Inner-Ring Reminder Tokens */}
+                {players.map((player, index) => {
+                  const angle = (index / totalSeats) * 2 * Math.PI - Math.PI / 2;
+                  const leftPct = 50 + radiusPct * Math.cos(angle);
+                  const topPct = 50 + radiusPct * Math.sin(angle);
+
+                  const isSelected = !spyCleanMode && selectedPlayer?.id === player.id;
+                  const isSwapSource = swapModeSourceIdx === index;
+                  const isDragTarget = dragOverSeatIdx === index;
+                  const isDrunk = player.trueRoleId === 'drunk';
+                  const isPoisoned = player.reminders.some((r) => r.reminderId === 'poisoned');
+                  const displayRoleId = spyCleanMode ? player.trueRoleId : player.perceivedRoleId;
+                  const nonDrunkReminders = player.reminders.filter(
+                    (r) => r.reminderId !== 'is_the_drunk' && r.reminderId !== 'executed'
+                  );
+
+                  return (
+                    <React.Fragment key={player.id}>
+                      <div
+                        style={{
+                          left: `${leftPct}%`,
+                          top: `${topPct}%`,
+                        }}
+                        draggable={!spyCleanMode}
+                        onDragStart={(e) => {
+                          setDragPayload({ type: 'seat', seatIndex: index });
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          if (dragOverSeatIdx !== index) setDragOverSeatIdx(index);
+                        }}
+                        onDragLeave={() => {
+                          if (dragOverSeatIdx === index) setDragOverSeatIdx(null);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setDragOverSeatIdx(null);
+                          if (!dragPayload) return;
+                          if (dragPayload.type === 'seat') {
+                            onSwapSeats(dragPayload.seatIndex, index);
+                          } else if (dragPayload.type === 'reminder') {
+                            onAddReminder(player.id, dragPayload.reminderId);
+                            setSelectedPlayerId(player.id);
+                          }
+                          setDragPayload(null);
+                        }}
+                        className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-10"
+                      >
+                        <motion.div
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ delay: index * 0.03, duration: 0.25 }}
+                          className="flex flex-col items-center"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleSeatClick(player)}
+                            aria-label={`Kursi ${index + 1}: ${player.name}, peran ${
+                              ROLE_MAP[player.perceivedRoleId]?.name
+                            }${isDrunk ? ' (Sebenarnya Drunk)' : ''}, status ${
+                              player.isAlive ? 'Hidup' : 'Mati'
+                            }`}
+                            className={`group relative rounded-full p-0.5 transition-transform cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FBBF24] ${
+                              isSelected
+                                ? 'ring-[3.5px] ring-[#D4AF37] scale-105 shadow-[0_0_20px_rgba(212,175,55,0.45)]'
+                                : isSwapSource || isDragTarget
+                                ? 'ring-[3.5px] ring-[#38BDF8] scale-110 shadow-[0_0_20px_rgba(56,189,248,0.45)]'
+                                : 'hover:scale-105'
+                            }`}
+                          >
+                            <CharacterToken
+                              roleId={displayRoleId}
+                              size={tokenSize}
+                              isDead={!player.isAlive}
+                              deathCause={player.deathCause}
+                              isDrunkSecret={isDrunk && !spyCleanMode}
+                              isPoisoned={isPoisoned && !spyCleanMode}
+                            />
+
+                            {/* Seat Number Tag */}
+                            <span className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#0C0C10] border-2 border-[#D4AF37] font-mono text-[10px] sm:text-xs font-black text-[#FDE68A] flex items-center justify-center tabular-nums shadow-md z-20">
+                              {index + 1}
+                            </span>
+
+                            {/* Ghost Vote Pip */}
+                            {!player.isAlive && player.hasGhostVote && (
+                              <span
+                                title="Suara Hantu masih tersedia"
+                                className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#1E293B] border-2 border-[#94A3B8] flex items-center justify-center shadow-md z-20"
+                              >
+                                <Ghost className="w-3 h-3 text-[#E2E8F0]" />
+                              </span>
+                            )}
+                          </button>
+
+                          {/* Player Name */}
+                          <div className="flex flex-col items-center gap-1 mt-1.5">
+                            <span
+                              className={`px-2.5 py-0.5 rounded-lg text-[10px] sm:text-xs font-black tracking-wide max-w-[90px] sm:max-w-[120px] truncate text-center shadow-lg border leading-tight ${
+                                player.isAlive
+                                  ? 'bg-[#14141B]/95 text-white border-white/[0.1]'
+                                  : 'bg-[#0C0C10]/95 text-[#8E8A9E] border-white/[0.06] line-through'
+                              }`}
+                            >
+                              {player.name}
+                            </span>
+
+                            {/* Distinct Status Badges */}
+                            {!spyCleanMode && (
+                              <div className="flex flex-wrap items-center justify-center gap-1 max-w-[130px]">
+                                {!player.isAlive && (
+                                  player.deathCause === 'demon' ? (
+                                    <span className="text-[8px] sm:text-[9px] font-black text-[#FECACA] bg-[#450A0A] border border-[#DC2626] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
+                                      DIBUNUH DEMON
+                                    </span>
+                                  ) : player.deathCause === 'execution' ? (
+                                    <span className="text-[8px] sm:text-[9px] font-black text-[#FDE68A] bg-[#3B2808] border border-[#D4AF37] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
+                                      DIGANTUNG
+                                    </span>
+                                  ) : (
+                                    <span className="text-[8px] sm:text-[9px] font-black text-[#E4E4E7] bg-[#18181B] border border-[#52525B] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
+                                      MATI
+                                    </span>
+                                  )
+                                )}
+
+                                {isDrunk && (
+                                  <span className="text-[8px] sm:text-[9px] font-black text-[#FDE68A] bg-[#451A03] border border-[#F59E0B] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow flex items-center gap-1">
+                                    <Beer className="w-3 h-3 text-[#F59E0B]" />
+                                    <span>ASLI: DRUNK</span>
+                                  </span>
+                                )}
+
+                                {isPoisoned && (
+                                  <span className="text-[8px] sm:text-[9px] font-black text-[#FECACA] bg-[#7F1D1D] border border-[#EF4444] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow flex items-center gap-1 animate-pulse">
+                                    <FlaskConical className="w-3 h-3 text-[#F87171]" />
+                                    <span>DIRACUN</span>
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Attached Reminder Tokens */}
+                            {!spyCleanMode && nonDrunkReminders.length > 0 && (
+                              <div className="flex flex-wrap items-center justify-center gap-1 max-w-[120px] mt-0.5">
+                                {nonDrunkReminders.map((rem) => (
+                                  <ReminderTokenChip
+                                    key={rem.instanceId}
+                                    reminderId={rem.reminderId}
+                                    size="xs"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onRemoveReminder(player.id, rem.instanceId);
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+
+              {!spyCleanMode && (
+                <p className="text-center text-[11px] text-[#8E8A9E] mt-3">
+                  Tips: Jika tampilan lingkaran terasa sempit di layar HP, klik tombol <strong>Mode Daftar Kursi</strong> di atas untuk tampilan kartu yang lebih mudah diklik.
+                </p>
+              )}
+            </>
           )}
         </div>
 
@@ -697,11 +878,7 @@ export default function GrimoireBoard({
                     <>
                       <button
                         type="button"
-                        onClick={() =>
-                          onKillPlayer
-                            ? onKillPlayer(selectedPlayer.id, 'demon')
-                            : onToggleAlive(selectedPlayer.id, 'demon')
-                        }
+                        onClick={() => handleSafeKill(selectedPlayer.id, 'demon')}
                         className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-[#2C1619] hover:bg-[#3D1E22] border border-[#EF4444]/60 text-[#FECACA]"
                       >
                         <Swords className="w-4 h-4 text-[#F87171] shrink-0" />
@@ -710,11 +887,7 @@ export default function GrimoireBoard({
 
                       <button
                         type="button"
-                        onClick={() =>
-                          onKillPlayer
-                            ? onKillPlayer(selectedPlayer.id, 'execution')
-                            : onToggleAlive(selectedPlayer.id, 'execution')
-                        }
+                        onClick={() => handleSafeKill(selectedPlayer.id, 'execution')}
                         className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-[#2B2011] hover:bg-[#3A2C18] border border-[#F59E0B]/60 text-[#FDE68A]"
                       >
                         <Gavel className="w-4 h-4 text-[#F59E0B] shrink-0" />
@@ -725,11 +898,7 @@ export default function GrimoireBoard({
                     <>
                       <button
                         type="button"
-                        onClick={() =>
-                          onResurrectPlayer
-                            ? onResurrectPlayer(selectedPlayer.id)
-                            : onToggleAlive(selectedPlayer.id)
-                        }
+                        onClick={() => handleSafeResurrect(selectedPlayer.id)}
                         className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-[#142922] hover:bg-[#1B382E] border border-[#10B981]/50 text-[#A7F3D0]"
                       >
                         <HeartPulse className="w-4 h-4 text-[#34D399] shrink-0" />
