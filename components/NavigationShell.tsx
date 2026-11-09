@@ -8,21 +8,25 @@ import {
   Check,
   ChevronDown,
   Compass,
+  History,
   Home,
   LayoutDashboard,
   Moon,
   Plus,
   ShieldAlert,
   Smartphone,
+  Sun,
   Swords,
   Trash2,
   Wrench,
 } from 'lucide-react';
 import { useGameSession, MAX_ROOMS } from '@/context/GameContext';
+import { useAppTheme } from '@/context/ThemeContext';
 import FullscreenCardModal from './FullscreenCardModal';
 import ReferenceSheetModal from './ReferenceSheetModal';
 import StarpassModal from './StarpassModal';
 import StoryRecapModal from './StoryRecapModal';
+import ThemeConfirmModal from './ThemeConfirmModal';
 
 export default function NavigationShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -49,6 +53,7 @@ export default function NavigationShell({ children }: { children: React.ReactNod
     handleDismissStarpassModal,
   } = useGameSession();
 
+  const { theme, requestThemeChange } = useAppTheme();
   const [isRoomMenuOpen, setIsRoomMenuOpen] = useState(false);
 
   if (!mounted) {
@@ -63,11 +68,12 @@ export default function NavigationShell({ children }: { children: React.ReactNod
   }
 
   const navItems = [
-    { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/', label: 'Home', icon: LayoutDashboard },
     { href: '/setup', label: 'Setup', icon: Wrench },
     { href: '/grimoire', label: 'Grimoire', icon: Compass, requireActive: true },
     { href: '/evil', label: 'Evil', icon: Swords, requireActive: true },
     { href: '/narrator', label: 'Narator', icon: Moon, requireActive: true },
+    { href: '/story', label: 'Kisah', icon: History, requireActive: true },
     { href: '/webplay', label: 'Layar HP', icon: Smartphone, requireActive: true },
   ];
 
@@ -107,13 +113,34 @@ export default function NavigationShell({ children }: { children: React.ReactNod
             </Link>
           </div>
 
-          {/* Right Header: Clean Room Switcher Pill (Max 3 Rooms) */}
-          <div className="relative">
+          {/* Right Header: Theme Switcher & Clean Room Switcher Pill (Max 3 Rooms) */}
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setIsRoomMenuOpen((prev) => !prev)}
-              className="px-3.5 py-1.5 rounded-full bg-[#14141B] hover:bg-[#1E1E28] border border-white/[0.1] text-xs font-semibold text-[#EDEAF0] flex items-center gap-2 cursor-pointer transition-colors shadow-sm"
+              onClick={() => requestThemeChange()}
+              className="px-3 py-1.5 rounded-full bg-[#14141B] hover:bg-[#1E1E28] border border-white/[0.1] text-xs font-semibold text-[#EDEAF0] flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+              title={theme === 'dark' ? 'Beralih ke Light Mode (Pastel Hijau & Ungu)' : 'Beralih ke Dark Mode'}
+              aria-label="Ganti Tema Warna"
             >
+              {theme === 'dark' ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-[#FBBF24]" />
+                  <span className="hidden sm:inline text-[11px]">Light Mode</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-[#8B5CF6]" />
+                  <span className="hidden sm:inline text-[11px]">Dark Mode</span>
+                </>
+              )}
+            </button>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsRoomMenuOpen((prev) => !prev)}
+                className="px-3.5 py-1.5 rounded-full bg-[#14141B] hover:bg-[#1E1E28] border border-white/[0.1] text-xs font-semibold text-[#EDEAF0] flex items-center gap-2 cursor-pointer transition-colors shadow-sm"
+              >
               <span className="w-2 h-2 rounded-full bg-[#D4AF37] animate-pulse" />
               <span className="font-mono">{activeRoom.name}</span>
               {hasActiveGame && (
@@ -200,7 +227,8 @@ export default function NavigationShell({ children }: { children: React.ReactNod
             )}
           </div>
         </div>
-      </header>
+      </div>
+    </header>
 
       {/* Critical Game Alert Banner (when active) */}
       {gameAlertBanner && (
@@ -286,6 +314,7 @@ export default function NavigationShell({ children }: { children: React.ReactNod
         winner={winner}
         activeRoomName={activeRoom.name}
       />
+      <ThemeConfirmModal />
     </div>
   );
 }

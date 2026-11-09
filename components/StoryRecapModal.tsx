@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import {
   Check,
   Copy,
   Crosshair,
+  ExternalLink,
   Gavel,
   History,
   Moon,
@@ -115,6 +117,16 @@ export default function StoryRecapModal({
           </div>
 
           <div className="flex items-center gap-2">
+            <Link
+              href="/story"
+              onClick={onClose}
+              className="px-3 py-1.5 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Halaman Penuh & Role Awal</span>
+              <span className="sm:hidden">Halaman Penuh</span>
+            </Link>
+
             <button
               type="button"
               onClick={handleCopyStory}

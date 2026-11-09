@@ -33,6 +33,15 @@ export interface GameStoryEntry {
   category: 'death' | 'execution' | 'slayer' | 'starpass' | 'win' | 'start';
 }
 
+export interface InitialPlayerRoster {
+  id: string;
+  name: string;
+  seatIndex: number;
+  roleId: string;
+  perceivedRoleId: string;
+  team: string;
+}
+
 export interface PersistedGameSession {
   hasActiveGame: boolean;
   playerCount: number;
@@ -41,6 +50,7 @@ export interface PersistedGameSession {
   drunkFakeRoleId: string | null;
   demonBluffIds: string[];
   players: PlayerSeat[];
+  initialPlayers?: InitialPlayerRoster[];
   phase: GamePhase;
   dayNumber: number;
   executedTodayPlayerId: string | null;
@@ -72,6 +82,7 @@ function createEmptySession(name = 'Game Baru'): PersistedGameSession {
     drunkFakeRoleId: null,
     demonBluffIds: [],
     players: [],
+    initialPlayers: [],
     phase: 'first_night',
     dayNumber: 1,
     executedTodayPlayerId: null,
@@ -101,6 +112,7 @@ export interface GameContextType {
   drunkFakeRoleId: string | null;
   demonBluffIds: string[];
   players: PlayerSeat[];
+  initialPlayers: InitialPlayerRoster[];
   phase: GamePhase;
   dayNumber: number;
   executedTodayPlayerId: string | null;
@@ -413,6 +425,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }.`,
       category: 'start',
     };
+    const initialRoster: InitialPlayerRoster[] = demo.players.map((p) => ({
+      id: p.id,
+      name: p.name,
+      seatIndex: p.seatIndex,
+      roleId: p.trueRoleId,
+      perceivedRoleId: p.perceivedRoleId,
+      team: ROLE_MAP[p.trueRoleId]?.team || 'townsfolk',
+    }));
     updateSession(() => ({
       hasActiveGame: true,
       playerCount: demo.playerCount,
@@ -420,6 +440,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       drunkFakeRoleId: demo.drunkFakeRoleId,
       demonBluffIds: demo.demonBluffIds,
       players: demo.players,
+      initialPlayers: initialRoster,
       phase: 'first_night',
       dayNumber: 1,
       executedTodayPlayerId: null,
@@ -446,6 +467,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       players: PlayerSeat[];
     }) => {
       const sanitized = sanitizePlayerSeats(payload.players);
+      const initialRoster: InitialPlayerRoster[] = sanitized.map((p) => ({
+        id: p.id,
+        name: p.name,
+        seatIndex: p.seatIndex,
+        roleId: p.trueRoleId,
+        perceivedRoleId: p.perceivedRoleId,
+        team: ROLE_MAP[p.trueRoleId]?.team || 'townsfolk',
+      }));
       const initialStory: GameStoryEntry = {
         id: `story-${Date.now()}`,
         round: 'Setup',
@@ -463,6 +492,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         drunkFakeRoleId: payload.drunkFakeRoleId,
         demonBluffIds: payload.demonBluffIds,
         players: sanitized,
+        initialPlayers: initialRoster,
         phase: 'first_night',
         dayNumber: 1,
         executedTodayPlayerId: null,
@@ -610,6 +640,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       const roleName = ROLE_MAP[target.perceivedRoleId]?.name || 'Unknown';
       const trueRoleName = ROLE_MAP[target.trueRoleId]?.name || 'Unknown';
+      const isTargetDemon = ROLE_MAP[target.trueRoleId]?.team === 'demon';
 
       // Record in story history
       if (cause === 'execution') {
@@ -624,16 +655,21 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           `${target.name} (${roleName}) tewas seketika akibat tembakan Slayer!`,
           'slayer'
         );
+      } else if (isTargetDemon && cause === 'demon') {
+        appendStory(
+          currentRoundLabel,
+          `STARPASS: Demon ${target.name} (${roleName}) sengaja melakukan bunuh diri malam ini untuk mengalihkan kekuatan Imp ke Minion!`,
+          'starpass'
+        );
       } else {
         appendStory(
           currentRoundLabel,
-          `${target.name} (${roleName}) tewas dibunuh oleh Demon.`,
+          `${target.name} (${roleName}) tewas diserang oleh Demon malam ini.`,
           'death'
         );
       }
 
       // Check for Demon Suicide / Starpass
-      const isTargetDemon = ROLE_MAP[target.trueRoleId]?.team === 'demon';
       if (isTargetDemon && cause === 'demon') {
         const aliveMinions = session.players.filter(
           (p) => p.isAlive && p.id !== playerId && ROLE_MAP[p.trueRoleId]?.team === 'minion'
@@ -674,7 +710,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
           appendStory(
             currentRoundLabel,
-            `Demon (${target.name}) bunuh diri. Karena hanya ada 1 Minion hidup (${singleMinion.name}), ia otomatis menjadi IMP baru!`,
+            `Pewarisan Imp Berhasil: Karena hanya ada 1 Minion hidup (${singleMinion.name} - Kursi ${singleMinion.seatIndex + 1}), ia otomatis mewarisi tahta dan resmi menjadi IMP baru!`,
             'starpass'
           );
           return;
@@ -699,6 +735,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               players: sanitizePlayerSeats(next),
             };
           });
+
+          appendStory(
+            currentRoundLabel,
+            `Pewarisan Imp: Terdapat ${aliveMinions.length} Minion hidup (${aliveMinions.map(m => m.name).join(', ')}). Storyteller membuka pemilihan Minion pewaris Imp.`,
+            'starpass'
+          );
 
           setStarpassPending({
             dyingDemon: target,
@@ -1376,6 +1418,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       drunkFakeRoleId: session.drunkFakeRoleId,
       demonBluffIds: session.demonBluffIds,
       players: session.players,
+      initialPlayers: session.initialPlayers || [],
       phase: session.phase,
       dayNumber: session.dayNumber,
       executedTodayPlayerId: session.executedTodayPlayerId,

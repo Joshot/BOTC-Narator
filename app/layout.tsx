@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { GameProvider } from '@/context/GameContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import NavigationShell from '@/components/NavigationShell';
 
 export const metadata: Metadata = {
@@ -34,9 +35,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         suppressHydrationWarning
         className="bg-[#0C0C10] text-[#EDEAF0] font-sans antialiased selection:bg-[#3D3552] selection:text-[#FFFFFF] min-h-screen"
       >
-        <GameProvider>
-          <NavigationShell>{children}</NavigationShell>
-        </GameProvider>
+        <ThemeProvider>
+          <GameProvider>
+            <NavigationShell>{children}</NavigationShell>
+          </GameProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

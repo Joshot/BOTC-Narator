@@ -38,7 +38,8 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
     { href: '/grimoire', label: 'Meja Grimoire', icon: Compass, id: 'grimoire' },
     { href: '/evil', label: 'Panel Evil & Bluff', icon: Swords, id: 'evil' },
     { href: '/narrator', label: 'Urutan Narator', icon: Moon, id: 'narrator' },
-    { href: '/webplay', label: 'Layar HP Pemain', icon: Smartphone, id: 'webplay' },
+    { href: '/story', label: 'Kisah & Role Awal', icon: History, id: 'story' },
+    { href: '/webplay', label: 'Layar HP', icon: Smartphone, id: 'webplay' },
   ];
 
   return (
