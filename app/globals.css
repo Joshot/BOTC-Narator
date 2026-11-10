@@ -2,6 +2,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --font-display: "Cinzel", "Palatino Linotype", Georgia, serif;
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
@@ -9,87 +11,265 @@
 }
 
 /* ========================================================
-   LIGHT MODE: 100% COMPREHENSIVE PASTEL GREEN & SOFT PURPLE
-   Designed for maximum legibility, zero clashing colors.
+   1. OBSIDIAN DARK MODE (html.dark)
+   "kalau dark beneran dark semua yaaaa tolong jgn ada latar yg terang kecuali tulisan gitu aja yaaaa!!!!!"
+   Zero bright backgrounds. Everything obsidian, midnight slate, with crisp white & gold text.
+   ======================================================== */
+
+html.dark body {
+  background-color: #0C0C10 !important;
+  color: #EDEAF0 !important;
+}
+
+html.dark header {
+  background-color: rgba(20, 20, 27, 0.95) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Guard against any bright white backgrounds leaking into dark mode */
+html.dark .bg-white {
+  background-color: #14141B !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #EDEAF0 !important;
+}
+
+html.dark .bg-purple-50 {
+  background-color: #181520 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #EDEAF0 !important;
+}
+
+html.dark .bg-purple-100 {
+  background-color: #1E1E28 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #EDEAF0 !important;
+}
+
+html.dark .text-slate-900,
+html.dark .text-slate-800 {
+  color: #EDEAF0 !important;
+}
+
+html.dark .text-slate-600,
+html.dark .text-slate-500 {
+  color: #8E8A9E !important;
+}
+
+html.dark .text-purple-900 {
+  color: #EDEAF0 !important;
+}
+
+html.dark .border-purple-200 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark .border-purple-100 {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+html.dark .border-purple-300 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Grimoire circle table in Dark Mode */
+html.dark [data-testid="grimoire-circle"] {
+  background: radial-gradient(circle at 50% 50%, #1A1A24 0%, #121217 55%, #0C0C10 100%) !important;
+  border: 2px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), inset 0 0 80px rgba(0, 0, 0, 0.9) !important;
+}
+
+html.dark [data-testid="grimoire-circle"] .font-display {
+  color: #FFFFFF !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9) !important;
+}
+
+/* ========================================================
+   2. PASTEL GREEN & SOFT PURPLE LIGHT MODE (html.light)
+   "begitupun light modenya"
+   Clean white cards, soft mint and lavender backgrounds, zero black buttons.
    ======================================================== */
 
 html.light body {
   background-color: #F1F8F4 !important;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(209, 250, 229, 0.8) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(237, 233, 254, 0.9) 0px, transparent 50%),
+    radial-gradient(at 0% 0%, rgba(209, 250, 229, 0.85) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(237, 233, 254, 0.95) 0px, transparent 50%),
     radial-gradient(at 50% 50%, rgba(243, 232, 255, 0.5) 0px, transparent 55%) !important;
   background-attachment: fixed !important;
   color: #1E1B4B !important;
 }
 
-/* Header & Navbar in Light Mode */
 html.light header {
   background-color: rgba(255, 255, 255, 0.96) !important;
   border-bottom: 1px solid rgba(139, 92, 246, 0.18) !important;
   box-shadow: 0 2px 12px rgba(139, 92, 246, 0.05) !important;
 }
 
-/* All Outer Containers & Cards */
-html.light .bg-\[\#0C0C10\] {
-  background-color: #F1F8F4 !important;
-}
-
-html.light .bg-\[\#14141B\],
-html.light .bg-\[\#181822\],
-html.light .bg-\[\#181520\] {
+/* All Outer Containers & Cards mapped to Clean White */
+html.light [class*="bg-[#14141B]"],
+html.light [class*="bg-[#181822]"],
+html.light [class*="bg-[#181520]"],
+html.light [class*="bg-[#110F17]"],
+html.light [class*="bg-[#121018]"],
+html.light [class*="bg-[#13101A]"],
+html.light [class*="bg-[#14111B]"],
+html.light [class*="bg-[#14121B]"],
+html.light [class*="bg-[#120F1A]"],
+html.light [class*="bg-[#100E17]"] {
   background-color: #FFFFFF !important;
-  border-color: rgba(139, 92, 246, 0.16) !important;
-  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.06) !important;
-}
-
-html.light .bg-\[\#1C1C26\] {
-  background-color: #FAF8FE !important;
-  border-color: rgba(16, 185, 129, 0.2) !important;
-}
-
-/* Inner Sections, Bars & Strips */
-html.light .bg-\[\#221E2E\],
-html.light .bg-\[\#2E293E\],
-html.light .bg-\[\#251F33\],
-html.light .bg-\[\#2A2636\],
-html.light .bg-\[\#2C263B\],
-html.light .bg-\[\#3C3450\] {
-  background-color: #F5F2FC !important;
   border-color: rgba(139, 92, 246, 0.18) !important;
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.06) !important;
   color: #1E1B4B !important;
 }
 
-/* Secondary Button Backgrounds in Light Mode */
-html.light .bg-\[\#1E1E28\],
-html.light .bg-\[\#282838\] {
+/* Outer canvas background */
+html.light [class*="bg-[#0C0C10]"]:not(button):not(a):not(span.rounded-full):not(span.rounded-md):not(div.w-11) {
+  background-color: #F1F8F4 !important;
+}
+
+/* Secondary bars, sub-cards, and strips */
+html.light [class*="bg-[#1C1C26]"],
+html.light [class*="bg-[#221E2E]"],
+html.light [class*="bg-[#2E293E]"],
+html.light [class*="bg-[#251F33]"],
+html.light [class*="bg-[#2A2636]"],
+html.light [class*="bg-[#2C263B]"],
+html.light [class*="bg-[#3C3450]"],
+html.light [class*="bg-[#231E30]"],
+html.light [class*="bg-[#2B253B]"],
+html.light [class*="bg-[#242031]"],
+html.light [class*="bg-[#2F2A40]"],
+html.light [class*="bg-[#302A42]"],
+html.light [class*="bg-[#3B3450]"],
+html.light [class*="bg-[#1E1A2A]"] {
+  background-color: #F5F2FC !important;
+  border-color: rgba(139, 92, 246, 0.2) !important;
+  color: #1E1B4B !important;
+}
+
+/* Secondary Button Backgrounds in Light Mode - Soft Lavender Pill */
+html.light [class*="bg-[#1E1E28]"],
+html.light [class*="bg-[#282838]"],
+html.light [class*="bg-[#222230]"],
+html.light [class*="bg-[#252533]"],
+html.light button[class*="bg-[#0C0C10]"],
+html.light a[class*="bg-[#0C0C10]"] {
   background-color: #EDE9FE !important;
   color: #5B21B6 !important;
   border-color: rgba(139, 92, 246, 0.3) !important;
 }
 
-html.light .bg-\[\#1E1E28\]:hover,
-html.light .bg-\[\#282838\]:hover {
+html.light [class*="bg-[#1E1E28]"]:hover,
+html.light [class*="bg-[#282838]"]:hover,
+html.light [class*="bg-[#222230]"]:hover,
+html.light button[class*="bg-[#0C0C10]"]:hover,
+html.light a[class*="bg-[#0C0C10]"]:hover {
   background-color: #DDD6FE !important;
   color: #4C1D95 !important;
 }
 
-/* Quick Pills & Badges */
-html.light .bg-\[\#222230\] {
-  background-color: #EDE9FE !important;
-  color: #5B21B6 !important;
+/* Inputs & Select Elements in Light Mode */
+html.light select,
+html.light input,
+html.light [class*="bg-[#13111A]"] {
+  background-color: #FFFFFF !important;
+  color: #1E1B4B !important;
+  border-color: rgba(139, 92, 246, 0.3) !important;
+}
+
+/* Character ability boxes and cards */
+html.light [class*="bg-[#120F1A]"] {
+  background-color: #F8F6FD !important;
   border-color: rgba(139, 92, 246, 0.25) !important;
+  color: #1E1B4B !important;
 }
 
-html.light .bg-\[\#222230\]:hover {
-  background-color: #DDD6FE !important;
-  color: #4C1D95 !important;
+/* Alert / Evil / Red highlights in Light Mode */
+html.light [class*="bg-[#2B171B]"],
+html.light [class*="bg-[#2D181C]"],
+html.light [class*="bg-[#35070A]"],
+html.light [class*="bg-[#1C1318]"],
+html.light [class*="bg-[#3E1A22]"],
+html.light [class*="bg-[#3D1A1E]"] {
+  background-color: #FEF2F2 !important;
+  border-color: #F87171 !important;
+  color: #991B1B !important;
 }
 
-html.light .bg-\[\#252533\] {
-  background-color: #E0E7FF !important;
-  color: #3730A3 !important;
-  border-color: rgba(99, 102, 241, 0.25) !important;
+/* Info / Blue highlights in Light Mode */
+html.light [class*="bg-[#162231]"],
+html.light [class*="bg-[#182433]"] {
+  background-color: #EFF6FF !important;
+  border-color: #93C5FD !important;
+  color: #1E40AF !important;
+}
+
+/* Warning / Amber highlights in Light Mode */
+html.light [class*="bg-[#261822]"],
+html.light [class*="bg-[#272115]"],
+html.light [class*="bg-[#2C1808]"],
+html.light [class*="bg-[#281C10]"],
+html.light [class*="bg-[#3D2008]"],
+html.light [class*="bg-[#2D1B08]"],
+html.light [class*="bg-[#3D250C]"],
+html.light [class*="bg-[#291B06]"] {
+  background-color: #FEF3C7 !important;
+  border-color: #F59E0B !important;
+  color: #92400E !important;
+}
+
+/* Demon Kill Button in Light Mode */
+html.light [class*="bg-[#EF4444]"],
+html.light [class*="bg-[#35070A]"] {
+  background-color: #FEE2E2 !important;
+  border-color: #F87171 !important;
+  color: #991B1B !important;
+}
+
+/* Alive / Health Badges in Light Mode */
+html.light [class*="bg-[#142A20]"] {
+  background-color: #D1FAE5 !important;
+  border-color: #10B981 !important;
+  color: #065F46 !important;
+}
+
+/* Text Overrides in Light Mode */
+html.light [class*="text-[#EDEAF0]"],
+html.light [class*="text-[#F5EFE6]"],
+html.light [class*="text-[#EDE7DB]"],
+html.light [class*="text-[#D6CFC2]"],
+html.light [class*="text-[#DED7CA]"],
+html.light h1.text-white,
+html.light h2.text-white,
+html.light h3.text-white,
+html.light h4.text-white,
+html.light strong.text-white {
+  color: #1E1B4B !important;
+}
+
+html.light [class*="text-[#8E8A9E]"],
+html.light [class*="text-[#A6A2B2]"],
+html.light [class*="text-[#716D80]"],
+html.light [class*="text-[#A8A092]"],
+html.light [class*="text-[#B8B0A2]"],
+html.light [class*="text-[#9C9486]"],
+html.light [class*="text-[#8E8698]"],
+html.light [class*="text-[#7D758A]"] {
+  color: #4B5563 !important;
+}
+
+/* Border Overrides in Light Mode */
+html.light [class*="border-[#2A2636]"],
+html.light [class*="border-[#2C263B]"],
+html.light [class*="border-[#292535]"],
+html.light [class*="border-[#262234]"],
+html.light [class*="border-[#342E46]"],
+html.light [class*="border-[#3B3450]"],
+html.light [class*="border-[#38324B]"],
+html.light [class*="border-[#322D42]"],
+html.light [class*="border-white/"] {
+  border-color: rgba(139, 92, 246, 0.18) !important;
 }
 
 /* ========================================================
@@ -130,94 +310,6 @@ html.light [data-testid="grimoire-circle"] .bg-\[\#0C0C10\]\/90 {
   border: 1px solid #D4AF37 !important;
   color: #B45309 !important;
   box-shadow: 0 2px 6px rgba(0,0,0,0.12) !important;
-}
-
-/* ========================================================
-   INSPECTOR PANEL & BUTTON CONTRAST IN LIGHT MODE
-   ======================================================== */
-html.light .bg-\[\#3D2008\],
-html.light .bg-\[\#2D1B08\],
-html.light .bg-\[\#3D250C\],
-html.light .bg-\[\#291B06\] {
-  background-color: #FEF3C7 !important;
-  border-color: #F59E0B !important;
-  color: #92400E !important;
-}
-
-/* Demon Kill Button */
-html.light .bg-\[\#EF4444\]\/20,
-html.light .bg-\[\#35070A\] {
-  background-color: #FEE2E2 !important;
-  border-color: #F87171 !important;
-  color: #991B1B !important;
-}
-html.light .bg-\[\#EF4444\]\/20:hover {
-  background-color: #FECACA !important;
-}
-
-/* Execution Button */
-html.light .bg-\[\#991B1B\] {
-  background-color: #DC2626 !important;
-  color: #FFFFFF !important;
-}
-
-/* Alive / Health Badges */
-html.light .bg-\[\#142A20\] {
-  background-color: #D1FAE5 !important;
-  border-color: #10B981 !important;
-  color: #065F46 !important;
-}
-
-/* Character Ability Box in Inspector */
-html.light .bg-\[\#14111B\],
-html.light .bg-\[\#1A1724\] {
-  background-color: #F6F3FC !important;
-  border-color: rgba(139, 92, 246, 0.2) !important;
-  color: #2E1065 !important;
-}
-
-/* Reminder Tokens Tray */
-html.light .bg-\[\#100E17\] {
-  background-color: #F5F2FB !important;
-  border-color: rgba(139, 92, 246, 0.15) !important;
-}
-
-/* Typography Overrides */
-html.light .text-\[\#EDEAF0\],
-html.light .text-\[\#F5EFE6\],
-html.light .text-\[\#EDE7DB\] {
-  color: #1E1B4B !important;
-}
-
-html.light .text-\[\#8E8A9E\],
-html.light .text-\[\#A6A2B2\],
-html.light .text-\[\#716D80\],
-html.light .text-\[\#C8C0B3\],
-html.light .text-\[\#B8B0A2\] {
-  color: #4B5563 !important;
-}
-
-/* Borders */
-html.light .border-white\/\[0\.08\],
-html.light .border-white\/\[0\.06\],
-html.light .border-white\/\[0\.1\],
-html.light .border-white\/\[0\.12\],
-html.light .border-\[\#2A2636\],
-html.light .border-\[\#363049\],
-html.light .border-\[\#2C263B\],
-html.light .border-\[\#3A334C\] {
-  border-color: rgba(139, 92, 246, 0.18) !important;
-}
-
-/* Dashboard Action Buttons Override */
-html.light .dashboard-action-btn {
-  background-color: #EDE9FE !important;
-  color: #5B21B6 !important;
-  border: 1px solid rgba(139, 92, 246, 0.3) !important;
-}
-html.light .dashboard-action-btn:hover {
-  background-color: #DDD6FE !important;
-  color: #4C1D95 !important;
 }
 
 /* Modals Overlay */

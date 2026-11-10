@@ -295,17 +295,10 @@ export function ReminderTokenChip({
 
   const toneClasses =
     rem.team === 'evil'
-      ? 'border-[#EF4444]/90 bg-[#2D171A] text-[#FECACA]'
+      ? 'border-[#EF4444] bg-red-950/80 dark:bg-[#2D171A] text-red-200'
       : rem.team === 'good'
-      ? 'border-[#38BDF8]/90 bg-[#162536] text-[#BAE6FD]'
-      : 'border-[#D4AF37]/90 bg-[#2B2418] text-[#FDE68A]';
-
-  const iconColor =
-    rem.team === 'evil'
-      ? 'text-[#F87171]'
-      : rem.team === 'good'
-      ? 'text-[#38BDF8]'
-      : 'text-[#FBBF24]';
+      ? 'border-[#38BDF8] bg-sky-950/80 dark:bg-[#162536] text-sky-200'
+      : 'border-[#D4AF37] bg-amber-950/80 dark:bg-[#2B2418] text-amber-200';
 
   if (size === 'xs') {
     return (
@@ -314,9 +307,14 @@ export function ReminderTokenChip({
         onClick={onClick}
         title={`${rem.label} (${rem.indonesianLabel}) — Klik untuk melepas`}
         aria-label={`Hapus token pengingat ${rem.indonesianLabel}`}
-        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95 cursor-pointer ${toneClasses}`}
+        className="relative w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden shadow-lg border border-white/30 transition-transform hover:scale-115 active:scale-90 cursor-pointer shrink-0 bg-[#14141B]"
       >
-        <RoleGlyph roleId={rem.roleId} className={`w-4 h-4 sm:w-4.5 sm:h-4.5 ${iconColor} shrink-0`} />
+        <img
+          src={`/reminders/${rem.id}.png`}
+          alt={rem.label}
+          className="w-full h-full object-cover filter drop-shadow select-none pointer-events-none"
+          loading="lazy"
+        />
       </button>
     );
   }
@@ -328,23 +326,119 @@ export function ReminderTokenChip({
       onDragStart={onDragStart}
       onClick={onClick}
       aria-label={`Token pengingat ${rem.indonesianLabel}`}
-      className={`group flex items-center gap-2.5 rounded-full border-2 px-3 py-1.5 min-h-[44px] text-left transition-all cursor-pointer select-none ${toneClasses} ${
+      className={`group flex items-center gap-2.5 rounded-2xl border-2 p-2 min-h-[50px] text-left transition-all cursor-pointer select-none ${toneClasses} ${
         isSelected
-          ? 'ring-2 ring-[#FBBF24] scale-[1.03] shadow-lg'
-          : 'hover:brightness-110 active:scale-95 shadow'
+          ? 'ring-2 ring-[#FBBF24] scale-[1.02] shadow-xl'
+          : 'hover:brightness-110 active:scale-98 shadow-md'
       }`}
     >
-      <span className="w-7 h-7 rounded-full bg-black/40 flex items-center justify-center shrink-0 border border-white/10">
-        <RoleGlyph roleId={rem.roleId} className={`w-4 h-4 ${iconColor}`} />
-      </span>
-      <span className="flex flex-col leading-tight pr-1">
-        <span className="text-xs font-bold text-[#F5EFE6] whitespace-nowrap">
+      <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden shrink-0 border border-white/30 shadow-md bg-[#14141B]">
+        <img
+          src={`/reminders/${rem.id}.png`}
+          alt={rem.label}
+          className="w-full h-full object-cover select-none pointer-events-none"
+          loading="lazy"
+        />
+      </div>
+      <div className="flex flex-col leading-tight min-w-0 flex-1">
+        <span className="text-xs sm:text-sm font-bold text-slate-100 dark:text-[#F5EFE6] truncate">
           {rem.label}
         </span>
-        <span className="text-[10px] font-semibold text-[#D6CFC2] whitespace-nowrap mt-0.5">
+        <span className="text-[10px] sm:text-xs font-semibold text-slate-300 dark:text-[#D6CFC2] truncate mt-0.5">
           {rem.indonesianLabel}
         </span>
-      </span>
+      </div>
     </button>
+  );
+}
+
+/**
+ * Enhanced authentic Reminder Token Card for the Grimoire Tray (Baki Token Pengingat).
+ * Highly detailed with authentic medallion art, ownership role, description, and mobile responsiveness.
+ */
+export function ReminderTokenTrayCard({
+  reminderId,
+  isSelected = false,
+  onClick,
+  onDragStart,
+  showRuleDetail = false,
+}: {
+  reminderId: string;
+  isSelected?: boolean;
+  onClick?: () => void;
+  onDragStart?: (e: React.DragEvent) => void;
+  showRuleDetail?: boolean;
+}) {
+  const rem = REMINDER_MAP[reminderId];
+  if (!rem) return null;
+
+  const role = ROLE_MAP[rem.roleId];
+
+  const borderClass =
+    rem.team === 'evil'
+      ? 'border-red-500/70 dark:border-[#EF4444]/80'
+      : rem.team === 'good'
+      ? 'border-sky-500/70 dark:border-[#38BDF8]/80'
+      : 'border-amber-500/70 dark:border-[#D4AF37]/80';
+
+  const badgeBg =
+    rem.team === 'evil'
+      ? 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30'
+      : rem.team === 'good'
+      ? 'bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/30'
+      : 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30';
+
+  return (
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onClick={onClick}
+      className={`relative group flex flex-col justify-between p-2.5 sm:p-3 rounded-2xl border-2 transition-all cursor-pointer select-none text-left shadow-sm hover:shadow-md ${borderClass} ${
+        isSelected
+          ? 'bg-amber-100/90 dark:bg-[#2C2415] ring-2 ring-amber-400 dark:ring-[#D4AF37] scale-[1.02]'
+          : 'bg-white/95 dark:bg-[#15121E] hover:bg-slate-50 dark:hover:bg-[#1E192B]'
+      }`}
+    >
+      <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
+        {/* Authentic 900x900 Reminder Medallion Image */}
+        <div className="relative w-11 h-11 sm:w-13 sm:h-13 rounded-full overflow-hidden shrink-0 border-2 border-white/40 shadow-md bg-[#100E17] group-hover:scale-105 transition-transform">
+          <img
+            src={`/reminders/${rem.id}.png`}
+            alt={rem.label}
+            className="w-full h-full object-cover select-none pointer-events-none"
+            loading="lazy"
+          />
+        </div>
+
+        {/* Labels & Role Tag */}
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <div className="flex items-center justify-between gap-1">
+            <span className="font-display font-black text-xs sm:text-sm text-slate-900 dark:text-[#EDEAF0] truncate tracking-wide">
+              {rem.label}
+            </span>
+            <span
+              className={`text-[9px] font-mono font-bold uppercase px-1.5 py-0.2 rounded border shrink-0 ${badgeBg}`}
+            >
+              {role?.name || rem.team}
+            </span>
+          </div>
+
+          <p className="text-[11px] font-semibold text-purple-900 dark:text-[#FDE68A] truncate">
+            {rem.indonesianLabel}
+          </p>
+
+          <p className="text-[10px] text-slate-500 dark:text-[#8E8A9E] truncate">
+            Peran: <strong className="text-slate-700 dark:text-slate-300">{role?.name || '-'}</strong>
+          </p>
+        </div>
+      </div>
+
+      {/* Optional Expanded Rule / Effect Details */}
+      {showRuleDetail && (
+        <div className="mt-2 pt-2 border-t border-slate-200 dark:border-white/[0.08] text-[10px] text-slate-600 dark:text-[#B8B0A2] leading-tight">
+          {rem.description}
+        </div>
+      )}
+    </div>
   );
 }

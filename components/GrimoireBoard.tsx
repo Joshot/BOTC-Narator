@@ -17,6 +17,7 @@ import {
   Skull,
   Swords,
   Trash2,
+  Info,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { REMINDER_MAP, REMINDER_TOKENS, ROLE_MAP, ROLES } from '@/lib/botc-data';
@@ -25,7 +26,7 @@ import {
   PlayerSeat,
   calculateVoteThreshold,
 } from '@/lib/botc-engine';
-import { CharacterToken, ReminderTokenChip, RoleGlyph } from './TokenArtwork';
+import { CharacterToken, ReminderTokenChip, ReminderTokenTrayCard, RoleGlyph } from './TokenArtwork';
 import { SilentCardPayload } from './FullscreenCardModal';
 import PeekCardModal from './PeekCardModal';
 import DesignateDrunkModal from './DesignateDrunkModal';
@@ -80,6 +81,7 @@ export default function GrimoireBoard({
   const [isSwapModeActive, setIsSwapModeActive] = useState(false);
   const [activeBrushReminderId, setActiveBrushReminderId] = useState<string | null>(null);
   const [reminderFilter, setReminderFilter] = useState<'active' | 'all'>('active');
+  const [showReminderRules, setShowReminderRules] = useState(false);
   const [displayMode, setDisplayMode] = useState<'circle' | 'cards'>('circle');
   const [spyCleanMode, setSpyCleanMode] = useState(false);
   const [dragPayload, setDragPayload] = useState<
@@ -320,17 +322,29 @@ export default function GrimoireBoard({
 
       {/* Interactive Mode Instruction Banner */}
       {(isSwapModeActive || activeBrushReminderId) && (
-        <div className="px-4 py-3 rounded-xl bg-[#272115] border border-[#D4AF37]/60 flex items-center justify-between gap-3 text-xs sm:text-sm text-[#FDE68A]">
+        <div className="px-4 py-3 rounded-xl bg-amber-100 dark:bg-[#272115] border border-amber-300 dark:border-[#D4AF37]/60 flex items-center justify-between gap-3 text-xs sm:text-sm text-amber-950 dark:text-[#FDE68A] shadow-md">
           {isSwapModeActive ? (
-            <span>
-              {swapModeSourceIdx === null
-                ? 'Mode Tukar Kursi: Ketuk pemain pertama di lingkaran Grimoire yang ingin dipindah.'
-                : `Pemain Kursi ${swapModeSourceIdx + 1} (${players[swapModeSourceIdx]?.name}) dipilih — sekarang ketuk kursi tujuan untuk menukar posisi!`}
-            </span>
+            <div className="flex items-center gap-2 min-w-0">
+              <ArrowLeftRight className="w-4 h-4 text-amber-700 dark:text-[#D4AF37] shrink-0" />
+              <span>
+                {swapModeSourceIdx === null
+                  ? 'Mode Tukar Kursi: Ketuk pemain pertama di lingkaran Grimoire yang ingin dipindah.'
+                  : `Pemain Kursi ${swapModeSourceIdx + 1} (${players[swapModeSourceIdx]?.name}) dipilih — sekarang ketuk kursi tujuan untuk menukar posisi!`}
+              </span>
+            </div>
           ) : (
-            <span>
-              Mode Pasang Token <strong>{REMINDER_MAP[activeBrushReminderId!]?.label}</strong> ({REMINDER_MAP[activeBrushReminderId!]?.indonesianLabel}): Ketuk kursi pemain di lingkaran Grimoire untuk menempelkannya!
-            </span>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="relative w-7 h-7 rounded-full overflow-hidden border border-amber-400 dark:border-amber-300 shrink-0 bg-[#100E17] shadow-sm">
+                <img
+                  src={`/reminders/${activeBrushReminderId}.png`}
+                  alt={REMINDER_MAP[activeBrushReminderId!]?.label}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <span className="truncate">
+                Mode Pasang Token <strong>{REMINDER_MAP[activeBrushReminderId!]?.label}</strong> ({REMINDER_MAP[activeBrushReminderId!]?.indonesianLabel}): Ketuk kursi pemain untuk menempelkannya!
+              </span>
+            </div>
           )}
           <button
             type="button"
@@ -339,7 +353,7 @@ export default function GrimoireBoard({
               setSwapModeSourceIdx(null);
               setActiveBrushReminderId(null);
             }}
-            className="px-2.5 py-1 rounded-lg bg-black/30 text-xs font-semibold text-white cursor-pointer shrink-0"
+            className="px-3 py-1 rounded-lg bg-amber-200 dark:bg-black/30 hover:bg-amber-300 dark:hover:bg-black/50 text-xs font-semibold text-amber-950 dark:text-white cursor-pointer shrink-0 transition-colors"
           >
             Batal
           </button>
@@ -349,7 +363,7 @@ export default function GrimoireBoard({
       {/* Main Split: Circular Grimoire Canvas + Inspector / Reminder Tray */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left/Center: Arena / Card View */}
-        <div className="lg:col-span-7 bg-[#14141B] border border-white/[0.08] rounded-3xl p-3 sm:p-6 shadow-2xl">
+        <div className="lg:col-span-7 bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] rounded-3xl p-3 sm:p-6 shadow-xl">
           {displayMode === 'cards' ? (
             /* Mode Daftar Kursi (Responsive Grid / Mobile Friendly) */
             <div className="space-y-4">
@@ -593,9 +607,9 @@ export default function GrimoireBoard({
                           </button>
 
                           {/* Player Name */}
-                          <div className="flex flex-col items-center gap-1 mt-1.5">
+                          <div className="flex flex-col items-center gap-0.5 sm:gap-1 mt-1 sm:mt-1.5">
                             <span
-                              className={`px-2.5 py-0.5 rounded-lg text-[10px] sm:text-xs font-black tracking-wide max-w-[90px] sm:max-w-[120px] truncate text-center shadow-md border leading-tight ${
+                              className={`px-1.5 sm:px-2.5 py-0.5 rounded-lg text-[9px] sm:text-xs font-black tracking-wide max-w-[76px] sm:max-w-[120px] truncate text-center shadow-md border leading-tight ${
                                 player.isAlive
                                   ? 'bg-white dark:bg-[#14141B]/95 text-slate-900 dark:text-white border-purple-300 dark:border-white/[0.1]'
                                   : 'bg-slate-100 dark:bg-[#0C0C10]/95 text-slate-500 dark:text-[#8E8A9E] border-slate-300 dark:border-white/[0.06] line-through'
@@ -606,42 +620,42 @@ export default function GrimoireBoard({
 
                             {/* Distinct Status Badges */}
                             {!spyCleanMode && (
-                              <div className="flex flex-wrap items-center justify-center gap-1 max-w-[130px]">
+                              <div className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1 max-w-[100px] sm:max-w-[130px]">
                                 {!player.isAlive && (
                                   player.deathCause === 'demon' ? (
-                                    <span className="text-[8px] sm:text-[9px] font-black text-[#FECACA] bg-[#450A0A] border border-[#DC2626] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
-                                      DIBUNUH DEMON
+                                    <span className="text-[7px] sm:text-[9px] font-black text-[#FECACA] bg-[#450A0A] border border-[#DC2626] px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-full uppercase tracking-wider shadow whitespace-nowrap">
+                                      DEMON
                                     </span>
                                   ) : player.deathCause === 'execution' ? (
-                                    <span className="text-[8px] sm:text-[9px] font-black text-[#FDE68A] bg-[#3B2808] border border-[#D4AF37] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
-                                      DIGANTUNG
+                                    <span className="text-[7px] sm:text-[9px] font-black text-[#FDE68A] bg-[#3B2808] border border-[#D4AF37] px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-full uppercase tracking-wider shadow whitespace-nowrap">
+                                      GANTUNG
                                     </span>
                                   ) : (
-                                    <span className="text-[8px] sm:text-[9px] font-black text-[#E4E4E7] bg-[#18181B] border border-[#52525B] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
+                                    <span className="text-[7px] sm:text-[9px] font-black text-[#E4E4E7] bg-[#18181B] border border-[#52525B] px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-full uppercase tracking-wider shadow whitespace-nowrap">
                                       MATI
                                     </span>
                                   )
                                 )}
 
                                 {isDrunk && (
-                                  <span className="text-[8px] sm:text-[9px] font-black text-[#FDE68A] bg-[#451A03] border border-[#F59E0B] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow flex items-center gap-1">
-                                    <Beer className="w-3 h-3 text-[#F59E0B]" />
-                                    <span>ASLI: DRUNK</span>
+                                  <span className="text-[7px] sm:text-[9px] font-black text-[#FDE68A] bg-[#451A03] border border-[#F59E0B] px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-full uppercase tracking-wider shadow flex items-center gap-0.5 whitespace-nowrap">
+                                    <Beer className="w-2.5 h-2.5 text-[#F59E0B]" />
+                                    <span>DRUNK</span>
                                   </span>
                                 )}
 
                                 {isPoisoned && (
-                                  <span className="text-[8px] sm:text-[9px] font-black text-[#FECACA] bg-[#7F1D1D] border border-[#EF4444] px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow flex items-center gap-1 animate-pulse">
-                                    <FlaskConical className="w-3 h-3 text-[#F87171]" />
-                                    <span>DIRACUN</span>
+                                  <span className="text-[7px] sm:text-[9px] font-black text-[#FECACA] bg-[#7F1D1D] border border-[#EF4444] px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-full uppercase tracking-wider shadow flex items-center gap-0.5 animate-pulse whitespace-nowrap">
+                                    <FlaskConical className="w-2.5 h-2.5 text-[#F87171]" />
+                                    <span>RACUN</span>
                                   </span>
                                 )}
                               </div>
                             )}
 
-                            {/* Attached Reminder Tokens */}
+                            {/* Attached Reminder Tokens with Authentic Images */}
                             {!spyCleanMode && nonDrunkReminders.length > 0 && (
-                              <div className="flex flex-wrap items-center justify-center gap-1 max-w-[120px] mt-0.5">
+                              <div className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1 max-w-[100px] sm:max-w-[120px] mt-0.5">
                                 {nonDrunkReminders.map((rem) => (
                                   <ReminderTokenChip
                                     key={rem.instanceId}
@@ -677,9 +691,9 @@ export default function GrimoireBoard({
           <div className="lg:col-span-5 space-y-5">
             {/* Selected Seat Inspector Card */}
             {selectedPlayer && (
-              <div className="bg-[#181520] border border-[#2A2636] rounded-2xl p-5 space-y-4">
+              <div className="bg-white dark:bg-[#181520] border border-purple-200 dark:border-[#2A2636] rounded-2xl p-5 space-y-4 shadow-xl">
                 {/* Header: Token + Big Role & Player Details */}
-                <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#2C263B]">
+                <div className="flex items-start justify-between gap-3 pb-3 border-b border-purple-100 dark:border-[#2C263B]">
                   <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
                     {/* Enlarged Authentic Token Medallion - turns dark black when dead */}
                     <div
@@ -986,12 +1000,12 @@ export default function GrimoireBoard({
                 </div>
 
                 {/* Active Reminder Tokens on Selected Player */}
-                <div className="pt-2 border-t border-[#292535] space-y-2">
-                  <div className="text-xs font-medium text-[#B8B0A2]">
+                <div className="pt-2 border-t border-purple-100 dark:border-[#292535] space-y-2">
+                  <div className="text-xs font-semibold text-slate-700 dark:text-[#B8B0A2]">
                     Token Pengingat di Kursi {selectedPlayer.name}:
                   </div>
                   {selectedPlayer.reminders.filter((r) => r.reminderId !== 'executed').length === 0 ? (
-                    <p className="text-xs text-[#7D758A]">
+                    <p className="text-xs text-slate-500 dark:text-[#7D758A]">
                       Belum ada token pengingat menempel di kursi ini.
                     </p>
                   ) : (
@@ -999,23 +1013,38 @@ export default function GrimoireBoard({
                       {selectedPlayer.reminders
                         .filter((r) => r.reminderId !== 'executed')
                         .map((rem) => {
-                        const def = REMINDER_MAP[rem.reminderId];
-                        if (!def) return null;
-                        return (
-                          <button
-                            key={rem.instanceId}
-                            type="button"
-                            onClick={() =>
-                              onRemoveReminder(selectedPlayer.id, rem.instanceId)
-                            }
-                            className="min-h-[36px] px-2.5 py-1 rounded-lg bg-[#242031] hover:bg-[#351D22] border border-[#39334B] text-xs text-[#EDE7DB] flex items-center gap-1.5 cursor-pointer"
-                          >
-                            <RoleGlyph roleId={def.roleId} className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
-                            <span className="font-semibold">{def.indonesianLabel}</span>
-                            <Trash2 className="w-3 h-3 text-[#F87171] ml-0.5" />
-                          </button>
-                        );
-                      })}
+                          const def = REMINDER_MAP[rem.reminderId];
+                          if (!def) return null;
+                          return (
+                            <div
+                              key={rem.instanceId}
+                              className="inline-flex items-center gap-2 pl-1.5 pr-2 py-1 rounded-full bg-purple-50 dark:bg-[#201B2E] border border-purple-200 dark:border-[#38314A] shadow-sm text-xs"
+                            >
+                              <div className="relative w-6 h-6 rounded-full overflow-hidden border border-white/30 shrink-0 bg-[#100E17]">
+                                <img
+                                  src={`/reminders/${def.id}.png`}
+                                  alt={def.label}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <span className="font-bold text-slate-900 dark:text-[#EDEAF0]">
+                                {def.label}
+                              </span>
+                              <span className="text-[10px] text-purple-700 dark:text-[#D4AF37]">
+                                ({def.indonesianLabel})
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => onRemoveReminder(selectedPlayer.id, rem.instanceId)}
+                                className="p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 cursor-pointer transition-colors"
+                                title={`Hapus token ${def.label}`}
+                                aria-label={`Hapus token ${def.label}`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          );
+                        })}
                     </div>
                   )}
                 </div>
@@ -1023,52 +1052,70 @@ export default function GrimoireBoard({
             )}
 
             {/* Baki Token Pengingat (Reminder Tokens Tray) */}
-            <div className="bg-[#181520] border border-[#2A2636] rounded-2xl p-5 space-y-4">
-              <div className="flex items-center justify-between gap-2">
+            <div className="bg-white dark:bg-[#181520] border border-purple-200 dark:border-[#2A2636] rounded-2xl p-4 sm:p-5 space-y-4 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="font-display text-base font-bold text-[#F5EFE6]">
+                  <h3 className="font-display text-base font-bold text-slate-900 dark:text-[#F5EFE6]">
                     Baki Token Pengingat (Reminder Tokens)
                   </h3>
-                  <p className="text-xs text-[#A8A092]">
+                  <p className="text-xs text-slate-600 dark:text-[#A8A092] mt-0.5">
                     {selectedPlayer
-                      ? `Ketuk token mana saja untuk langsung menempelkannya ke ${selectedPlayer.name} (Kursi ${selectedPlayer.seatIndex + 1}).`
-                      : 'Pilih kursi pemain terlebih dahulu, atau ketuk token lalu ketuk kursi di lingkaran.'}
+                      ? `Ketuk token untuk langsung menempelkannya ke ${selectedPlayer.name} (Kursi ${selectedPlayer.seatIndex + 1}).`
+                      : 'Pilih kursi pemain di atas, atau ketuk token lalu ketuk kursi di lingkaran.'}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-1 p-1 bg-[#121018] rounded-lg shrink-0">
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  {/* Detail Aturan Toggle Button */}
                   <button
                     type="button"
-                    onClick={() => setReminderFilter('active')}
-                    className={`px-2.5 py-1 rounded text-[11px] font-semibold cursor-pointer ${
-                      reminderFilter === 'active'
-                        ? 'bg-[#2C263B] text-[#F5EFE6]'
-                        : 'text-[#9C9486]'
+                    onClick={() => setShowReminderRules((prev) => !prev)}
+                    aria-pressed={showReminderRules}
+                    className={`min-h-[34px] px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer border transition-colors ${
+                      showReminderRules
+                        ? 'bg-amber-100 dark:bg-amber-950/80 border-amber-300 dark:border-amber-500/50 text-amber-900 dark:text-amber-200'
+                        : 'bg-purple-100 dark:bg-[#1E1E28] border-purple-200 dark:border-white/[0.1] text-purple-900 dark:text-[#EDEAF0]'
                     }`}
+                    title="Tampilkan keterangan aturan efek token"
                   >
-                    Aktif
+                    <Info className="w-3.5 h-3.5 text-amber-600 dark:text-[#D4AF37]" />
+                    <span>Detail</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setReminderFilter('all')}
-                    className={`px-2.5 py-1 rounded text-[11px] font-semibold cursor-pointer ${
-                      reminderFilter === 'all'
-                        ? 'bg-[#2C263B] text-[#F5EFE6]'
-                        : 'text-[#9C9486]'
-                    }`}
-                  >
-                    Semua (16)
-                  </button>
+
+                  <div className="flex items-center gap-1 p-1 bg-purple-100 dark:bg-[#121018] rounded-lg shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setReminderFilter('active')}
+                      className={`px-2.5 py-1 rounded text-[11px] font-semibold cursor-pointer ${
+                        reminderFilter === 'active'
+                          ? 'bg-purple-200 dark:bg-[#2C263B] text-purple-950 dark:text-[#F5EFE6]'
+                          : 'text-slate-600 dark:text-[#9C9486]'
+                      }`}
+                    >
+                      Aktif
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReminderFilter('all')}
+                      className={`px-2.5 py-1 rounded text-[11px] font-semibold cursor-pointer ${
+                        reminderFilter === 'all'
+                          ? 'bg-purple-200 dark:bg-[#2C263B] text-purple-950 dark:text-[#F5EFE6]'
+                          : 'text-slate-600 dark:text-[#9C9486]'
+                      }`}
+                    >
+                      Semua (16)
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2 sm:gap-2.5 max-h-[520px] overflow-y-auto pr-1">
                 {displayedReminders.map((rem) => (
-                  <ReminderTokenChip
+                  <ReminderTokenTrayCard
                     key={rem.id}
                     reminderId={rem.id}
-                    draggable
                     isSelected={activeBrushReminderId === rem.id}
+                    showRuleDetail={showReminderRules}
                     onDragStart={(e) => {
                       setDragPayload({ type: 'reminder', reminderId: rem.id });
                       e.dataTransfer.effectAllowed = 'copy';

@@ -15,6 +15,7 @@ import {
   RotateCcw,
   Search,
   Shuffle,
+  Sparkles,
   Users,
   X,
 } from 'lucide-react';
@@ -111,28 +112,30 @@ export default function SetupWizard({
   });
 
   // Does the Storyteller want the Drunk Outsider in this game?
+  // Default strictly nonaktif (false) unless randomly selected or manually toggled by user
   const [isDrunkActive, setIsDrunkActive] = useState<boolean>(() => {
-    if (initialSaved) return Boolean(initialSaved.isDrunkActive);
-    return playerCount >= 6;
+    if (initialSaved && typeof initialSaved.isDrunkActive === 'boolean') {
+      return initialSaved.isDrunkActive;
+    }
+    return false;
   });
 
   // Calculate required counts
   const baseCounts = getBaseCharacterCounts(playerCount);
 
   // Selected roles in the bag (for Menu 1)
+  // Default strictly 0 (empty array) so user can manually pick, or click randomize button
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>(() => {
     if (initialSaved && Array.isArray(initialSaved.selectedRoleIds) && initialSaved.selectedRoleIds.length > 0) {
       return initialSaved.selectedRoleIds;
     }
-    // Default starter bag
-    const townsfolkNeeded = (playerCount >= 6 ? true : false) ? baseCounts.townsfolk + 1 : baseCounts.townsfolk;
-    const defaultTownsfolk = ROLES.filter((r) => r.team === 'townsfolk').slice(0, townsfolkNeeded).map((r) => r.id);
-    const defaultOutsiders = (playerCount >= 6 ? true : false)
-      ? []
-      : ROLES.filter((r) => r.team === 'outsider' && r.id !== 'drunk').slice(0, baseCounts.outsiders).map((r) => r.id);
-    const defaultMinions = ROLES.filter((r) => r.team === 'minion' && r.id !== 'baron').slice(0, baseCounts.minions).map((r) => r.id);
-    return [...defaultTownsfolk, ...defaultOutsiders, ...defaultMinions, 'imp'];
+    return [];
   });
+
+  const [randomFormulaInfo, setRandomFormulaInfo] = useState<{
+    formulaSummary: string;
+    formulaDetails: string[];
+  } | null>(null);
 
   // Seats with names (STRICTLY EMPTY by default!)
   const [seats, setSeats] = useState<SeatDraft[]>(() => {
@@ -248,34 +251,117 @@ export default function SetupWizard({
     });
   };
 
-  // Quick auto-balance for Menu 1
-  const handleAutoBalanceBag = (forceDrunk: boolean) => {
-    setIsDrunkActive(forceDrunk);
+  // User: "abis ituu misalkan dia ngacakk nihh saya klik acakk maka kamu kasih rumusnya gituu misalkan dalem 1 game itu wajib ada skill yg membantu gitu2 dehhh kamu kalkulasiin yaaa pake rumus buat rumusnya yaaaaa"
+  const handleRandomizeBalancedBag = () => {
     const count = playerCount;
     const base = getBaseCharacterCounts(count);
 
-    const targetTownsfolk = forceDrunk ? base.townsfolk + 1 : base.townsfolk;
-    const targetOutsiders = forceDrunk ? Math.max(0, base.outsiders - 1) : base.outsiders;
+    // 1. Minions selection (Poisoner, Spy, Scarlet Woman, Baron)
+    const allMinions = ['poisoner', 'spy', 'scarlet_woman', 'baron'];
+    const shuffledMinions = [...allMinions].sort(() => Math.random() - 0.5);
+    const chosenMinions = shuffledMinions.slice(0, base.minions);
+    const hasBaron = chosenMinions.includes('baron');
 
-    const allTownsfolk = ROLES.filter((r) => r.team === 'townsfolk').map((r) => r.id);
-    const allOutsiders = ROLES.filter((r) => r.team === 'outsider' && r.id !== 'drunk').map((r) => r.id);
-    const allMinions = ROLES.filter((r) => r.team === 'minion' && r.id !== 'baron').map((r) => r.id);
+    // 2. Outsiders selection
+    const baseOutsidersCount = hasBaron ? Math.min(4, base.outsiders + 2) : base.outsiders;
+    const allOutsiders = ['butler', 'recluse', 'saint', 'drunk'];
+    const shuffledOutsiders = [...allOutsiders].sort(() => Math.random() - 0.5);
+    const chosenOutsiders = shuffledOutsiders.slice(0, baseOutsidersCount);
 
-    const chosenTf = allTownsfolk.slice(0, targetTownsfolk);
-    const chosenOut = allOutsiders.slice(0, targetOutsiders);
-    const chosenMin = allMinions.slice(0, base.minions);
+    const drunkPicked = chosenOutsiders.includes('drunk');
+    setIsDrunkActive(drunkPicked);
 
-    const newRoles = [...chosenTf, ...chosenOut, ...chosenMin, 'imp'];
+    // Physical Outsiders in the bag
+    const physicalOutsidersInBag = chosenOutsiders.filter((id) => id !== 'drunk');
+
+    // 3. Townsfolk count
+    const baseTownsfolkCount = hasBaron
+      ? Math.max(0, base.townsfolk - (baseOutsidersCount - base.outsiders))
+      : base.townsfolk;
+    const physicalTownsfolkInBagCount = drunkPicked ? baseTownsfolkCount + 1 : baseTownsfolkCount;
+
+    // Categorized Townsfolk Archetypes:
+    // Info Awal (Starting Info): Washerwoman, Librarian, Investigator, Chef
+    const infoAwalRoles = ['washerwoman', 'librarian', 'investigator', 'chef'];
+    // Info Lanjutan & Proteksi (Ongoing Info & Protection): Empath, Fortune Teller, Monk, Soldier, Slayer
+    const ongoingProtRoles = ['empath', 'fortune_teller', 'monk', 'soldier', 'slayer'];
+    // Reaktif / Eksekusi (Reactive / Execution / Defense): Undertaker, Mayor, Virgin, Ravenkeeper
+    const reactiveRoles = ['undertaker', 'mayor', 'virgin', 'ravenkeeper'];
+
+    const shuffledInfoAwal = [...infoAwalRoles].sort(() => Math.random() - 0.5);
+    const shuffledOngoing = [...ongoingProtRoles].sort(() => Math.random() - 0.5);
+    const shuffledReactive = [...reactiveRoles].sort(() => Math.random() - 0.5);
+
+    const chosenTownsfolk: string[] = [];
+
+    // Formula Keseimbangan Skill:
+    // Slot 1: Info Awal (agar kubu Good memiliki titik tolak investigasi hari pertama)
+    if (physicalTownsfolkInBagCount >= 1 && shuffledInfoAwal.length > 0) {
+      chosenTownsfolk.push(shuffledInfoAwal.pop()!);
+    }
+    // Slot 2: Info Berkelanjutan / Proteksi (agar ada petunjuk dinamis / perlindungan setiap malam)
+    if (physicalTownsfolkInBagCount >= 2 && shuffledOngoing.length > 0) {
+      chosenTownsfolk.push(shuffledOngoing.pop()!);
+    }
+    // Slot 3: Reaktif / Eksekusi (agar ada mekanik eksekusi / defensif)
+    if (physicalTownsfolkInBagCount >= 3 && shuffledReactive.length > 0) {
+      chosenTownsfolk.push(shuffledReactive.pop()!);
+    }
+
+    // Sisa slot Townsfolk diisi acak dari sisa kumpulan peran
+    const remainingPool = [...shuffledInfoAwal, ...shuffledOngoing, ...shuffledReactive].sort(
+      () => Math.random() - 0.5
+    );
+
+    while (chosenTownsfolk.length < physicalTownsfolkInBagCount && remainingPool.length > 0) {
+      chosenTownsfolk.push(remainingPool.pop()!);
+    }
+
+    const newRoles = [...chosenTownsfolk, ...physicalOutsidersInBag, ...chosenMinions, 'imp'];
     setSelectedRoleIds(newRoles);
 
     // Sync seats
     setSeats((prev) => {
+      const rolesForSeats = [...newRoles];
+      for (let i = rolesForSeats.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [rolesForSeats[i], rolesForSeats[j]] = [rolesForSeats[j], rolesForSeats[i]];
+      }
       return prev.map((s, idx) => ({
         ...s,
-        roleId: newRoles[idx] ?? 'washerwoman',
+        roleId: rolesForSeats[idx] ?? 'washerwoman',
       }));
     });
 
+    const infoList = chosenTownsfolk.filter((id) => infoAwalRoles.includes(id));
+    const protList = chosenTownsfolk.filter((id) => ongoingProtRoles.includes(id));
+    const reactList = chosenTownsfolk.filter((id) => reactiveRoles.includes(id));
+
+    const formulaSummary = `Formula: ${chosenTownsfolk.length} Townsfolk (${infoList.length} Info Awal + ${protList.length} Info/Proteksi + ${reactList.length} Reaktif) + ${physicalOutsidersInBag.length} Outsider + ${chosenMinions.length} Minion + 1 Demon`;
+
+    const formulaDetails = [
+      `Skill Membantu (Info Awal): Wajib ada minimal 1 karakter info malam pertama (${infoList.map((id) => ROLE_MAP[id]?.name).join(', ') || 'Nihil'}) agar warga kota memiliki petunjuk awal untuk mulai berdiskusi.`,
+      `Skill Proteksi/Lanjutan: Menjamin adanya perkembangan informasi/pertahanan tiap malam (${protList.map((id) => ROLE_MAP[id]?.name).join(', ') || 'Nihil'}).`,
+      hasBaron
+        ? `Modifikasi Baron Terpilih: Minion Baron menambahkan +2 slot Outsider (${chosenOutsiders.map((id) => ROLE_MAP[id]?.name).join(', ')}) dan mengurangi 2 Townsfolk.`
+        : `Komposisi Normal: Tanpa Baron, slot Outsider standar (${baseOutsidersCount} karakter: ${chosenOutsiders.map((id) => ROLE_MAP[id]?.name).join(', ')}).`,
+      drunkPicked
+        ? `The Drunk Teracak (Aktif): Drunk keluar dalam undian Outsider! Fisik token Drunk di tas digantikan dengan +1 Townsfolk ekstra (${chosenTownsfolk[chosenTownsfolk.length - 1] ? ROLE_MAP[chosenTownsfolk[chosenTownsfolk.length - 1]]?.name : 'Ekstra'}).`
+        : `The Drunk Tidak Teracak (Nonaktif): Semua slot Outsider diisi oleh Outsider reguler.`,
+    ];
+
+    setRandomFormulaInfo({
+      formulaSummary,
+      formulaDetails,
+    });
+
+    setErrorMessage(null);
+  };
+
+  const handleResetSelection = () => {
+    setSelectedRoleIds([]);
+    setIsDrunkActive(false);
+    setRandomFormulaInfo(null);
     setErrorMessage(null);
   };
 
@@ -641,14 +727,22 @@ export default function SetupWizard({
                 <span className="font-bold text-[#E5DFD5]">
                   Target Komposisi Tas untuk {playerCount} Pemain:
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => handleAutoBalanceBag(isDrunkActive)}
-                    className="px-3 py-1.5 rounded-lg bg-[#251E33] hover:bg-[#35284B] text-[11px] font-bold text-[#D4AF37] border border-[#44355D] flex items-center gap-1.5 cursor-pointer"
+                    onClick={handleRandomizeBalancedBag}
+                    className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#251E33] hover:bg-[#35284B] text-[11px] sm:text-xs font-bold text-[#D4AF37] border border-[#44355D] flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
                   >
-                    <Shuffle className="w-3.5 h-3.5" />
-                    <span>Isi Otomatis Rekomendasi</span>
+                    <Shuffle className="w-3.5 h-3.5 text-[#D4AF37]" />
+                    <span>Acak Karakter & Hitung Formula</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetSelection}
+                    className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#1C1628] hover:bg-[#282038] text-[11px] sm:text-xs font-semibold text-[#A8A092] hover:text-[#EDE7DB] border border-[#382F4C] flex items-center gap-1.5 cursor-pointer transition-all"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Kosongkan Pilihan (Pilih Manual 0)</span>
                   </button>
                 </div>
               </div>
@@ -732,6 +826,27 @@ export default function SetupWizard({
                   </span>
                 </div>
               </div>
+
+              {/* Formula & Skill Balance Calculation Card */}
+              {randomFormulaInfo && (
+                <div className="p-4 rounded-2xl bg-[#13111C] border border-[#3D3354] space-y-2.5">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#D4AF37]">
+                    <Sparkles className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                    <span>Kalkulasi Formula Keseimbangan Karakter (Trouble Brewing)</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-[#1A1626] border border-[#2F2740] font-mono text-[11px] text-[#93C5FD] leading-relaxed break-words">
+                    {randomFormulaInfo.formulaSummary}
+                  </div>
+                  <ul className="space-y-1.5 text-[11px] text-[#C4BCAD] leading-relaxed">
+                    {randomFormulaInfo.formulaDetails.map((detail, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] mt-1.5 shrink-0" />
+                        <span>{detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 

@@ -17,13 +17,13 @@ export default function ThemeConfirmModal() {
   const isSwitchingToLight = targetTheme === 'light';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md rounded-3xl bg-[#14141B] dark:bg-[#14141B] border border-white/[0.12] p-6 shadow-2xl space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.12] p-6 shadow-2xl space-y-6">
         {/* Close Button */}
         <button
           type="button"
           onClick={cancelThemeChange}
-          className="absolute top-4 right-4 p-2 rounded-xl text-[#8E8A9E] hover:text-[#EDEAF0] hover:bg-white/[0.06] transition-colors cursor-pointer"
+          className="absolute top-4 right-4 p-2 rounded-xl text-slate-500 dark:text-[#8E8A9E] hover:text-slate-900 dark:hover:text-[#EDEAF0] hover:bg-purple-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
           aria-label="Batal Ganti Tema"
         >
           <X className="w-5 h-5" />
@@ -34,27 +34,27 @@ export default function ThemeConfirmModal() {
           <div
             className={`p-3.5 rounded-2xl border shrink-0 ${
               isSwitchingToLight
-                ? 'bg-[#10B981]/15 border-[#10B981]/40 text-[#34D399]'
-                : 'bg-[#8B5CF6]/15 border-[#8B5CF6]/40 text-[#A78BFA]'
+                ? 'bg-emerald-100 dark:bg-[#10B981]/15 border-emerald-300 dark:border-[#10B981]/40 text-emerald-800 dark:text-[#34D399]'
+                : 'bg-purple-100 dark:bg-[#8B5CF6]/15 border-purple-300 dark:border-[#8B5CF6]/40 text-purple-800 dark:text-[#A78BFA]'
             }`}
           >
             {isSwitchingToLight ? (
-              <Sun className="w-6 h-6 text-[#FBBF24]" />
+              <Sun className="w-6 h-6 text-amber-500" />
             ) : (
-              <Moon className="w-6 h-6 text-[#93C5FD]" />
+              <Moon className="w-6 h-6 text-indigo-500 dark:text-[#93C5FD]" />
             )}
           </div>
 
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.1] text-[10px] font-mono uppercase tracking-wider text-[#D4AF37]">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-white/[0.06] border border-purple-200 dark:border-white/[0.1] text-[10px] font-mono uppercase tracking-wider text-purple-900 dark:text-[#D4AF37]">
               Konfirmasi Tampilan
             </div>
-            <h3 className="font-display text-xl font-bold text-[#EDEAF0]">
+            <h3 className="font-display text-xl font-bold text-slate-900 dark:text-[#EDEAF0]">
               {isSwitchingToLight
                 ? 'Beralih ke Light Mode?'
                 : 'Beralih ke Dark Mode?'}
             </h3>
-            <p className="text-xs text-[#A6A2B2] leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-[#A6A2B2] leading-relaxed">
               {isSwitchingToLight
                 ? 'Tampilan akan berganti ke tema terang bernuansa Hijau Pastel lembut dan Ungu Lavender yang nyaman di mata.'
                 : 'Tampilan akan berganti kembali ke tema gelap Obsidian Dark dengan aksen Emas dan Crimson khas Grimoire.'}
@@ -63,10 +63,10 @@ export default function ThemeConfirmModal() {
         </div>
 
         {/* Color Palette Preview Badge */}
-        <div className="p-3.5 rounded-2xl bg-[#1C1C26] border border-white/[0.08] flex items-center justify-between gap-3">
+        <div className="p-3.5 rounded-2xl bg-purple-50 dark:bg-[#1C1C26] border border-purple-200 dark:border-white/[0.08] flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Palette className="w-4 h-4 text-[#D4AF37]" />
-            <span className="text-xs font-semibold text-[#EDEAF0]">
+            <Palette className="w-4 h-4 text-amber-600 dark:text-[#D4AF37]" />
+            <span className="text-xs font-semibold text-slate-900 dark:text-[#EDEAF0]">
               {isSwitchingToLight ? 'Tema: Hijau Pastel & Ungu' : 'Tema: Obsidian Dark'}
             </span>
           </div>
@@ -94,7 +94,7 @@ export default function ThemeConfirmModal() {
           <button
             type="button"
             onClick={cancelThemeChange}
-            className="px-4 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs font-semibold text-[#EDEAF0] transition-colors cursor-pointer"
+            className="px-4 py-2.5 rounded-xl bg-purple-100 dark:bg-white/[0.06] hover:bg-purple-200 dark:hover:bg-white/[0.1] text-xs font-semibold text-purple-900 dark:text-[#EDEAF0] transition-colors cursor-pointer"
           >
             Batal
           </button>

@@ -212,16 +212,6 @@ export default function NavigationShell({ children }: { children: React.ReactNod
       </div>
     </header>
 
-      {/* Critical Game Alert Banner (when active) */}
-      {gameAlertBanner && (
-        <div className="bg-[#2A1216] border-b border-[#EF4444]/40 px-4 py-2 shadow-md">
-          <div className="max-w-7xl mx-auto flex items-center gap-2.5 text-xs text-[#FECACA]">
-            <ShieldAlert className="w-4 h-4 text-[#F87171] shrink-0" />
-            <span className="font-semibold">{gameAlertBanner}</span>
-          </div>
-        </div>
-      )}
-
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 pb-12">
         {children}

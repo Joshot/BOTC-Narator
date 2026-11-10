@@ -172,22 +172,6 @@ export default function NarratorView({
         </div>
       </div>
 
-      {/* Game Victory / Critical Event Alert Banner */}
-      {gameAlertBanner && (
-        <div
-          role="status"
-          className="p-4 rounded-2xl bg-[#2B171B] border border-[#EF4444]/70 text-sm text-[#FECACA] flex items-start gap-3"
-        >
-          <ShieldAlert className="w-5 h-5 text-[#F87171] shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <strong className="block font-display text-base text-white">
-              Pemberitahuan Penting Storyteller
-            </strong>
-            <p>{gameAlertBanner}</p>
-          </div>
-        </div>
-      )}
-
       {phase !== 'day' ? (
         /* ================= NIGHT NARRATOR VIEW ================= */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

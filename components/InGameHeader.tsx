@@ -106,36 +106,36 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
       </div>
 
       {/* ================= PROMINENT MANUAL PHASE CONTROLLER BANNER ================= */}
-      <div className="bg-[#14141B] border-2 border-[#D4AF37]/50 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
+      <div className="bg-white dark:bg-[#14141B] border-2 border-amber-500/60 dark:border-[#D4AF37]/50 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-[#D4AF37] uppercase tracking-wider font-mono">
+            <span className="text-[11px] font-bold text-amber-700 dark:text-[#D4AF37] uppercase tracking-wider font-mono">
               Kontrol Fase Storyteller
             </span>
-            <span className="text-xs text-[#716D80]">·</span>
-            <span className="text-[11px] text-[#34D399] font-medium flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#34D399] animate-pulse" />
+            <span className="text-xs text-slate-400 dark:text-[#716D80]">·</span>
+            <span className="text-[11px] text-emerald-600 dark:text-[#34D399] font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-[#34D399] animate-pulse" />
               Auto Save Aktif
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[#1C1C26] border border-white/[0.08] shrink-0">
+            <div className="p-2.5 rounded-xl bg-purple-100 dark:bg-[#1C1C26] border border-purple-200 dark:border-white/[0.08] shrink-0">
               {isNightPhase ? (
-                <Moon className="w-5 h-5 text-[#93C5FD]" />
+                <Moon className="w-5 h-5 text-indigo-600 dark:text-[#93C5FD]" />
               ) : (
-                <Sun className="w-5 h-5 text-[#FBBF24]" />
+                <Sun className="w-5 h-5 text-amber-500 dark:text-[#FBBF24]" />
               )}
             </div>
             <div>
-              <h2 className="font-display text-base sm:text-lg font-bold text-[#EDEAF0]">
+              <h2 className="font-display text-base sm:text-lg font-bold text-slate-900 dark:text-[#EDEAF0]">
                 {phase === 'first_night'
                   ? 'Malam Pertama (First Night)'
                   : phase === 'day'
                   ? `Fase Siang Hari ke-${dayNumber}`
                   : `Malam ke-${dayNumber + 1}`}
               </h2>
-              <p className="text-xs text-[#8E8A9E] leading-tight">
+              <p className="text-xs text-slate-600 dark:text-[#8E8A9E] leading-tight">
                 {phase === 'first_night'
                   ? 'Semua mata tertutup. Minion & Demon saling mengenal, karakter malam pertama menerima info.'
                   : phase === 'day'
