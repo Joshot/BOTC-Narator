@@ -121,40 +121,40 @@ export default function StoryPage() {
     switch (category) {
       case 'starpass':
         return {
-          icon: <RefreshCw className="w-3.5 h-3.5 text-[#C084FC]" />,
+          icon: <RefreshCw className="w-3.5 h-3.5 text-purple-700 dark:text-[#C084FC]" />,
           label: 'STARPASS / BUNUH DIRI',
-          classes: 'bg-[#A855F7]/15 border-[#A855F7]/40 text-[#E9D5FF]',
+          classes: 'bg-purple-100 dark:bg-[#A855F7]/15 border-purple-300 dark:border-[#A855F7]/40 text-purple-950 dark:text-[#E9D5FF] font-bold',
         };
       case 'death':
         return {
-          icon: <Skull className="w-3.5 h-3.5 text-[#F87171]" />,
+          icon: <Skull className="w-3.5 h-3.5 text-red-700 dark:text-[#F87171]" />,
           label: 'KEMATIAN',
-          classes: 'bg-[#EF4444]/15 border-[#EF4444]/40 text-[#FCA5A5]',
+          classes: 'bg-red-100 dark:bg-[#EF4444]/15 border-red-300 dark:border-[#EF4444]/40 text-red-950 dark:text-[#FCA5A5] font-bold',
         };
       case 'execution':
         return {
-          icon: <Gavel className="w-3.5 h-3.5 text-[#FBBF24]" />,
+          icon: <Gavel className="w-3.5 h-3.5 text-amber-700 dark:text-[#FBBF24]" />,
           label: 'EKSEKUSI',
-          classes: 'bg-[#F59E0B]/15 border-[#F59E0B]/40 text-[#FDE68A]',
+          classes: 'bg-amber-100 dark:bg-[#F59E0B]/15 border-amber-300 dark:border-[#F59E0B]/40 text-amber-950 dark:text-[#FDE68A] font-bold',
         };
       case 'slayer':
         return {
-          icon: <Crosshair className="w-3.5 h-3.5 text-[#60A5FA]" />,
+          icon: <Crosshair className="w-3.5 h-3.5 text-blue-700 dark:text-[#60A5FA]" />,
           label: 'SLAYER',
-          classes: 'bg-[#3B82F6]/15 border-[#3B82F6]/40 text-[#BFDBFE]',
+          classes: 'bg-blue-100 dark:bg-[#3B82F6]/15 border-blue-300 dark:border-[#3B82F6]/40 text-blue-950 dark:text-[#BFDBFE] font-bold',
         };
       case 'win':
         return {
-          icon: <Trophy className="w-3.5 h-3.5 text-[#FACC15]" />,
+          icon: <Trophy className="w-3.5 h-3.5 text-amber-700 dark:text-[#FACC15]" />,
           label: 'KEMENANGAN',
-          classes: 'bg-[#EAB308]/20 border-[#EAB308]/50 text-[#FEF08A] font-bold',
+          classes: 'bg-amber-100 dark:bg-[#EAB308]/20 border-amber-400 dark:border-[#EAB308]/50 text-amber-950 dark:text-[#FEF08A] font-black',
         };
       case 'start':
       default:
         return {
-          icon: <Sparkles className="w-3.5 h-3.5 text-[#34D399]" />,
+          icon: <Sparkles className="w-3.5 h-3.5 text-emerald-700 dark:text-[#34D399]" />,
           label: 'AWAL',
-          classes: 'bg-[#10B981]/15 border-[#10B981]/40 text-[#A7F3D0]',
+          classes: 'bg-emerald-100 dark:bg-[#10B981]/15 border-emerald-300 dark:border-[#10B981]/40 text-emerald-950 dark:text-[#A7F3D0] font-bold',
         };
     }
   };
@@ -162,14 +162,14 @@ export default function StoryPage() {
   const getTeamBadge = (team: string) => {
     switch (team) {
       case 'demon':
-        return 'bg-[#EF4444]/20 border-[#EF4444]/40 text-[#FCA5A5]';
+        return 'bg-red-100 text-red-950 border-red-300 dark:bg-[#450A0A]/60 dark:text-[#FCA5A5] dark:border-[#EF4444]/60 font-black';
       case 'minion':
-        return 'bg-[#DC2626]/15 border-[#DC2626]/30 text-[#F87171]';
+        return 'bg-orange-100 text-orange-950 border-orange-300 dark:bg-[#7F1D1D]/50 dark:text-[#FECACA] dark:border-[#DC2626]/50 font-black';
       case 'outsider':
-        return 'bg-[#0284C7]/20 border-[#0284C7]/40 text-[#BAE6FD]';
+        return 'bg-sky-100 text-sky-950 border-sky-300 dark:bg-[#075985]/60 dark:text-[#BAE6FD] dark:border-[#0284C7]/60 font-black';
       case 'townsfolk':
       default:
-        return 'bg-[#2563EB]/20 border-[#2563EB]/40 text-[#BFDBFE]';
+        return 'bg-blue-100 text-blue-950 border-blue-300 dark:bg-[#1E3A8A]/60 dark:text-[#BFDBFE] dark:border-[#2563EB]/60 font-black';
     }
   };
 
@@ -265,12 +265,12 @@ export default function StoryPage() {
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-[#D4AF37]" />
-            <h2 className="font-display text-base sm:text-lg font-bold text-[#EDEAF0]">
+            <Users className="w-4 h-4 text-amber-600 dark:text-[#D4AF37]" />
+            <h2 className="font-display text-base sm:text-lg font-bold text-slate-900 dark:text-[#EDEAF0]">
               Susunan Awal Peran Pemain ({roster.length} Pemain)
             </h2>
           </div>
-          <span className="text-xs text-[#8E8A9E]">
+          <span className="text-xs text-slate-500 dark:text-[#8E8A9E]">
             Peran rahasia yang dibagikan pada awal permainan
           </span>
         </div>
@@ -285,7 +285,7 @@ export default function StoryPage() {
                 className="p-3.5 rounded-2xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] hover:border-[#D4AF37]/60 transition-all space-y-2 group shadow-sm"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-[#1C1C26] border border-purple-200 dark:border-white/[0.06] text-[10px] font-mono text-amber-700 dark:text-[#D4AF37]">
+                  <span className="px-2 py-0.5 rounded-md bg-purple-100 dark:bg-[#1C1C26] border border-purple-200 dark:border-white/[0.06] text-[10px] font-mono text-purple-900 dark:text-[#D4AF37] font-bold">
                     Kursi #{player.seatIndex + 1}
                   </span>
                   <span
@@ -298,15 +298,15 @@ export default function StoryPage() {
                 </div>
 
                 <div>
-                  <div className="text-xs text-slate-500 dark:text-[#8E8A9E] font-medium">Nama Pemain:</div>
-                  <div className="font-display text-base font-bold text-slate-900 dark:text-[#EDEAF0] truncate group-hover:text-[#D4AF37] transition-colors">
+                  <div className="text-xs text-slate-600 dark:text-[#8E8A9E] font-medium">Nama Pemain:</div>
+                  <div className="font-display text-base font-extrabold text-slate-900 dark:text-[#EDEAF0] truncate group-hover:text-amber-600 dark:group-hover:text-[#D4AF37] transition-colors">
                     {player.name}
                   </div>
                 </div>
 
                 <div className="pt-1 border-t border-purple-100 dark:border-white/[0.06] flex items-center justify-between text-xs">
-                  <span className="text-slate-500 dark:text-[#8E8A9E]">Peran Awal:</span>
-                  <span className="font-bold text-slate-900 dark:text-[#EDEAF0] font-mono">
+                  <span className="text-slate-600 dark:text-[#8E8A9E]">Peran Awal:</span>
+                  <span className="font-black text-slate-900 dark:text-[#EDEAF0] font-mono">
                     {role?.name || player.roleId}
                   </span>
                 </div>
@@ -317,10 +317,10 @@ export default function StoryPage() {
 
         {/* Demon Bluff Cards if configured */}
         {demonBluffIds && demonBluffIds.length > 0 && (
-          <div className="p-4 rounded-2xl bg-red-50/60 dark:bg-[#14141B] border border-red-200 dark:border-[#EF4444]/25 space-y-2 mt-2">
+          <div className="p-4 rounded-2xl bg-red-50/80 dark:bg-[#14141B] border border-red-200 dark:border-[#EF4444]/25 space-y-2 mt-2">
             <div className="flex items-center gap-2">
               <Swords className="w-4 h-4 text-red-600 dark:text-[#EF4444]" />
-              <span className="text-xs font-bold text-red-800 dark:text-[#FCA5A5] uppercase tracking-wider font-mono">
+              <span className="text-xs font-bold text-red-900 dark:text-[#FCA5A5] uppercase tracking-wider font-mono">
                 Peran Bluff Demon (Tidak Ada di Permainan):
               </span>
             </div>
@@ -330,7 +330,7 @@ export default function StoryPage() {
                 return (
                   <span
                     key={bid}
-                    className="px-3 py-1 rounded-xl bg-red-100 dark:bg-[#2A1216] border border-red-300 dark:border-[#EF4444]/40 text-xs font-semibold text-red-900 dark:text-[#FCA5A5]"
+                    className="px-3 py-1 rounded-xl bg-white dark:bg-[#2A1216] border border-red-200 dark:border-[#EF4444]/40 text-xs font-bold text-red-900 dark:text-[#FCA5A5] shadow-sm"
                   >
                     {r?.name || bid}
                   </span>
@@ -346,7 +346,7 @@ export default function StoryPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 border-b border-white/[0.06] pb-3">
           <div className="flex items-center gap-2">
             <Scroll className="w-4 h-4 text-[#D4AF37]" />
-            <h2 className="font-display text-base sm:text-lg font-bold text-[#EDEAF0]">
+            <h2 className="font-display text-base sm:text-lg font-bold text-slate-900 dark:text-[#EDEAF0]">
               Kronologi Alur Cerita ({filteredHistory.length} Peristiwa)
             </h2>
           </div>

@@ -272,6 +272,11 @@ html.light [class*="border-white/"] {
   border-color: rgba(139, 92, 246, 0.18) !important;
 }
 
+/* Dead Tokens in Light Mode - clearly visible, not pitch black */
+html.light img[class*="grayscale"] {
+  filter: grayscale(85%) opacity(0.65) contrast(1.1) !important;
+}
+
 /* ========================================================
    GRIMOIRE CIRCLE TABLE: LIGHT PARCHMENT / STONE ARENA
    ======================================================== */

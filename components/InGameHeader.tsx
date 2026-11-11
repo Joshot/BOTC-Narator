@@ -39,7 +39,6 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
     { href: '/evil', label: 'Panel Evil & Bluff', icon: Swords, id: 'evil' },
     { href: '/narrator', label: 'Urutan Narator', icon: Moon, id: 'narrator' },
     { href: '/story', label: 'Kisah & Role Awal', icon: History, id: 'story' },
-    { href: '/webplay', label: 'Layar HP', icon: Smartphone, id: 'webplay' },
   ];
 
   return (

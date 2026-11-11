@@ -513,3 +513,129 @@ export const DEFAULT_INDONESIAN_NAMES: string[] = [
   'Sinta',
   'Arga',
 ];
+
+export interface BalancedBagResult {
+  selectedRoleIds: string[];
+  isDrunkActive: boolean;
+  drunkFakeRoleId: string | null;
+  formulaSummary: string;
+  formulaDetails: string[];
+}
+
+/**
+ * Calculates a balanced, mathematically verified Trouble Brewing character bag.
+ * Balanced Archetypes: Starting Info, Ongoing/Protection, Reactive/Execution.
+ * Respects Baron modifier (+2 Outsider, -2 Townsfolk) and Drunk modifier (+1 Townsfolk in bag).
+ */
+export function calculateBalancedBag(playerCount: number): BalancedBagResult {
+  const count = Math.max(5, Math.min(15, playerCount));
+  const base = CHARACTER_COUNTS[count] || CHARACTER_COUNTS[8];
+
+  // 1. Minions selection (Poisoner, Spy, Scarlet Woman, Baron)
+  const allMinions = ['poisoner', 'spy', 'scarlet_woman', 'baron'];
+  const shuffledMinions = [...allMinions].sort(() => Math.random() - 0.5);
+  const chosenMinions = shuffledMinions.slice(0, base.minions);
+  const hasBaron = chosenMinions.includes('baron');
+
+  // 2. Outsiders selection
+  const baseOutsidersCount = hasBaron ? Math.min(4, base.outsiders + 2) : base.outsiders;
+  const allOutsiders = ['butler', 'recluse', 'saint', 'drunk'];
+  const shuffledOutsiders = [...allOutsiders].sort(() => Math.random() - 0.5);
+  const chosenOutsiders = shuffledOutsiders.slice(0, baseOutsidersCount);
+
+  const drunkPicked = chosenOutsiders.includes('drunk');
+  const physicalOutsidersInBag = chosenOutsiders.filter((id) => id !== 'drunk');
+
+  // 3. Townsfolk count
+  const baseTownsfolkCount = hasBaron
+    ? Math.max(0, base.townsfolk - (baseOutsidersCount - base.outsiders))
+    : base.townsfolk;
+  const physicalTownsfolkInBagCount = drunkPicked ? baseTownsfolkCount + 1 : baseTownsfolkCount;
+
+  // Categorized Townsfolk Archetypes:
+  const infoAwalRoles = ['washerwoman', 'librarian', 'investigator', 'chef'];
+  const ongoingProtRoles = ['empath', 'fortune_teller', 'monk', 'soldier', 'slayer'];
+  const reactiveRoles = ['undertaker', 'mayor', 'virgin', 'ravenkeeper'];
+
+  const shuffledInfoAwal = [...infoAwalRoles].sort(() => Math.random() - 0.5);
+  const shuffledOngoing = [...ongoingProtRoles].sort(() => Math.random() - 0.5);
+  const shuffledReactive = [...reactiveRoles].sort(() => Math.random() - 0.5);
+
+  const chosenTownsfolk: string[] = [];
+
+  // Slot 1: Info Awal
+  if (physicalTownsfolkInBagCount >= 1 && shuffledInfoAwal.length > 0) {
+    chosenTownsfolk.push(shuffledInfoAwal.pop()!);
+  }
+  // Slot 2: Ongoing Info / Proteksi
+  if (physicalTownsfolkInBagCount >= 2 && shuffledOngoing.length > 0) {
+    chosenTownsfolk.push(shuffledOngoing.pop()!);
+  }
+  // Slot 3: Reaktif / Eksekusi
+  if (physicalTownsfolkInBagCount >= 3 && shuffledReactive.length > 0) {
+    chosenTownsfolk.push(shuffledReactive.pop()!);
+  }
+
+  // Fill remaining townsfolk slots from pooled pool
+  const remainingPool = [...shuffledInfoAwal, ...shuffledOngoing, ...shuffledReactive].sort(
+    () => Math.random() - 0.5
+  );
+
+  while (chosenTownsfolk.length < physicalTownsfolkInBagCount && remainingPool.length > 0) {
+    chosenTownsfolk.push(remainingPool.pop()!);
+  }
+
+  // 4. Demon (Trouble Brewing uses Imp)
+  const chosenDemon = ['imp'];
+
+  // Final Bag Composition (Physical tokens in bag)
+  const finalBag = [
+    ...chosenTownsfolk,
+    ...physicalOutsidersInBag,
+    ...chosenMinions,
+    ...chosenDemon,
+  ];
+
+  // Drunk Fake Role calculation
+  let drunkFakeRoleId: string | null = null;
+  if (drunkPicked) {
+    const unpickedTownsfolk = [
+      ...infoAwalRoles,
+      ...ongoingProtRoles,
+      ...reactiveRoles,
+    ].filter((id) => !chosenTownsfolk.includes(id));
+    if (unpickedTownsfolk.length > 0) {
+      drunkFakeRoleId = unpickedTownsfolk[Math.floor(Math.random() * unpickedTownsfolk.length)];
+    } else {
+      drunkFakeRoleId = chosenTownsfolk[0] || 'investigator';
+    }
+  }
+
+  const details: string[] = [
+    `Townsfolk (${chosenTownsfolk.length}): ${chosenTownsfolk.map((id) => ROLE_MAP[id]?.name || id).join(', ')}`,
+    `Outsiders (${chosenOutsiders.length}): ${
+      chosenOutsiders.length === 0
+        ? 'Tidak ada'
+        : chosenOutsiders.map((id) => (id === 'drunk' ? 'The Drunk (Pemabuk)' : ROLE_MAP[id]?.name || id)).join(', ')
+    }`,
+    `Minions (${chosenMinions.length}): ${chosenMinions.map((id) => ROLE_MAP[id]?.name || id).join(', ')}`,
+    `Demon (1): Imp`,
+  ];
+
+  if (hasBaron) {
+    details.push('Modifier Baron aktif: +2 Outsiders tambahan, -2 Townsfolk.');
+  }
+  if (drunkPicked) {
+    details.push(
+      `The Drunk terpilih: 1 token Townsfolk ekstra dimasukkan ke kantung sebagai peran samaran Drunk (${ROLE_MAP[drunkFakeRoleId || '']?.name || 'Townsfolk'}).`
+    );
+  }
+
+  return {
+    selectedRoleIds: finalBag,
+    isDrunkActive: drunkPicked,
+    drunkFakeRoleId,
+    formulaSummary: `Formula Seimbang: ${chosenTownsfolk.length} Townsfolk + ${chosenOutsiders.length} Outsider + ${chosenMinions.length} Minion + 1 Demon`,
+    formulaDetails: details,
+  };
+}

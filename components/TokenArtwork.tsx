@@ -173,13 +173,11 @@ export function CharacterToken({
 
   return (
     <div
-      className={`relative rounded-full shrink-0 aspect-square flex items-center justify-center select-none shadow-2xl transition-all duration-200 bg-[#14111B] ${
-        sizeMap.circle
-      } ${
+      className={`relative rounded-full shrink-0 aspect-square flex items-center justify-center select-none shadow-xl transition-all duration-200 ${
         isDead
-          ? 'border-[3.5px] border-[#22202A] ring-2 ring-black/90 shadow-[0_0_16px_rgba(0,0,0,0.95)]'
-          : styles.ring
-      }`}
+          ? 'bg-slate-100 dark:bg-[#121018] border-[3px] border-slate-300 dark:border-[#38324B] shadow-sm'
+          : `bg-white dark:bg-[#14111B] ${styles.ring}`
+      } ${sizeMap.circle}`}
     >
       {/* Storyteller Secret Drunk Halo */}
       {isDrunkSecret && (
@@ -206,7 +204,7 @@ export function CharacterToken({
           onError={() => setImageError(true)}
           className={`w-full h-full object-contain rounded-full select-none pointer-events-none filter drop-shadow transition-all duration-200 ${
             isDead
-              ? 'grayscale-[95%] brightness-[0.35] contrast-[1.25]'
+              ? 'grayscale-[50%] opacity-90 contrast-[1.05] dark:brightness-[0.8] dark:opacity-80'
               : ''
           }`}
         />
@@ -226,9 +224,9 @@ export function CharacterToken({
         </div>
       )}
 
-      {/* Deep Black Death Shroud Overlay for Dead Tokens */}
+      {/* Subtle Shroud Overlay for Dead Tokens (kept transparent so token art is clear) */}
       {isDead && (
-        <div className="absolute inset-0 rounded-full bg-black/60 pointer-events-none z-10" />
+        <div className="absolute inset-0 rounded-full bg-slate-900/5 dark:bg-black/30 pointer-events-none z-10" />
       )}
 
       {/* Differentiated Death Shroud Ribbon: Demon Kill vs Execution */}

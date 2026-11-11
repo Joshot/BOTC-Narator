@@ -6,6 +6,7 @@ import {
   BookMarked,
   Coins,
   Compass,
+  History,
   Moon,
   Play,
   Plus,
@@ -169,27 +170,27 @@ export default function DashboardView({
             </div>
           </div>
 
-          {/* Quick Side Widget */}
+          {/* Quick Side Widget: Kisah & Log */}
           <div className="rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] p-6 sm:p-7 flex flex-col justify-between shadow-xl space-y-4">
             <div className="space-y-3">
               <span className="text-xs font-mono text-purple-700 dark:text-[#D4AF37] font-semibold uppercase tracking-wider block">
-                Mode Pemain
+                Riwayat Sesi
               </span>
               <h3 className="font-display text-xl font-bold text-slate-900 dark:text-[#EDEAF0]">
-                Layar Rahasia Pemain
+                Kisah & Log Permainan
               </h3>
               <p className="text-xs text-slate-600 dark:text-[#8E8A9E] leading-relaxed">
-                Gunakan mode HP untuk membagikan token rahasia secara bergantian (pass-and-play) tanpa memerlukan kartu fisik.
+                Pantau susunan peran awal setiap kursi serta kronologi peristiwa kematian, eksekusi, dan pergantian Demon.
               </p>
             </div>
 
             <Link
-              href="/webplay"
+              href="/story"
               className="w-full py-3 px-4 rounded-full bg-purple-100 dark:bg-[#1E1E28] hover:bg-purple-200 dark:hover:bg-[#282838] border border-purple-300 dark:border-white/[0.1] text-xs font-bold text-purple-900 dark:text-[#EDEAF0] flex items-center justify-between transition-colors shadow-sm"
             >
               <span className="flex items-center gap-2">
-                <Coins className="w-4 h-4 text-amber-600 dark:text-[#D4AF37]" />
-                <span>Buka Layar HP</span>
+                <History className="w-4 h-4 text-amber-600 dark:text-[#D4AF37]" />
+                <span>Buka Kisah Permainan</span>
               </span>
               <ArrowRight className="w-4 h-4 text-purple-700 dark:text-[#8E8A9E]" />
             </Link>

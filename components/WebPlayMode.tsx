@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   ArrowRight,
   Beer,
@@ -22,7 +22,7 @@ import {
   Users,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ROLES, ROLE_MAP } from '@/lib/botc-data';
+import { ROLES, ROLE_MAP, calculateBalancedBag } from '@/lib/botc-data';
 import {
   PlayerSeat,
   clampPlayerCount,
@@ -87,12 +87,21 @@ export default function WebPlayMode({
   // ================= STEP 1: SETUP STATE =================
   const [subStep, setSubStep] = useState<WebPlaySubStep>('setup');
   const [playerCount, setPlayerCount] = useState<number>(8);
-  const [isDrunkActive, setIsDrunkActive] = useState<boolean>(() => 8 >= 6);
+  // Default Drunk is STRICTLY nonaktif (false) unless user randomizes or explicitly activates it
+  const [isDrunkActive, setIsDrunkActive] = useState<boolean>(false);
+  // Default selected roles is STRICTLY 0 (empty array)
   const [{ selectedRoleIds, drunkFakeRoleId }, setRolesState] = useState<{
     selectedRoleIds: string[];
     drunkFakeRoleId: string | null;
-  }>(() => generateAutoRoles(8, true));
+  }>({
+    selectedRoleIds: [],
+    drunkFakeRoleId: null,
+  });
   const [setupError, setSetupError] = useState<string | null>(null);
+  const [randomFormulaInfo, setRandomFormulaInfo] = useState<{
+    formulaSummary: string;
+    formulaDetails: string[];
+  } | null>(null);
 
   const setSelectedRoleIds = (updater: (prev: string[]) => string[]) => {
     setRolesState((prev) => {
@@ -108,16 +117,37 @@ export default function WebPlayMode({
   const handleUpdatePlayerCount = (cnt: number) => {
     setPlayerCount(cnt);
     setSetupError(null);
-    const shouldDrunk = cnt >= 6;
-    setIsDrunkActive(shouldDrunk);
-    setRolesState(generateAutoRoles(cnt, shouldDrunk));
+    // User requested: do NOT auto-fill roles or auto-activate Drunk!
   };
 
   const handleToggleDrunk = () => {
     const nextDrunk = !isDrunkActive;
     setIsDrunkActive(nextDrunk);
     setSetupError(null);
-    setRolesState(generateAutoRoles(playerCount, nextDrunk));
+  };
+
+  const handleRandomizeBalancedBag = () => {
+    setSetupError(null);
+    const result = calculateBalancedBag(playerCount);
+    setIsDrunkActive(result.isDrunkActive);
+    setRolesState({
+      selectedRoleIds: result.selectedRoleIds,
+      drunkFakeRoleId: result.drunkFakeRoleId,
+    });
+    setRandomFormulaInfo({
+      formulaSummary: result.formulaSummary,
+      formulaDetails: result.formulaDetails,
+    });
+  };
+
+  const handleClearRoles = () => {
+    setSetupError(null);
+    setIsDrunkActive(false);
+    setRolesState({
+      selectedRoleIds: [],
+      drunkFakeRoleId: null,
+    });
+    setRandomFormulaInfo(null);
   };
 
   const effectiveCounts = useMemo(() => {
@@ -340,9 +370,13 @@ export default function WebPlayMode({
     return () => clearInterval(interval);
   }, [subStep]);
 
+  const hasCompletedRef = useRef(false);
+
   // When countdown hits 0, build the full session and launch Grimoire
   useEffect(() => {
     if (subStep === 'countdown' && countdownSeconds === 0) {
+      if (hasCompletedRef.current) return;
+      hasCompletedRef.current = true;
       // Build final PlayerSeat[] array
       const finalSeats: PlayerSeat[] = assignedSeats.map((item) => {
         const isDrunk = item.trueRoleId === 'drunk';
@@ -467,14 +501,25 @@ export default function WebPlayMode({
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={handleAutoSelect}
-                className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-[#231A26] hover:bg-[#34243A] border border-[#D4AF37]/60 text-xs font-bold text-[#FDE68A] flex items-center gap-1.5 cursor-pointer transition-colors"
-              >
-                <Sparkles className="w-4 h-4 text-[#D4AF37]" />
-                <span>Pilih Karakter Otomatis</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleClearRoles}
+                  className="min-h-[40px] px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-[#1E1A29] hover:bg-purple-100 dark:hover:bg-[#2A2338] border border-purple-200 dark:border-white/[0.1] text-xs font-semibold text-slate-700 dark:text-[#C8C0B3] flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-slate-500 dark:text-[#8E8A9E]" />
+                  <span>Kosongkan (0)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleRandomizeBalancedBag}
+                  className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#121016] text-xs font-extrabold flex items-center gap-1.5 cursor-pointer transition-colors shadow-md border border-[#F59E0B]"
+                >
+                  <Sparkles className="w-4 h-4 text-[#121016]" />
+                  <span>Acak Karakter & Hitung Formula</span>
+                </button>
+              </div>
             </div>
 
             {/* Quick Count Pills */}
@@ -494,6 +539,23 @@ export default function WebPlayMode({
                 </button>
               ))}
             </div>
+
+            {/* Random Formula Breakdown Info */}
+            {randomFormulaInfo && (
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#F59E0B]" />
+                  <span className="font-display text-sm font-bold text-amber-900 dark:text-[#FDE68A]">
+                    {randomFormulaInfo.formulaSummary}
+                  </span>
+                </div>
+                <ul className="text-xs text-slate-700 dark:text-[#C8C0B3] space-y-1 list-disc list-inside">
+                  {randomFormulaInfo.formulaDetails.map((det, dIdx) => (
+                    <li key={dIdx}>{det}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Drunk Toggle Feature matching SetupWizard */}
             <div className="p-4 rounded-2xl bg-gradient-to-r from-[#281D12] via-[#201710] to-[#17121E] border-2 border-[#D97706]/70 flex flex-col gap-4">

@@ -1294,64 +1294,6 @@ export default function StorytellerApp({
         )}
       </main>
 
-      {/* Mobile Fixed Navigation Bar (Visible only when in active game) */}
-      {isPlayingView && (
-        <nav
-          aria-label="Navigasi Bawah Layar HP"
-          className="md:hidden fixed bottom-0 left-0 right-0 z-30 h-14 bg-[#13101A]/95 border-t border-[#292535] grid grid-cols-4 items-center px-1 backdrop-blur-sm"
-        >
-          <button
-            type="button"
-            onClick={() => navigateToView('grimoire')}
-            className={`min-h-[44px] flex flex-col items-center justify-center cursor-pointer ${
-              currentView === 'grimoire' ? 'text-[#D4AF37]' : 'text-[#9C9486]'
-            }`}
-          >
-            <Compass className="w-4 h-4" />
-            <span className="text-[10px] font-medium mt-0.5 whitespace-nowrap">
-              Grimoire
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigateToView('evil')}
-            className={`min-h-[44px] flex flex-col items-center justify-center cursor-pointer ${
-              currentView === 'evil' ? 'text-[#D4AF37]' : 'text-[#9C9486]'
-            }`}
-          >
-            <Swords className="w-4 h-4" />
-            <span className="text-[10px] font-medium mt-0.5 whitespace-nowrap">
-              Bluff Evil
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigateToView('narrator')}
-            className={`min-h-[44px] flex flex-col items-center justify-center cursor-pointer ${
-              currentView === 'narrator' ? 'text-[#D4AF37]' : 'text-[#9C9486]'
-            }`}
-          >
-            <Moon className="w-4 h-4" />
-            <span className="text-[10px] font-medium mt-0.5 whitespace-nowrap">
-              Narator
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigateToView('dashboard')}
-            className="min-h-[44px] flex flex-col items-center justify-center text-[#9C9486] cursor-pointer"
-          >
-            <Home className="w-4 h-4" />
-            <span className="text-[10px] font-medium mt-0.5 whitespace-nowrap">
-              Dashboard
-            </span>
-          </button>
-        </nav>
-      )}
-
       {/* Modals */}
       <FullscreenCardModal
         card={silentCard}
