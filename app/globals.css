@@ -286,12 +286,14 @@ html.light [data-testid="grimoire-circle"] {
 }
 
 /* Inner dashed compass guide in circular table */
-html.light [data-testid="grimoire-circle"] .border-dashed {
-  border-color: rgba(212, 175, 55, 0.5) !important;
+html.light [data-testid="grimoire-circle"] .border-dashed,
+html.light [data-testid="grimoire-circle"] .border-dotted {
+  border-color: rgba(180, 130, 30, 0.38) !important;
+  background-color: transparent !important;
 }
 
 /* Center Clocktower Hub inside circle */
-html.light [data-testid="grimoire-circle"] .rounded-full.border-2 {
+html.light [data-testid="grimoire-center-hub"] {
   background-color: rgba(255, 255, 255, 0.98) !important;
   border-color: #D4AF37 !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;

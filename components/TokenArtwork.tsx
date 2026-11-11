@@ -136,7 +136,7 @@ export function CharacterToken({
   showIndonesianSubtitle = false,
 }: {
   roleId: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'circle-sm' | 'circle-md' | 'circle-lg' | 'sm' | 'md' | 'lg' | 'xl';
   isDead?: boolean;
   deathCause?: 'demon' | 'execution' | 'slayer';
   isDrunkSecret?: boolean;
@@ -149,8 +149,20 @@ export function CharacterToken({
 
   const styles = getTeamColorStyles(role.team);
 
-  // Enlarged sizes for high visibility and crisp display on mobile, tablet, and desktop
+  // Proportional circle sizes prevent perimeter clipping + generous sizes for cards/modals
   const sizeMap = {
+    'circle-sm': {
+      circle: 'w-[42px] h-[42px] sm:w-[52px] sm:h-[52px] xl:w-[56px] xl:h-[56px]',
+      icon: 'w-4 h-4',
+    },
+    'circle-md': {
+      circle: 'w-[50px] h-[50px] sm:w-[62px] sm:h-[62px] xl:w-[68px] xl:h-[68px]',
+      icon: 'w-5 h-5',
+    },
+    'circle-lg': {
+      circle: 'w-[58px] h-[58px] sm:w-[74px] sm:h-[74px] xl:w-[78px] xl:h-[78px]',
+      icon: 'w-5 h-5 sm:w-6 sm:h-6',
+    },
     sm: {
       circle: 'w-[72px] h-[72px] sm:w-[84px] sm:h-[84px]',
       icon: 'w-6 h-6',
@@ -282,7 +294,7 @@ export function ReminderTokenChip({
   isSelected = false,
 }: {
   reminderId: string;
-  size?: 'xs' | 'sm' | 'md';
+  size?: 'xxs' | 'xs' | 'sm' | 'md';
   onClick?: (e: React.MouseEvent) => void;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
@@ -298,14 +310,18 @@ export function ReminderTokenChip({
       ? 'border-[#38BDF8] bg-sky-950/80 dark:bg-[#162536] text-sky-200'
       : 'border-[#D4AF37] bg-amber-950/80 dark:bg-[#2B2418] text-amber-200';
 
-  if (size === 'xs') {
+  if (size === 'xxs' || size === 'xs') {
+    const dimClass =
+      size === 'xxs'
+        ? 'w-5 h-5 sm:w-[23px] sm:h-[23px]'
+        : 'w-7 h-7 sm:w-8 sm:h-8';
     return (
       <button
         type="button"
         onClick={onClick}
         title={`${rem.label} (${rem.indonesianLabel}) — Klik untuk melepas`}
         aria-label={`Hapus token pengingat ${rem.indonesianLabel}`}
-        className="relative w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden shadow-lg border border-white/30 transition-transform hover:scale-115 active:scale-90 cursor-pointer shrink-0 bg-[#14141B]"
+        className={`relative ${dimClass} rounded-full overflow-hidden shadow-md border border-[#D4AF37]/70 dark:border-white/35 transition-transform hover:scale-115 active:scale-90 cursor-pointer shrink-0 bg-white dark:bg-[#14141B]`}
       >
         <img
           src={`/reminders/${rem.id}.png`}

@@ -104,9 +104,10 @@ export default function GrimoireBoard({
   const voteStats = calculateVoteThreshold(players);
   const totalSeats = players.length;
 
-  // Responsive circular geometry
-  const radiusPct = totalSeats <= 8 ? 36.5 : totalSeats <= 11 ? 38.5 : 40.5;
-  const tokenSize = totalSeats >= 12 ? 'sm' : 'md';
+  // Proportional circular geometry so seat tokens & badges stay comfortably inside the arena
+  const radiusPct = totalSeats <= 7 ? 33.5 : totalSeats <= 10 ? 35.5 : 37.5;
+  const tokenSize =
+    totalSeats <= 7 ? 'circle-lg' : totalSeats <= 10 ? 'circle-md' : 'circle-sm';
 
   // Active roles set for filtering relevant reminder tokens
   const inPlayRoleSet = new Set<string>();
@@ -486,33 +487,34 @@ export default function GrimoireBoard({
             </div>
           ) : (
             /* Mode Lingkaran Grimoire Klasik */
-            <>
+            <div className="py-2 sm:py-3">
               <div
                 data-testid="grimoire-circle"
-                className="relative w-full aspect-square max-w-[420px] sm:max-w-[460px] xl:max-w-[490px] 2xl:max-w-[520px] mx-auto rounded-full bg-radial from-[#1A1A24] via-[#121217] to-[#0C0C10] border-2 border-white/[0.1] shadow-2xl overflow-hidden"
+                className="relative w-full aspect-square max-w-[430px] sm:max-w-[465px] xl:max-w-[485px] mx-auto rounded-full bg-radial from-[#1F1B2B] via-[#13111B] to-[#0B0A10] border-2 border-[#D4AF37]/35 shadow-[0_14px_45px_rgba(0,0,0,0.6),inset_0_0_50px_rgba(212,175,55,0.06)]"
               >
                 {/* Dual Counter-Rotating Luxury Clocktower Compass Rings */}
-                <div className="absolute inset-[10%] rounded-full border border-dotted border-[#D4AF37]/25 animate-clockwork-slow pointer-events-none" />
-                <div className="absolute inset-[16%] rounded-full border-2 border-dashed border-[#D4AF37]/25 animate-clockwork-reverse pointer-events-none" />
+                <div className="absolute inset-[11%] rounded-full border border-dotted border-[#D4AF37]/25 animate-clockwork-slow pointer-events-none" />
+                <div className="absolute inset-[18%] rounded-full border-2 border-dashed border-[#D4AF37]/25 animate-clockwork-reverse pointer-events-none" />
 
                 {/* Center Clocktower Hub with subtle breathing glow */}
                 <motion.div
+                  data-testid="grimoire-center-hub"
                   animate={{ scale: [1, 1.03, 1] }}
                   transition={{ repeat: Infinity, duration: 4.5, ease: 'easeInOut' }}
-                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[26%] h-[26%] rounded-full bg-white/95 dark:bg-[#14141B]/95 border-2 border-purple-200 dark:border-white/[0.12] flex flex-col items-center justify-center text-center p-2 pointer-events-none shadow-xl z-10"
+                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[23%] h-[23%] rounded-full bg-white/95 dark:bg-[#14141B]/95 border-2 border-purple-200 dark:border-[#D4AF37]/35 flex flex-col items-center justify-center text-center p-1.5 pointer-events-none shadow-xl z-10"
                 >
-                  <span className="font-display text-[10px] sm:text-xs font-black tracking-widest text-amber-800 dark:text-[#D4AF37] leading-tight font-mono">
+                  <span className="font-display text-[9px] sm:text-[11px] font-black tracking-widest text-amber-800 dark:text-[#D4AF37] leading-tight font-mono">
                     GRIMOIRE
                   </span>
-                  <span className="text-[9px] sm:text-[11px] font-bold text-slate-900 dark:text-[#EDEAF0] mt-0.5 truncate max-w-full">
+                  <span className="text-[8.5px] sm:text-[10.5px] font-bold text-slate-900 dark:text-[#EDEAF0] mt-0.5 truncate max-w-full px-1">
                     {phaseLabel}
                   </span>
-                  <span className="font-mono text-[9px] sm:text-[11px] font-bold text-emerald-700 dark:text-[#34D399] mt-0.5 tabular-nums">
+                  <span className="font-mono text-[8.5px] sm:text-[10.5px] font-bold text-emerald-700 dark:text-[#34D399] mt-0.5 tabular-nums">
                     {voteStats.aliveCount}H · {voteStats.votesNeeded}V
                   </span>
                 </motion.div>
 
-                {/* Circular Player Seats & Inner-Ring Reminder Tokens */}
+                {/* Circular Player Seats */}
                 {players.map((player, index) => {
                   const angle = (index / totalSeats) * 2 * Math.PI - Math.PI / 2;
                   const leftPct = 50 + radiusPct * Math.cos(angle);
@@ -559,7 +561,9 @@ export default function GrimoireBoard({
                           }
                           setDragPayload(null);
                         }}
-                        className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-10"
+                        className={`absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center ${
+                          isSelected ? 'z-20' : 'z-10'
+                        }`}
                       >
                         <motion.div
                           initial={{ scale: 0.78, opacity: 0 }}
@@ -579,9 +583,9 @@ export default function GrimoireBoard({
                             }`}
                             className={`group relative rounded-full p-0.5 transition-shadow cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FBBF24] ${
                               isSelected
-                                ? 'ring-[3.5px] ring-[#D4AF37] scale-105 shadow-[0_0_24px_rgba(212,175,55,0.55)]'
+                                ? 'ring-[3px] ring-[#D4AF37] scale-105 shadow-[0_0_22px_rgba(212,175,55,0.55)]'
                                 : isSwapSource || isDragTarget
-                                ? 'ring-[3.5px] ring-[#38BDF8] scale-110 shadow-[0_0_22px_rgba(56,189,248,0.5)]'
+                                ? 'ring-[3px] ring-[#38BDF8] scale-110 shadow-[0_0_20px_rgba(56,189,248,0.5)]'
                                 : 'hover:shadow-[0_0_16px_rgba(212,175,55,0.28)]'
                             }`}
                           >
@@ -595,7 +599,7 @@ export default function GrimoireBoard({
                             />
 
                             {/* Seat Number Tag */}
-                            <span className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#0C0C10] border-2 border-[#D4AF37] font-mono text-[10px] sm:text-xs font-black text-[#FDE68A] flex items-center justify-center tabular-nums shadow-md z-20">
+                            <span className="absolute -top-0.5 -left-0.5 w-[18px] h-[18px] sm:w-[22px] sm:h-[22px] rounded-full bg-white dark:bg-[#0C0C10] border-[1.5px] sm:border-2 border-[#D4AF37] font-mono text-[9px] sm:text-[11px] font-black text-amber-800 dark:text-[#FDE68A] flex items-center justify-center tabular-nums shadow-md z-30">
                               {index + 1}
                             </span>
 
@@ -603,53 +607,53 @@ export default function GrimoireBoard({
                             {!player.isAlive && player.hasGhostVote && (
                               <span
                                 title="Suara Hantu masih tersedia"
-                                className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#1E293B] border-2 border-[#94A3B8] flex items-center justify-center shadow-md z-20"
+                                className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] sm:w-[22px] sm:h-[22px] rounded-full bg-[#1E293B] border-[1.5px] sm:border-2 border-[#94A3B8] flex items-center justify-center shadow-md z-30"
                               >
-                                <Ghost className="w-3 h-3 text-[#E2E8F0]" />
+                                <Ghost className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#E2E8F0]" />
                               </span>
                             )}
                           </motion.button>
 
                           {/* Player Name */}
-                          <div className="flex flex-col items-center gap-0.5 sm:gap-1 mt-1 sm:mt-1.5">
+                          <div className="flex flex-col items-center gap-0.5 mt-1">
                             <span
-                              className={`px-1.5 sm:px-2.5 py-0.5 rounded-lg text-[9px] sm:text-xs font-black tracking-wide max-w-[76px] sm:max-w-[120px] truncate text-center shadow-md border leading-tight ${
+                              className={`px-1.5 sm:px-2.5 py-[2px] rounded-md text-[9.5px] sm:text-[11px] font-extrabold tracking-wide max-w-[74px] sm:max-w-[106px] truncate text-center shadow-md border leading-tight ${
                                 player.isAlive
-                                  ? 'bg-white dark:bg-[#14141B]/95 text-slate-900 dark:text-white border-purple-300 dark:border-white/[0.1]'
-                                  : 'bg-slate-100 dark:bg-[#0C0C10]/95 text-slate-500 dark:text-[#8E8A9E] border-slate-300 dark:border-white/[0.06] line-through'
+                                  ? 'bg-white dark:bg-[#14141B]/95 text-slate-900 dark:text-white border-purple-300 dark:border-white/[0.14]'
+                                  : 'bg-slate-100 dark:bg-[#0C0C10]/95 text-slate-500 dark:text-[#8E8A9E] border-slate-300 dark:border-white/[0.08] line-through'
                               }`}
                             >
                               {player.name}
                             </span>
 
                             {/* Distinct Status Badges */}
-                            {!spyCleanMode && (
-                              <div className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1 max-w-[100px] sm:max-w-[130px]">
+                            {!spyCleanMode && (isDrunk || isPoisoned || !player.isAlive) && (
+                              <div className="flex flex-wrap items-center justify-center gap-0.5 max-w-[96px] sm:max-w-[120px]">
                                 {!player.isAlive && (
                                   player.deathCause === 'demon' ? (
-                                    <span className="text-[7px] sm:text-[9px] font-black text-[#FECACA] bg-[#450A0A] border border-[#DC2626] px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-full uppercase tracking-wider shadow whitespace-nowrap">
+                                    <span className="text-[7px] sm:text-[8px] font-black text-[#FECACA] bg-[#450A0A] border border-[#DC2626] px-1.5 py-[1px] rounded-full uppercase tracking-wider shadow whitespace-nowrap">
                                       DEMON
                                     </span>
                                   ) : player.deathCause === 'execution' ? (
-                                    <span className="text-[7px] sm:text-[9px] font-black text-[#FDE68A] bg-[#3B2808] border border-[#D4AF37] px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-full uppercase tracking-wider shadow whitespace-nowrap">
+                                    <span className="text-[7px] sm:text-[8px] font-black text-[#FDE68A] bg-[#3B2808] border border-[#D4AF37] px-1.5 py-[1px] rounded-full uppercase tracking-wider shadow whitespace-nowrap">
                                       GANTUNG
                                     </span>
                                   ) : (
-                                    <span className="text-[7px] sm:text-[9px] font-black text-[#E4E4E7] bg-[#18181B] border border-[#52525B] px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-full uppercase tracking-wider shadow whitespace-nowrap">
+                                    <span className="text-[7px] sm:text-[8px] font-black text-[#E4E4E7] bg-[#18181B] border border-[#52525B] px-1.5 py-[1px] rounded-full uppercase tracking-wider shadow whitespace-nowrap">
                                       MATI
                                     </span>
                                   )
                                 )}
 
                                 {isDrunk && (
-                                  <span className="text-[7px] sm:text-[9px] font-black text-[#FDE68A] bg-[#451A03] border border-[#F59E0B] px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-full uppercase tracking-wider shadow flex items-center gap-0.5 whitespace-nowrap">
+                                  <span className="text-[7px] sm:text-[8px] font-black text-[#FDE68A] bg-[#451A03] border border-[#F59E0B] px-1.5 py-[1px] rounded-full uppercase tracking-wider shadow flex items-center gap-0.5 whitespace-nowrap">
                                     <Beer className="w-2.5 h-2.5 text-[#F59E0B]" />
                                     <span>DRUNK</span>
                                   </span>
                                 )}
 
                                 {isPoisoned && (
-                                  <span className="text-[7px] sm:text-[9px] font-black text-[#FECACA] bg-[#7F1D1D] border border-[#EF4444] px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-full uppercase tracking-wider shadow flex items-center gap-0.5 animate-pulse whitespace-nowrap">
+                                  <span className="text-[7px] sm:text-[8px] font-black text-[#FECACA] bg-[#7F1D1D] border border-[#EF4444] px-1.5 py-[1px] rounded-full uppercase tracking-wider shadow flex items-center gap-0.5 whitespace-nowrap">
                                     <FlaskConical className="w-2.5 h-2.5 text-[#F87171]" />
                                     <span>RACUN</span>
                                   </span>
@@ -659,12 +663,12 @@ export default function GrimoireBoard({
 
                             {/* Attached Reminder Tokens with Authentic Images */}
                             {!spyCleanMode && nonDrunkReminders.length > 0 && (
-                              <div className="flex flex-wrap items-center justify-center gap-0.5 sm:gap-1 max-w-[100px] sm:max-w-[120px] mt-0.5">
+                              <div className="flex flex-wrap items-center justify-center gap-0.5 max-w-[96px] sm:max-w-[116px] mt-0.5">
                                 {nonDrunkReminders.map((rem) => (
                                   <ReminderTokenChip
                                     key={rem.instanceId}
                                     reminderId={rem.reminderId}
-                                    size="xs"
+                                    size="xxs"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       onRemoveReminder(player.id, rem.instanceId);
@@ -682,11 +686,11 @@ export default function GrimoireBoard({
               </div>
 
               {!spyCleanMode && (
-                <p className="text-center text-[11px] text-slate-500 dark:text-[#8E8A9E] mt-3">
+                <p className="text-center text-[11px] text-slate-500 dark:text-[#8E8A9E] mt-4">
                   Klik kursi pemain untuk melihat info & kelola token, atau klik <strong>Mode Daftar Kursi</strong> untuk tampilan kartu.
                 </p>
               )}
-            </>
+            </div>
           )}
         </div>
 
