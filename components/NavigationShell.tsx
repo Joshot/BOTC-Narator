@@ -7,7 +7,6 @@ import {
   Check,
   ChevronDown,
   Compass,
-  Home,
   Moon,
   Plus,
   Sun,
@@ -71,7 +70,7 @@ export default function NavigationShell({ children }: { children: React.ReactNod
       */}
       <header className="sticky top-0 z-40 bg-white/90 dark:bg-[#0C0C10]/95 backdrop-blur-md border-b border-purple-200 dark:border-white/[0.08] px-4 sm:px-6 py-2.5 transition-colors shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          {/* Minimal Brand Link & Home Link */}
+          {/* Minimal Brand Link */}
           <div className="flex items-center gap-3">
             <Link
               href="/"
@@ -83,14 +82,6 @@ export default function NavigationShell({ children }: { children: React.ReactNod
               <span className="font-display text-base font-bold tracking-tight text-slate-900 dark:text-[#EDEAF0] group-hover:text-amber-700 dark:group-hover:text-[#D4AF37] transition-colors">
                 Grimoire BOTC
               </span>
-            </Link>
-
-            <Link
-              href="/"
-              className="px-3 py-1 rounded-full bg-purple-50 hover:bg-purple-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-purple-200 dark:border-white/[0.08] text-xs font-medium text-purple-900 dark:text-[#A6A2B2] hover:text-purple-950 dark:hover:text-[#EDEAF0] transition-colors flex items-center gap-1.5 cursor-pointer"
-            >
-              <Home className="w-3.5 h-3.5 text-amber-600 dark:text-[#D4AF37]" />
-              <span>Home</span>
             </Link>
           </div>
 

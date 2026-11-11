@@ -454,6 +454,117 @@ export default function NarratorView({
                     </div>
                   )}
 
+                  {currentStep.roleId === 'undertaker' && phase === 'other_night' && (() => {
+                    const executedTarget = executedTodayPlayerId
+                      ? players.find((p) => p.id === executedTodayPlayerId)
+                      : players.find((p) =>
+                          p.reminders.some((r) => r.reminderId === 'executed')
+                        );
+                    const executedTrueRole = executedTarget
+                      ? ROLE_MAP[executedTarget.trueRoleId]
+                      : null;
+
+                    return (
+                      <div className="pt-2 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="text-xs font-semibold text-purple-950 dark:text-[#E9D5FF]">
+                            Pilih / Konfirmasi Korban Eksekusi Siang Tadi (Klik Nama Pemain):
+                          </div>
+                          {executedTarget && (
+                            <button
+                              type="button"
+                              onClick={() => onSetSingleReminderTarget('executed', '')}
+                              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#221E2E] dark:hover:bg-[#312B42] text-[11px] font-semibold text-slate-700 dark:text-[#C4BCD0] cursor-pointer transition-colors"
+                            >
+                              Kosongkan Eksekusi
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {players.map((p) => {
+                            const isExec = executedTarget?.id === p.id;
+                            const isExecutedDead = !p.isAlive && p.deathCause === 'execution';
+                            return (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() =>
+                                  onSetSingleReminderTarget('executed', isExec ? '' : p.id)
+                                }
+                                className={`min-h-[40px] px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer transition-colors ${
+                                  isExec
+                                    ? 'bg-[#6D28D9] text-white border-[#A78BFA] shadow-sm'
+                                    : isExecutedDead
+                                    ? 'bg-amber-50 hover:bg-amber-100 text-amber-950 border-amber-300 dark:bg-[#2A2018] dark:hover:bg-[#382B20] dark:text-[#FDE68A] dark:border-[#D4AF37]/50'
+                                    : 'bg-purple-50 hover:bg-purple-100 text-slate-800 border-purple-200 dark:bg-[#1E1A2A] dark:hover:bg-[#2B253B] dark:text-[#EDE7DB] dark:border-[#342E46]'
+                                }`}
+                              >
+                                #{p.seatIndex + 1} {p.name}{' '}
+                                {isExec
+                                  ? '(Dieksekusi)'
+                                  : !p.isAlive
+                                  ? '(Mati)'
+                                  : ''}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {executedTarget && executedTrueRole ? (
+                          <div className="p-3.5 rounded-2xl bg-purple-50/80 dark:bg-[#191524] border border-purple-200 dark:border-[#342E46] space-y-2.5">
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                              <span className="text-slate-700 dark:text-[#D5CEBC]">
+                                Korban:{' '}
+                                <strong className="text-slate-950 dark:text-white">
+                                  {executedTarget.name} (Kursi {executedTarget.seatIndex + 1})
+                                </strong>{' '}
+                                — Peran Asli:{' '}
+                                <strong className="text-purple-900 dark:text-[#E9D5FF]">
+                                  {executedTrueRole.name} ({executedTrueRole.indonesianName})
+                                </strong>
+                              </span>
+                            </div>
+
+                            {(executedTarget.trueRoleId === 'spy' ||
+                              executedTarget.trueRoleId === 'recluse' ||
+                              currentStep.isDrunkPlayer ||
+                              currentStep.isPoisonedPlayer) && (
+                              <p className="text-[11px] text-amber-800 dark:text-[#FDE68A]">
+                                {currentStep.isDrunkPlayer || currentStep.isPoisonedPlayer
+                                  ? 'Catatan Storyteller: Undertaker sedang Mabuk/Diracun — Anda boleh memakai pemilih token di bawah untuk menampilkan peran palsu.'
+                                  : `Catatan Misregistration: Korban adalah ${executedTrueRole.name}, sehingga Anda boleh menunjuk peran lain via pemilih token di bawah.`}
+                              </p>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onShowSilentCard({
+                                  heading: 'KARAKTER PEMAIN YANG DIEKSEKUSI:',
+                                  subheading: `${executedTarget.name} (Kursi ${
+                                    executedTarget.seatIndex + 1
+                                  })`,
+                                  roleIds: [executedTrueRole.id],
+                                })
+                              }
+                              className="brass-sheen-btn w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F59E0B] hover:brightness-105 text-[#121016] text-xs font-black inline-flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all"
+                            >
+                              <Eye className="w-4 h-4 shrink-0" />
+                              <span>
+                                Tunjukkan Token {executedTrueRole.name} ke Undertaker (Layar Penuh)
+                              </span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#191622] border border-purple-200/80 dark:border-[#2C263B] text-xs text-slate-600 dark:text-[#A8A092]">
+                            Belum ada korban eksekusi dipilih. Klik salah satu pemain di atas jika siang tadi ada eksekusi, atau biarkan kosong dan lewati membangunkan Undertaker.
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {/* Silent Fullscreen Card Quick Helpers inside Narrator */}
                   <div className="pt-3 border-t border-purple-100 dark:border-[#292535] space-y-3">
                     <div className="text-xs font-medium text-slate-600 dark:text-[#A8A092]">

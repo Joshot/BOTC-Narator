@@ -186,7 +186,6 @@ export default function WebPlayMode({
   // Role toggling for setup
   const handleToggleRole = (roleId: string) => {
     setSetupError(null);
-    if (roleId === 'imp') return; // 1 Imp locked
     if (roleId === 'drunk') {
       handleToggleDrunk();
       return;

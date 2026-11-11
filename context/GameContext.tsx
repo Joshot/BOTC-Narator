@@ -1004,9 +1004,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     (reminderId: string, targetPlayerId: string) => {
       updateSession((s) => ({
         ...s,
+        ...(reminderId === 'executed'
+          ? { executedTodayPlayerId: targetPlayerId || null }
+          : {}),
         players: s.players.map((p) => {
           const cleaned = p.reminders.filter((r) => r.reminderId !== reminderId);
-          if (p.id !== targetPlayerId) {
+          if (!targetPlayerId || p.id !== targetPlayerId) {
             return { ...p, reminders: cleaned };
           }
           return {

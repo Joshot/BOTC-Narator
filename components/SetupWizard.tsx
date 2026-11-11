@@ -217,7 +217,6 @@ export default function SetupWizard({
 
   // Toggle role in Menu 1 bag
   const toggleRoleInBag = (roleId: string) => {
-    if (roleId === 'imp') return; // Locked to 1 Imp
     if (roleId === 'drunk') {
       setIsDrunkActive((prev) => !prev);
       return;
@@ -919,25 +918,47 @@ export default function SetupWizard({
                   <h3 className="font-display text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-[#DC2626]">
                     Demon (1 Karakter: Imp)
                   </h3>
-                  <span className="text-xs text-rose-700 dark:text-[#FCA5A5] font-mono font-bold">1/1</span>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-red-50 dark:bg-[#351418] border-2 border-red-500 dark:border-[#DC2626] flex items-center justify-between text-slate-900 dark:text-white max-w-sm">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src="/tokens/imp.png"
-                      alt="Imp"
-                      className="w-8 h-8 rounded-full object-contain shrink-0 filter drop-shadow"
-                    />
-                    <div>
-                      <div className="font-bold text-sm text-slate-900 dark:text-white">Imp</div>
-                      <div className="text-[10px] text-slate-600 dark:text-[#A8A092]">Iblis Utama Trouble Brewing</div>
-                    </div>
-                  </div>
-                  <span className="px-2 py-0.5 rounded bg-red-700 dark:bg-[#DC2626] text-white text-[10px] font-black uppercase">
-                    Terkunci
+                  <span className="text-xs text-rose-700 dark:text-[#FCA5A5] font-mono font-bold">
+                    {currentCounts.demons}/{requiredDemonsInBag}
                   </span>
                 </div>
+
+                {(() => {
+                  const isImpSelected = selectedRoleIds.includes('imp');
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => toggleRoleInBag('imp')}
+                      aria-pressed={isImpSelected}
+                      className={`w-full max-w-sm p-3.5 rounded-2xl border-2 flex items-center justify-between text-left cursor-pointer transition-all hover:-translate-y-0.5 ${
+                        isImpSelected
+                          ? 'bg-red-50 dark:bg-[#351418] border-red-500 dark:border-[#DC2626] text-slate-900 dark:text-white shadow-md ring-1 ring-red-400/50 dark:ring-[#DC2626]/50'
+                          : 'bg-purple-50/40 dark:bg-[#15121C] border-purple-200 dark:border-[#292436] text-slate-700 dark:text-[#C4BCD0] hover:border-red-300 dark:hover:border-[#DC2626]/60 hover:bg-white dark:hover:bg-[#1E1928]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src="/tokens/imp.png"
+                          alt="Imp"
+                          className="w-8 h-8 rounded-full object-contain shrink-0 filter drop-shadow"
+                        />
+                        <div>
+                          <div className="font-bold text-sm text-slate-900 dark:text-white">Imp</div>
+                          <div className="text-[10px] text-slate-600 dark:text-[#A8A092]">Iblis Utama Trouble Brewing</div>
+                        </div>
+                      </div>
+                      <span
+                        className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase ${
+                          isImpSelected
+                            ? 'bg-red-700 dark:bg-[#DC2626] text-white'
+                            : 'bg-purple-100 dark:bg-[#292336] text-slate-700 dark:text-[#C4BCD0]'
+                        }`}
+                      >
+                        {isImpSelected ? 'Dipilih' : 'Pilih'}
+                      </span>
+                    </button>
+                  );
+                })()}
               </div>
             </div>
 
@@ -957,7 +978,7 @@ export default function SetupWizard({
                 <p className="text-xs text-slate-600 dark:text-[#A8A092] mt-0.5">
                   {isMenu1Valid
                     ? 'Klik tombol di kanan untuk lanjut mengetik nama pemain & pembagian kursi!'
-                    : 'Pastikan jumlah karakter Townsfolk, Outsider, dan Minion sesuai target di atas.'}
+                    : 'Pastikan jumlah karakter Townsfolk, Outsider, Minion, dan Demon sesuai target di atas.'}
                 </p>
               </div>
 
