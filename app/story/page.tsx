@@ -47,21 +47,21 @@ export default function StoryPage() {
   if (!hasActiveGame) {
     return (
       <div className="max-w-xl mx-auto py-16 text-center space-y-6">
-        <div className="w-16 h-16 rounded-3xl bg-[#14141B] border border-white/[0.08] flex items-center justify-center mx-auto text-[#D4AF37] shadow-xl">
+        <div className="w-16 h-16 rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] flex items-center justify-center mx-auto text-amber-700 dark:text-[#D4AF37] shadow-md dark:shadow-xl">
           <History className="w-8 h-8" />
         </div>
         <div className="space-y-2">
-          <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#EDEAF0]">
+          <h2 className="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-[#EDEAF0]">
             Belum Ada Kisah Permainan
           </h2>
-          <p className="text-sm text-[#8E8A9E] leading-relaxed">
+          <p className="text-sm text-slate-600 dark:text-[#8E8A9E] leading-relaxed">
             Riwayat cerita dan alur permainan akan otomatis tercatat secara kronologis begitu sesi permainan dimulai.
           </p>
         </div>
         <div className="pt-2">
           <Link
             href="/setup"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] font-bold text-xs shadow-lg transition-colors cursor-pointer"
+            className="brass-sheen-btn inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] font-bold text-xs shadow-lg transition-colors cursor-pointer"
           >
             <Compass className="w-4 h-4" />
             <span>Mulai Setup Permainan</span>
@@ -231,17 +231,17 @@ export default function StoryPage() {
       {/* Victory Status Banner */}
       {winner && (
         <div
-          className={`p-6 rounded-3xl border shadow-xl flex items-center gap-4 ${
+          className={`p-6 rounded-3xl border shadow-md dark:shadow-xl flex items-center gap-4 ${
             winner === 'good'
-              ? 'bg-[#064E3B]/30 border-[#10B981]/40 text-[#A7F3D0]'
-              : 'bg-[#7F1D1D]/30 border-[#EF4444]/40 text-[#FECACA]'
+              ? 'bg-emerald-50 dark:bg-[#064E3B]/30 border-emerald-400 dark:border-[#10B981]/40 text-emerald-950 dark:text-[#A7F3D0]'
+              : 'bg-red-50 dark:bg-[#7F1D1D]/30 border-red-400 dark:border-[#EF4444]/40 text-red-950 dark:text-[#FECACA]'
           }`}
         >
           <div
             className={`p-3.5 rounded-2xl border shrink-0 ${
               winner === 'good'
-                ? 'bg-[#065F46] border-[#34D399]/40 text-[#34D399]'
-                : 'bg-[#991B1B] border-[#F87171]/40 text-[#F87171]'
+                ? 'bg-emerald-600 dark:bg-[#065F46] border-emerald-500 dark:border-[#34D399]/40 text-white dark:text-[#34D399]'
+                : 'bg-red-600 dark:bg-[#991B1B] border-red-500 dark:border-[#F87171]/40 text-white dark:text-[#F87171]'
             }`}
           >
             <Trophy className="w-7 h-7" />

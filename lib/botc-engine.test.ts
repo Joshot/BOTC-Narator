@@ -15,6 +15,7 @@ import {
   validateRoleSelection,
   validateRoleBag,
   sanitizePlayerSeats,
+  type PlayerSeat,
 } from './botc-engine.ts';
 
 test('official Trouble Brewing character counts match 5 to 15 players table', () => {

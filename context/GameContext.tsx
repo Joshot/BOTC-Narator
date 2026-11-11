@@ -779,7 +779,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             };
           }
 
-          // Scarlet Woman check on Demon execution
+          // Scarlet Woman check on Demon execution or Slayer shot (BOTC official: 5+ alive players before death)
+        }
+
+        if (cause === 'execution' || cause === 'slayer') {
           const healthySW = s.players.find(
             (p) =>
               p.isAlive &&
@@ -795,7 +798,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                 return {
                   ...p,
                   isAlive: false,
-                  deathCause: 'execution' as const,
+                  deathCause: cause,
                   hasGhostVote: true,
                   reminders: cleaned,
                 };
@@ -814,17 +817,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               return { ...p, reminders: cleaned };
             });
 
+            const causeText =
+              cause === 'slayer' ? 'ditembak mati oleh Slayer' : 'dieksekusi warga';
+
             appendStory(
               currentRoundLabel,
-              `Demon (${target.name}) dieksekusi saat ada ${aliveBefore} pemain hidup. Scarlet Woman (${healthySW.name}) otomatis berubah menjadi IMP baru!`,
+              `Demon (${target.name}) ${causeText} saat ada ${aliveBefore} pemain hidup. Scarlet Woman (${healthySW.name}) otomatis berubah menjadi IMP baru!`,
               'starpass'
             );
 
             return {
               ...s,
-              executedTodayPlayerId: playerId,
+              executedTodayPlayerId: cause === 'execution' ? playerId : s.executedTodayPlayerId,
               players: sanitizePlayerSeats(next),
-              gameAlertBanner: `SCARLET WOMAN AKTIF! Demon (${target.name}) dieksekusi saat ada ${aliveBefore} pemain hidup. ${healthySW.name} otomatis berubah menjadi IMP baru!`,
+              gameAlertBanner: `SCARLET WOMAN AKTIF! Demon (${target.name}) ${causeText} saat ada ${aliveBefore} pemain hidup. ${healthySW.name} otomatis berubah menjadi IMP baru!`,
             };
           }
         }
@@ -1087,6 +1093,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
         if (aliveMinions.length === 1) {
           const singleMinion = aliveMinions[0];
+          const currentRoundLabel =
+            session.phase === 'first_night'
+              ? 'Malam Pertama'
+              : session.phase === 'day'
+              ? `Siang #${session.dayNumber}`
+              : `Malam #${session.dayNumber + 1}`;
+
           updateSession((s) => ({
             ...s,
             players: s.players.map((p) => {
@@ -1115,6 +1128,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             }),
           }));
 
+          appendStory(
+            currentRoundLabel,
+            `STARPASS: Demon (${impPlayer.name}) bunuh diri. Karena hanya ada 1 Minion hidup (${singleMinion.name} - Kursi ${singleMinion.seatIndex + 1}), ia otomatis berubah menjadi IMP baru!`,
+            'starpass'
+          );
+
           return {
             outcomeMessage: `STARPASS! ${impPlayer.name} bunuh diri. ${singleMinion.name} otomatis menjadi IMP baru!`,
           };
@@ -1130,6 +1149,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           };
         }
 
+        handleSetSingleReminderTarget('die_imp', impPlayer.id);
         return {
           outcomeMessage: `${impPlayer.name} bunuh diri tanpa Minion hidup tersisa! Setelah fajar, Tim Good akan menang.`,
         };
@@ -1169,7 +1189,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         }).`,
       };
     },
-    [handleSetSingleReminderTarget, session.players, updateSession]
+    [
+      appendStory,
+      handleSetSingleReminderTarget,
+      session.dayNumber,
+      session.phase,
+      session.players,
+      updateSession,
+    ]
   );
 
   const handleTransitionNightToDay = useCallback(() => {
@@ -1349,6 +1376,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const nominator = session.players.find((p) => p.id === nominatorPlayerId);
       if (!virgin || !nominator) return 'Pemain tidak ditemukan.';
 
+      const alreadyUsed = virgin.reminders.some(
+        (r) => r.reminderId === 'used_virgin'
+      );
+      if (alreadyUsed) {
+        return `Kemampuan Virgin (${virgin.name}) sudah pernah terpicu sebelumnya (hanya aktif 1x per permainan). Lanjutkan pemungutan suara seperti biasa.`;
+      }
+
       handleAddReminder(virgin.id, 'used_virgin');
 
       const isRealHealthyVirgin =
@@ -1368,6 +1402,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return `KEMAMPUAN VIRGIN AKTIF! Karena ${nominator.name} adalah Townsfolk asli (${
           ROLE_MAP[nominator.trueRoleId]?.name
         }), umumkan: "${nominator.name} langsung dieksekusi saat ini juga!"`;
+      }
+
+      if (isRealHealthyVirgin && nominator.trueRoleId === 'spy') {
+        return `Penominasi adalah SPY (${nominator.name}). Sebagai Storyteller, Anda BOLEH memilih untuk memicu kemampuan Virgin (eksekusi Spy) jika ingin menyamarkannya sebagai Townsfolk, atau biarkan tidak terpicu.`;
       }
 
       return `Kemampuan Virgin TIDAK terpicu. Lanjutkan pemungutan suara seperti biasa.`;

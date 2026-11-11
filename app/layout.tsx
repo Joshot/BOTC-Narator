@@ -33,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="id" className="dark">
       <body
         suppressHydrationWarning
-        className="bg-[#0C0C10] text-[#EDEAF0] font-sans antialiased selection:bg-[#3D3552] selection:text-[#FFFFFF] min-h-screen"
+        className="bg-[#F1F8F4] dark:bg-[#0C0C10] text-slate-900 dark:text-[#EDEAF0] font-sans antialiased selection:bg-purple-200 dark:selection:bg-[#3D3552] selection:text-slate-900 dark:selection:text-[#FFFFFF] min-h-screen transition-colors duration-300"
       >
         <ThemeProvider>
           <GameProvider>

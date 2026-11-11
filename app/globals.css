@@ -219,8 +219,7 @@ html.light [class*="bg-[#291B06]"] {
   color: #92400E !important;
 }
 
-/* Demon Kill Button in Light Mode */
-html.light [class*="bg-[#EF4444]"],
+/* Demon Kill Surface in Light Mode (keep solid #EF4444 primary buttons crimson) */
 html.light [class*="bg-[#35070A]"] {
   background-color: #FEE2E2 !important;
   border-color: #F87171 !important;
@@ -320,4 +319,74 @@ html.light [data-testid="grimoire-circle"] .bg-\[\#0C0C10\]\/90 {
 /* Modals Overlay */
 html.light .fixed.bg-black\/80 {
   background-color: rgba(15, 23, 42, 0.5) !important;
+}
+
+/* ========================================================
+   BESPOKE CLOCKTOWER LUXURY ANIMATIONS & DEPTH
+   ======================================================== */
+@keyframes clocktower-spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes clocktower-spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes brass-sheen {
+  0% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-20deg);
+  }
+}
+
+.animate-clockwork-slow {
+  animation: clocktower-spin-slow 90s linear infinite;
+}
+
+.animate-clockwork-reverse {
+  animation: clocktower-spin-reverse 120s linear infinite;
+}
+
+.brass-sheen-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.brass-sheen-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.28) 50%,
+    transparent 100%
+  );
+  transform: translateX(-120%) skewX(-20deg);
+  pointer-events: none;
+}
+
+.brass-sheen-btn:hover::after {
+  animation: brass-sheen 0.85s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-clockwork-slow,
+  .animate-clockwork-reverse,
+  .brass-sheen-btn:hover::after {
+    animation: none !important;
+  }
 }

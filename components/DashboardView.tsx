@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { motion } from 'motion/react';
 import {
   BookMarked,
   Coins,
@@ -13,7 +14,6 @@ import {
   RotateCcw,
   Sparkles,
   Swords,
-  Users,
   ArrowRight,
   ShieldCheck,
 } from 'lucide-react';
@@ -58,8 +58,52 @@ export default function DashboardView({
   return (
     <div className="max-w-6xl mx-auto space-y-8 py-2">
       {/* Editorial Hero Header */}
-      <div className="relative rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] p-6 sm:p-10 overflow-hidden shadow-xl">
-        <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-[#D4AF37]/5 blur-3xl pointer-events-none" />
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="relative rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] p-6 sm:p-10 overflow-hidden shadow-xl"
+      >
+        {/* Subtle Gold Aura */}
+        <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-[#D4AF37]/8 blur-3xl pointer-events-none" />
+
+        {/* Clocktower Mechanical Astrolabe Watermark */}
+        <div
+          aria-hidden="true"
+          className="hidden md:block absolute -right-14 top-1/2 -translate-y-1/2 w-72 h-72 pointer-events-none opacity-[0.09] dark:opacity-[0.11] text-purple-900 dark:text-[#D4AF37]"
+        >
+          <svg
+            viewBox="0 0 200 200"
+            fill="none"
+            className="w-full h-full animate-clockwork-slow"
+          >
+            <circle cx="100" cy="100" r="90" stroke="currentColor" strokeWidth="1.5" strokeDasharray="6 4" />
+            <circle cx="100" cy="100" r="76" stroke="currentColor" strokeWidth="1" />
+            {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => (
+              <line
+                key={deg}
+                x1="100"
+                y1="10"
+                x2="100"
+                y2="24"
+                stroke="currentColor"
+                strokeWidth="2"
+                transform={`rotate(${deg} 100 100)`}
+              />
+            ))}
+          </svg>
+          <svg
+            viewBox="0 0 200 200"
+            fill="none"
+            className="absolute inset-0 w-full h-full animate-clockwork-reverse"
+          >
+            <circle cx="100" cy="100" r="54" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 5" />
+            <polygon points="100,48 110,100 100,152 90,100" stroke="currentColor" strokeWidth="1.2" />
+            <polygon points="48,100 100,110 152,100 100,90" stroke="currentColor" strokeWidth="1.2" />
+            <circle cx="100" cy="100" r="14" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        </div>
+
         <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-3 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 dark:bg-[#0C0C10] border border-purple-200 dark:border-[#D4AF37]/30 text-[11px] font-mono font-semibold text-purple-900 dark:text-[#D4AF37] uppercase tracking-wider">
@@ -95,11 +139,16 @@ export default function DashboardView({
             )}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Active Game Bento Overview (When Active) */}
       {hasActiveGame && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.38, delay: 0.08, ease: 'easeOut' }}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-5"
+        >
           {/* Main Status Bento Card - Perfectly Responsive to Dark and Light Mode */}
           <div className="lg:col-span-2 rounded-3xl bg-white dark:bg-[#181520] text-[#1E1B4B] dark:text-[#EDEAF0] border border-purple-200 dark:border-[#2A2636] p-6 sm:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden">
             <div className="space-y-4">
@@ -148,7 +197,7 @@ export default function DashboardView({
             <div className="flex flex-wrap items-center gap-2.5 pt-6 mt-4 border-t border-purple-100 dark:border-white/[0.08]">
               <Link
                 href="/grimoire"
-                className="px-5 py-2.5 rounded-full bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] text-xs font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md"
+                className="brass-sheen-btn px-5 py-2.5 rounded-full bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] text-xs font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-md"
               >
                 <Compass className="w-4 h-4 fill-current" />
                 <span>Buka Grimoire</span>
@@ -195,15 +244,21 @@ export default function DashboardView({
               <ArrowRight className="w-4 h-4 text-purple-700 dark:text-[#8E8A9E]" />
             </Link>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Main Bento Cards Grid (Action Hub) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Card 1: Setup Baru */}
-        <div className="rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] p-6 sm:p-7 flex flex-col justify-between space-y-5 hover:border-purple-400 dark:hover:border-[#D4AF37]/50 transition-all shadow-lg group">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.14 }}
+          whileHover={{ y: -4 }}
+          className="rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] p-6 sm:p-7 flex flex-col justify-between space-y-5 hover:border-purple-400 dark:hover:border-[#D4AF37]/50 transition-colors shadow-lg hover:shadow-xl group"
+        >
           <div className="space-y-3">
-            <div className="w-11 h-11 rounded-2xl bg-purple-50 dark:bg-[#0C0C10] border border-purple-200 dark:border-white/[0.08] flex items-center justify-center text-amber-600 dark:text-[#D4AF37] group-hover:scale-105 transition-transform">
+            <div className="w-11 h-11 rounded-2xl bg-purple-50 dark:bg-[#0C0C10] border border-purple-200 dark:border-white/[0.08] flex items-center justify-center text-amber-600 dark:text-[#D4AF37] group-hover:scale-110 transition-transform">
               <Plus className="w-5 h-5" />
             </div>
             <div>
@@ -223,12 +278,18 @@ export default function DashboardView({
             <Play className="w-3.5 h-3.5 text-amber-600 dark:text-[#D4AF37] fill-current" />
             <span>Mulai Wizard Setup</span>
           </Link>
-        </div>
+        </motion.div>
 
         {/* Card 2: Main di Web (Roll Koin) */}
-        <div className="rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] p-6 sm:p-7 flex flex-col justify-between space-y-5 hover:border-purple-400 dark:hover:border-[#D4AF37]/50 transition-all shadow-lg group">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.2 }}
+          whileHover={{ y: -4 }}
+          className="rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] p-6 sm:p-7 flex flex-col justify-between space-y-5 hover:border-purple-400 dark:hover:border-[#D4AF37]/50 transition-colors shadow-lg hover:shadow-xl group"
+        >
           <div className="space-y-3">
-            <div className="w-11 h-11 rounded-2xl bg-purple-50 dark:bg-[#0C0C10] border border-purple-200 dark:border-white/[0.08] flex items-center justify-center text-amber-600 dark:text-[#D4AF37] group-hover:scale-105 transition-transform">
+            <div className="w-11 h-11 rounded-2xl bg-purple-50 dark:bg-[#0C0C10] border border-purple-200 dark:border-white/[0.08] flex items-center justify-center text-amber-600 dark:text-[#D4AF37] group-hover:scale-110 transition-transform">
               <Coins className="w-5 h-5" />
             </div>
             <div>
@@ -248,12 +309,18 @@ export default function DashboardView({
             <Coins className="w-3.5 h-3.5 text-amber-600 dark:text-[#D4AF37]" />
             <span>Buka Mode Roll Koin</span>
           </Link>
-        </div>
+        </motion.div>
 
         {/* Card 3: Demo Cepat */}
-        <div className="rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] p-6 sm:p-7 flex flex-col justify-between space-y-5 hover:border-emerald-300 dark:hover:border-white/[0.2] transition-all shadow-lg group">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.26 }}
+          whileHover={{ y: -4 }}
+          className="rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] p-6 sm:p-7 flex flex-col justify-between space-y-5 hover:border-emerald-300 dark:hover:border-white/[0.2] transition-colors shadow-lg hover:shadow-xl group"
+        >
           <div className="space-y-3">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-[#0C0C10] border border-emerald-200 dark:border-white/[0.08] flex items-center justify-center text-emerald-600 dark:text-[#34D399] group-hover:scale-105 transition-transform">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-[#0C0C10] border border-emerald-200 dark:border-white/[0.08] flex items-center justify-center text-emerald-600 dark:text-[#34D399] group-hover:scale-110 transition-transform">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
@@ -274,7 +341,7 @@ export default function DashboardView({
             <Sparkles className="w-3.5 h-3.5 text-emerald-700 dark:text-[#34D399]" />
             <span>Mulai Demo 8 Pemain</span>
           </button>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

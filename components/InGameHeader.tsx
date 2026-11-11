@@ -3,13 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   BookMarked,
   ChevronRight,
   Compass,
   History,
   Moon,
-  Smartphone,
   Sun,
   Swords,
 } from 'lucide-react';
@@ -52,24 +52,32 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
               <Link
                 key={tab.id}
                 href={tab.href}
-                className={`min-h-[38px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap ${
+                className={`relative min-h-[38px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap ${
                   isActive
-                    ? 'bg-[#991B1B] text-white shadow-md'
+                    ? 'text-white'
                     : 'bg-purple-50 dark:bg-[#1C1C26] hover:bg-purple-100 dark:hover:bg-[#252533] text-purple-900 dark:text-[#A6A2B2] hover:text-purple-950 dark:hover:text-[#EDEAF0]'
                 }`}
               >
+                {isActive && (
+                  <motion.span
+                    layoutId="ingame-nav-pill"
+                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                    className="absolute inset-0 rounded-xl bg-[#991B1B] shadow-md"
+                    aria-hidden="true"
+                  />
+                )}
                 <tab.icon
-                  className={`w-4 h-4 ${
+                  className={`relative z-10 w-4 h-4 ${
                     isActive
-                      ? 'text-[#FCA5A5]'
+                      ? 'text-rose-100 dark:text-[#FCA5A5]'
                       : tab.id === 'evil'
-                      ? 'text-[#F87171]'
+                      ? 'text-red-700 dark:text-[#F87171]'
                       : tab.id === 'narrator'
-                      ? 'text-[#93C5FD]'
-                      : 'text-[#D4AF37]'
+                      ? 'text-indigo-700 dark:text-[#93C5FD]'
+                      : 'text-amber-700 dark:text-[#D4AF37]'
                   }`}
                 />
-                <span>{tab.label}</span>
+                <span className="relative z-10">{tab.label}</span>
               </Link>
             );
           })}
@@ -83,10 +91,10 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
             className="min-h-[38px] px-3 py-2 rounded-xl text-xs font-semibold bg-purple-50 dark:bg-[#1C1C26] hover:bg-purple-100 dark:hover:bg-[#252533] text-purple-900 dark:text-[#EDEAF0] border border-purple-200 dark:border-white/[0.06] hover:border-[#D4AF37]/50 flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
             title="Buka Catatan Riwayat Cerita Permainan"
           >
-            <History className="w-4 h-4 text-[#D4AF37]" />
+            <History className="w-4 h-4 text-amber-700 dark:text-[#D4AF37]" />
             <span>Riwayat Cerita</span>
             {storyHistory.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-[#D4AF37]/20 text-[10px] font-mono text-[#FDE68A]">
+              <span className="px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-[#D4AF37]/20 text-[10px] font-mono font-bold text-amber-950 dark:text-[#FDE68A]">
                 {storyHistory.length}
               </span>
             )}
@@ -98,7 +106,7 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
             className="min-h-[38px] px-3 py-2 rounded-xl text-xs font-semibold bg-purple-50 dark:bg-[#1C1C26] hover:bg-purple-100 dark:hover:bg-[#252533] text-purple-900 dark:text-[#A6A2B2] hover:text-purple-950 dark:hover:text-[#EDEAF0] border border-purple-200 dark:border-white/[0.06] flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
             title="Buka Panduan Skrip Trouble Brewing"
           >
-            <BookMarked className="w-4 h-4 text-[#D4AF37]" />
+            <BookMarked className="w-4 h-4 text-amber-700 dark:text-[#D4AF37]" />
             <span className="hidden sm:inline">Panduan Skrip</span>
           </button>
         </div>
@@ -112,19 +120,37 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
               Kontrol Fase Storyteller
             </span>
             <span className="text-xs text-slate-400 dark:text-[#716D80]">·</span>
-            <span className="text-[11px] text-emerald-600 dark:text-[#34D399] font-medium flex items-center gap-1">
+            <span className="text-[11px] text-emerald-700 dark:text-[#34D399] font-medium flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-[#34D399] animate-pulse" />
               Auto Save Aktif
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-purple-100 dark:bg-[#1C1C26] border border-purple-200 dark:border-white/[0.08] shrink-0">
-              {isNightPhase ? (
-                <Moon className="w-5 h-5 text-indigo-600 dark:text-[#93C5FD]" />
-              ) : (
-                <Sun className="w-5 h-5 text-amber-500 dark:text-[#FBBF24]" />
-              )}
+            <div className="p-2.5 rounded-xl bg-purple-100 dark:bg-[#1C1C26] border border-purple-200 dark:border-white/[0.08] shrink-0 overflow-hidden">
+              <AnimatePresence mode="wait">
+                {isNightPhase ? (
+                  <motion.div
+                    key="moon-icon"
+                    initial={{ rotate: -45, scale: 0.7, opacity: 0 }}
+                    animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                    exit={{ rotate: 45, scale: 0.7, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Moon className="w-5 h-5 text-indigo-600 dark:text-[#93C5FD]" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="sun-icon"
+                    initial={{ rotate: 45, scale: 0.7, opacity: 0 }}
+                    animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                    exit={{ rotate: -45, scale: 0.7, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Sun className="w-5 h-5 text-amber-500 dark:text-[#FBBF24]" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             <div>
               <h2 className="font-display text-base sm:text-lg font-bold text-slate-900 dark:text-[#EDEAF0]">
@@ -148,25 +174,29 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
         {/* Phase Buttons: Instant Execution Without Browser Confirm Alerts */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
           {isNightPhase ? (
-            <button
+            <motion.button
               type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
               onClick={handleTransitionNightToDay}
-              className="min-h-[44px] px-5 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] text-xs sm:text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-98 shadow-lg"
+              className="brass-sheen-btn min-h-[44px] px-5 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] text-xs sm:text-sm font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg"
             >
               <Sun className="w-4 h-4 fill-current" />
               <span>Lanjut ke Siang Hari {phase === 'first_night' ? '1' : dayNumber}</span>
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </motion.button>
           ) : (
-            <button
+            <motion.button
               type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
               onClick={handleTransitionDayToNextNight}
-              className="min-h-[44px] px-5 py-2 rounded-xl bg-[#991B1B] hover:bg-[#B91C1C] text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-98 shadow-lg"
+              className="brass-sheen-btn min-h-[44px] px-5 py-2 rounded-xl bg-[#991B1B] hover:bg-[#B91C1C] text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg"
             >
               <Moon className="w-4 h-4" />
               <span>Lanjut ke Malam Hari {dayNumber + 1}</span>
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </motion.button>
           )}
 
           {/* Quick Manual Phase Selector (Zero confirm dialogs) */}

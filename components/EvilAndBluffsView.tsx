@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'motion/react';
 import { Eye, Shuffle, Swords, Users } from 'lucide-react';
 import { ROLE_MAP } from '@/lib/botc-data';
 import { PlayerSeat, computeSafeDemonBluffs } from '@/lib/botc-engine';
@@ -43,7 +44,12 @@ export default function EvilAndBluffsView({
   const isUnder7 = players.length < 7;
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="space-y-6"
+    >
       {/* Evil Team Coordination Panel */}
       <div className="bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] rounded-3xl p-5 sm:p-7 space-y-6 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-purple-100 dark:border-white/[0.08]">
@@ -218,7 +224,7 @@ export default function EvilAndBluffsView({
                     'Tidak ada warga baik yang memegang 3 token ini. Anda dapat mengklaim peran ini dengan aman.',
                 })
               }
-              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#121016] text-xs sm:text-sm font-extrabold flex items-center gap-2 cursor-pointer transition-colors shadow-md border border-[#F59E0B]"
+              className="brass-sheen-btn min-h-[44px] px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#121016] text-xs sm:text-sm font-extrabold flex items-center gap-2 cursor-pointer transition-colors shadow-md border border-[#F59E0B]"
             >
               <Eye className="w-4 h-4 text-[#121016]" />
               <span>Tunjukkan 3 Bluff ke Demon (Layar Penuh)</span>
@@ -231,9 +237,11 @@ export default function EvilAndBluffsView({
             const role = ROLE_MAP[roleId];
             if (!role) return null;
             return (
-              <div
+              <motion.div
                 key={roleId}
-                className="p-4 rounded-2xl bg-purple-50/70 dark:bg-[#1A1A24] border border-purple-200 dark:border-white/[0.08] flex flex-col justify-between space-y-3 shadow-sm"
+                whileHover={{ y: -3 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+                className="p-4 rounded-2xl bg-purple-50/70 dark:bg-[#1A1A24] border border-purple-200 dark:border-white/[0.08] flex flex-col justify-between space-y-3 shadow-sm hover:shadow-md"
               >
                 <div className="flex items-start gap-3">
                   <div className="shrink-0 mt-0.5">
@@ -270,11 +278,11 @@ export default function EvilAndBluffsView({
                       ))}
                   </select>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -319,7 +319,7 @@ export default function PeekCardModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full min-h-[46px] py-2.5 rounded-2xl bg-[#D4AF37] hover:bg-[#E5C365] text-xs sm:text-sm font-extrabold text-[#121016] border border-[#F59E0B] cursor-pointer transition-colors shadow-md"
+                className="brass-sheen-btn w-full min-h-[46px] py-2.5 rounded-2xl bg-[#D4AF37] hover:bg-[#E5C365] text-xs sm:text-sm font-extrabold text-[#121016] border border-[#F59E0B] cursor-pointer transition-colors shadow-md"
               >
                 Selesai & Sembunyikan Layar
               </button>
@@ -354,32 +354,32 @@ export default function PeekCardModal({
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/[0.08] text-xs">
-                  <span className="text-[#8E8A9E]">Status Hidup:</span>
+                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-purple-200 dark:border-white/[0.08] text-xs">
+                  <span className="text-slate-600 dark:text-[#8E8A9E] font-medium">Status Hidup:</span>
                   <span
                     className={`px-2 py-0.5 rounded font-bold ${
                       player.isAlive
-                        ? 'bg-[#10B981]/20 text-[#A7F3D0] border border-[#10B981]/40'
-                        : 'bg-[#EF4444]/20 text-[#FECACA] border border-[#EF4444]/40'
+                        ? 'bg-emerald-100 dark:bg-[#10B981]/20 text-emerald-900 dark:text-[#A7F3D0] border border-emerald-400 dark:border-[#10B981]/40'
+                        : 'bg-red-100 dark:bg-[#EF4444]/20 text-red-900 dark:text-[#FECACA] border border-red-400 dark:border-[#EF4444]/40'
                     }`}
                   >
                     {player.isAlive ? 'Hidup' : 'Mati'}
                   </span>
 
                   {!player.isAlive && (
-                    <span className="text-[#8E8A9E] ml-2">
-                      Suara Hantu: <strong>{player.hasGhostVote ? 'Masih Ada' : 'Sudah Habis'}</strong>
+                    <span className="text-slate-600 dark:text-[#8E8A9E] ml-2">
+                      Suara Hantu: <strong className="text-slate-900 dark:text-[#EDEAF0]">{player.hasGhostVote ? 'Masih Ada' : 'Sudah Habis'}</strong>
                     </span>
                   )}
                 </div>
               </div>
 
               {isDrunk && (
-                <div className="p-4 rounded-2xl bg-[#281D12] border border-[#D97706]/60 flex items-start gap-3">
-                  <Beer className="w-5 h-5 text-[#F59E0B] shrink-0 mt-0.5" />
+                <div className="p-4 rounded-2xl bg-amber-50 dark:bg-[#281D12] border border-amber-400 dark:border-[#D97706]/60 flex items-start gap-3">
+                  <Beer className="w-5 h-5 text-amber-700 dark:text-[#F59E0B] shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="font-bold text-sm text-[#FDE68A]">Pemain Ini Adalah THE DRUNK!</h5>
-                    <p className="text-xs text-[#FDE68A]/90 mt-1 leading-relaxed">
+                    <h5 className="font-bold text-sm text-amber-950 dark:text-[#FDE68A]">Pemain Ini Adalah THE DRUNK!</h5>
+                    <p className="text-xs text-amber-900 dark:text-[#FDE68A]/90 mt-1 leading-relaxed">
                       Token aslinya adalah <strong>Drunk (Outsider)</strong>, tetapi pemain ini memegang token <strong>{perceivedRole?.name}</strong>. Kemampuannya TIDAK BERFUNGSI.
                     </p>
                   </div>
@@ -387,11 +387,11 @@ export default function PeekCardModal({
               )}
 
               {isPoisoned && (
-                <div className="p-4 rounded-2xl bg-[#2B1317] border border-[#EF4444]/60 flex items-start gap-3">
-                  <ShieldAlert className="w-5 h-5 text-[#EF4444] shrink-0 mt-0.5" />
+                <div className="p-4 rounded-2xl bg-red-50 dark:bg-[#2B1317] border border-red-400 dark:border-[#EF4444]/60 flex items-start gap-3">
+                  <ShieldAlert className="w-5 h-5 text-red-700 dark:text-[#EF4444] shrink-0 mt-0.5" />
                   <div>
-                    <h5 className="font-bold text-sm text-[#FCA5A5]">Pemain Ini Sedang Diracun (Poisoned)!</h5>
-                    <p className="text-xs text-[#FECACA]/90 mt-1 leading-relaxed">
+                    <h5 className="font-bold text-sm text-red-950 dark:text-[#FCA5A5]">Pemain Ini Sedang Diracun (Poisoned)!</h5>
+                    <p className="text-xs text-red-900 dark:text-[#FECACA]/90 mt-1 leading-relaxed">
                       Racun dari Poisoner menonaktifkan kemampuan pemain ini. Berikan informasi palsu malam ini.
                     </p>
                   </div>
@@ -399,12 +399,12 @@ export default function PeekCardModal({
               )}
 
               {/* Active Reminders on this Player */}
-              <div className="p-4 rounded-2xl bg-[#14141B] border border-white/[0.08] space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#D4AF37] font-mono">
+              <div className="p-4 rounded-2xl bg-purple-50/50 dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] space-y-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-[#D4AF37] font-mono">
                   Token Pengingat Menempel ({player.reminders.length}):
                 </h4>
                 {player.reminders.length === 0 ? (
-                  <p className="text-xs text-[#8E8A9E]">Tidak ada token pengingat aktif pada kursi ini.</p>
+                  <p className="text-xs text-slate-600 dark:text-[#8E8A9E]">Tidak ada token pengingat aktif pada kursi ini.</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {player.reminders.map((r) => {
@@ -412,12 +412,12 @@ export default function PeekCardModal({
                       return (
                         <div
                           key={r.instanceId}
-                          className="px-3 py-1.5 rounded-xl bg-[#1E1E28] border border-white/[0.08] flex items-center gap-2 text-xs"
+                          className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#1E1E28] border border-purple-200 dark:border-white/[0.08] flex items-center gap-2 text-xs shadow-xs"
                         >
-                          <RoleGlyph roleId={def?.roleId ?? 'imp'} className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                          <RoleGlyph roleId={def?.roleId ?? 'imp'} className="w-4 h-4 text-amber-700 dark:text-[#D4AF37] shrink-0" />
                           <div>
-                            <span className="font-bold text-white block">{def?.label}</span>
-                            <span className="text-[10px] text-[#8E8A9E]">{def?.indonesianLabel}</span>
+                            <span className="font-bold text-slate-900 dark:text-white block">{def?.label}</span>
+                            <span className="text-[10px] text-slate-600 dark:text-[#8E8A9E]">{def?.indonesianLabel}</span>
                           </div>
                         </div>
                       );

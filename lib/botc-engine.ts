@@ -612,10 +612,14 @@ export function calculateEmpathInfo(
   }
 
   // Search counter-clockwise (left around circle) for nearest alive player
+  // Official BOTC rule: Imp acts before Empath, so players marked `die_imp` tonight are already dead when Empath wakes.
   let ccwNeighbor: PlayerSeat | null = null;
   for (let step = 1; step < n; step++) {
     const candidate = players[(empathSeatIndex - step + n) % n];
-    if (candidate.isAlive) {
+    const markedDeadTonight = candidate.reminders.some(
+      (r) => r.reminderId === 'die_imp'
+    );
+    if (candidate.isAlive && !markedDeadTonight) {
       ccwNeighbor = candidate;
       break;
     }
@@ -625,7 +629,10 @@ export function calculateEmpathInfo(
   let cwNeighbor: PlayerSeat | null = null;
   for (let step = 1; step < n; step++) {
     const candidate = players[(empathSeatIndex + step) % n];
-    if (candidate.isAlive) {
+    const markedDeadTonight = candidate.reminders.some(
+      (r) => r.reminderId === 'die_imp'
+    );
+    if (candidate.isAlive && !markedDeadTonight) {
       cwNeighbor = candidate;
       break;
     }
@@ -866,6 +873,17 @@ export function buildNightOrder(
       dynamicHelperText = `Minion di Permainan: ${
         minionsInPlay.map((m) => `${m.name} (${ROLE_MAP[m.trueRoleId]?.name})`).join(', ') || '-'
       }.`;
+    } else if (actingRole.id === 'scarlet_woman') {
+      const aliveCount = players.filter((p) => p.isAlive).length;
+      const isSwDemonNow = player.reminders.some(
+        (r) => r.reminderId === 'is_demon_sw'
+      );
+      dynamicHelperText = isSwDemonNow
+        ? `AKTIF: Scarlet Woman baru saja berubah menjadi IMP BARU! Bangunkan ia dan tunjukkan token "Anda Adalah -> Imp".`
+        : `Status Siaga: ${aliveCount} pemain masih hidup (Syarat minimal >= 5 pemain saat Demon mati). Bangunkan hanya jika Demon baru saja mati.`;
+    } else if (actingRole.id === 'spy') {
+      dynamicHelperText =
+        'Tunjukkan layar Meja Grimoire secara diam-diam kepada Spy (~15 detik) agar ia dapat melihat semua peran, status mabuk/racun, dan token.';
     }
 
     const isConditional =

@@ -451,9 +451,9 @@ export const ROLES: RoleDefinition[] = [
     team: 'minion',
     ability: 'Jika terdapat 5 atau lebih pemain hidup (Traveller tidak dihitung) dan Demon mati, Anda berubah menjadi Demon.',
     firstNightOrder: null,
-    otherNightOrder: 35,
+    otherNightOrder: 42,
     otherNightInstruction:
-      'JIKA Demon mati pada siang tadi saat masih ada minimal 5 pemain hidup (dan Scarlet Woman hidup & tidak Poisoned), bangunkan Scarlet Woman sekarang: tunjukkan kartu "ANDA ADALAH" lalu token "Imp". Tandai ia dengan token "Demon".',
+      'JIKA Demon baru saja mati (saat ada minimal 5 pemain hidup dan Scarlet Woman hidup & sehat), bangunkan Scarlet Woman sekarang: tunjukkan kartu "ANDA ADALAH" lalu token "Imp". Tandai ia dengan token "Demon".',
     storytellerNote:
       'Jika ada tepat 5 pemain hidup lalu warga mengeksekusi Imp, Scarlet Woman langsung menjadi Imp baru sehingga permainan TIDAK berakhir!',
     reminderIds: ['is_demon_sw'],
