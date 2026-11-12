@@ -1,55 +1,96 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeftRight,
   Beer,
-  ChevronLeft,
-  ChevronRight,
-  Compass,
+  BookOpen,
   Eye,
   EyeOff,
-  FlaskConical,
   Gavel,
-  Ghost,
-  HeartPulse,
   LayoutGrid,
-  Skull,
-  Swords,
-  Trash2,
-  Info,
+  Moon,
+  Plus,
+  RotateCcw,
+  RotateCw,
+  ScrollText,
+  Sparkles,
+  Sun,
+  Trophy,
+  Undo2,
+  Users,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { REMINDER_MAP, REMINDER_TOKENS, ROLE_MAP, ROLES } from '@/lib/botc-data';
+import { ALL_TB_ROLES, ROLE_MAP } from '@/lib/botc-data';
 import {
+  DayNomination,
   GamePhase,
   PlayerSeat,
+  calculateNominationThresholds,
   calculateVoteThreshold,
+  getPlayerAlignment,
+  isPlayerPoisoned,
 } from '@/lib/botc-engine';
-import { CharacterToken, ReminderTokenChip, ReminderTokenTrayCard, RoleGlyph } from './TokenArtwork';
+import {
+  ART_ASSETS,
+  BOARD_CHROME,
+  GRIMOIRE_PALETTE,
+  SEAT_METRICS,
+  VelvetColour,
+} from '@/lib/grimoire-theme';
+import { fitRing, placeSeatMenu, reminderStack, stackAngle } from '@/lib/ring-geometry';
 import { SilentCardPayload } from './FullscreenCardModal';
-import PeekCardModal from './PeekCardModal';
 import DesignateDrunkModal from './DesignateDrunkModal';
+import PeekCardModal from './PeekCardModal';
+import VelvetBackdrop, { VelvetColourSelector } from './grimoire/VelvetBackdrop';
+import ParchmentSurface from './grimoire/ParchmentSurface';
+import { CharacterTokenFront, ReminderDisc } from './grimoire/TokenPrimitives';
+import SeatContextMenu from './grimoire/SeatContextMenu';
+import ReminderPicker from './grimoire/ReminderPicker';
+import ShowSheetModal from './grimoire/ShowSheetModal';
+import ReferenceDrawer from './grimoire/ReferenceDrawer';
+import { DayNominationControls, VotingArcSvg } from './grimoire/VotingOverlay';
 
-interface GrimoireBoardProps {
+export interface GrimoireBoardProps {
   players: PlayerSeat[];
   phase: GamePhase;
   dayNumber: number;
   executedTodayPlayerId: string | null;
   demonBluffIds?: string[];
   isDrunkActive?: boolean;
+  winner?: 'good' | 'evil' | null;
+  velvetColour?: VelvetColour;
+  nominationsToday?: DayNomination[];
+  canUndo?: boolean;
+  onUndo?: () => void;
+  onVelvetColourChange?: (colour: VelvetColour) => void;
+  onUpdateBluffs?: (bluffs: string[]) => void;
   onSetDrunkPlayer?: (playerId: string) => void;
   onSwapSeats: (fromIndex: number, toIndex: number) => void;
   onMoveSeat: (seatIndex: number, direction: 'cw' | 'ccw') => void;
+  onRotateRing?: (dir: 'cw' | 'ccw') => void;
+  onAddSeat?: (atIndex?: number) => void;
+  onRemoveSeat?: (playerId: string) => void;
+  onRenamePlayer?: (playerId: string, name: string) => void;
+  onSetPlayerAlignment?: (playerId: string, alignment: 'good' | 'evil') => void;
   onKillPlayer?: (playerId: string, cause: 'demon' | 'execution' | 'slayer') => void;
   onResurrectPlayer?: (playerId: string) => void;
   onChangeDeathCause?: (playerId: string, cause: 'demon' | 'execution' | 'slayer') => void;
   onToggleAlive: (playerId: string, cause?: 'demon' | 'execution' | 'slayer') => void;
   onToggleGhostVote: (playerId: string) => void;
   onAddReminder: (playerId: string, reminderId: string) => void;
+  onAddCustomNoteReminder?: (playerId: string, noteText: string) => void;
+  onEditCustomNoteReminder?: (playerId: string, instanceId: string, noteText: string) => void;
+  onMoveReminder?: (fromPlayerId: string, instanceId: string, toPlayerId: string) => void;
   onRemoveReminder: (playerId: string, instanceId: string) => void;
   onMarkExecutedToday: (playerId: string | null) => void;
   onChangePlayerTrueRole: (playerId: string, newTrueRoleId: string) => void;
+  onAdvancePhase?: () => void;
+  onSetWinnerManual?: (winner: 'good' | 'evil' | null) => void;
+  onStartNomination?: (nominatorId: string, nomineeId: string) => void;
+  onToggleNominationVote?: (nominationId: string, seatId: string) => void;
+  onResetNominationVotes?: (nominationId: string) => void;
+  onMarkNominationExecution?: (nominationId: string, mark: boolean) => void;
+  onCancelNomination?: (nominationId: string) => void;
   onShowSilentCard: (card: SilentCardPayload) => void;
 }
 
@@ -60,85 +101,169 @@ export default function GrimoireBoard({
   executedTodayPlayerId,
   demonBluffIds = [],
   isDrunkActive = false,
+  winner = null,
+  velvetColour = 'midnight',
+  nominationsToday = [],
+  canUndo = false,
+  onUndo,
+  onVelvetColourChange,
+  onUpdateBluffs,
   onSetDrunkPlayer,
   onSwapSeats,
   onMoveSeat,
+  onRotateRing,
+  onAddSeat,
+  onRemoveSeat,
+  onRenamePlayer,
+  onSetPlayerAlignment,
   onKillPlayer,
   onResurrectPlayer,
-  onChangeDeathCause,
   onToggleAlive,
   onToggleGhostVote,
   onAddReminder,
+  onAddCustomNoteReminder,
+  onEditCustomNoteReminder,
+  onMoveReminder,
   onRemoveReminder,
-  onMarkExecutedToday,
   onChangePlayerTrueRole,
+  onAdvancePhase,
+  onSetWinnerManual,
+  onStartNomination,
+  onToggleNominationVote,
+  onResetNominationVotes,
+  onMarkNominationExecution,
+  onCancelNomination,
   onShowSilentCard,
 }: GrimoireBoardProps) {
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(
-    players[0]?.id ?? null
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const [stageSize, setStageSize] = useState({ width: 880, height: 580 });
+
+  const [menuSeatId, setMenuSeatId] = useState<string | null>(null);
+  const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
+  const [reminderPickerSeatId, setReminderPickerSeatId] = useState<string | null>(null);
+  const [swapSourceSeatIdx, setSwapSourceSeatIdx] = useState<number | null>(null);
+  const [arrangeGapsVisible, setArrangeGapsVisible] = useState(false);
+  const [spyStealth, setSpyStealth] = useState(false);
+  const [viewMode, setViewMode] = useState<'circle' | 'cards'>('circle');
+
+  const [isShowSheetOpen, setIsShowSheetOpen] = useState(false);
+  const [showSheetInitialRoleId, setShowSheetInitialRoleId] = useState<string | undefined>(undefined);
+  const [isRefDrawerOpen, setIsRefDrawerOpen] = useState(false);
+  const [isPeekOpen, setIsPeekOpen] = useState(false);
+  const [peekIndex, setPeekIndex] = useState(0);
+
+  const [pendingNomineeId, setPendingNomineeId] = useState<string | null>(null);
+  const [bluffEditorOpen, setBluffEditorOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState<{
+    playerId: string;
+    instanceId: string;
+    text: string;
+  } | null>(null);
+
+  const [dragReminder, setDragReminder] = useState<{
+    fromPlayerId: string;
+    instanceId: string;
+  } | null>(null);
+  const [dragTargetSeatId, setDragTargetSeatId] = useState<string | null>(null);
+
+  const currentDrunkPlayer = players.find((p) => p.trueRoleId === 'drunk') ?? null;
+  const [isDrunkModalOpen, setIsDrunkModalOpen] = useState(() =>
+    Boolean(isDrunkActive && !currentDrunkPlayer)
   );
-  const [swapModeSourceIdx, setSwapModeSourceIdx] = useState<number | null>(null);
-  const [isSwapModeActive, setIsSwapModeActive] = useState(false);
-  const [activeBrushReminderId, setActiveBrushReminderId] = useState<string | null>(null);
-  const [reminderFilter, setReminderFilter] = useState<'active' | 'all'>('active');
-  const [showReminderRules, setShowReminderRules] = useState(false);
-  const [displayMode, setDisplayMode] = useState<'circle' | 'cards'>('circle');
-  const [spyCleanMode, setSpyCleanMode] = useState(false);
-  const [dragPayload, setDragPayload] = useState<
-    | { type: 'seat'; seatIndex: number }
-    | { type: 'reminder'; reminderId: string }
-    | null
-  >(null);
-  const [dragOverSeatIdx, setDragOverSeatIdx] = useState<number | null>(null);
-  const [isPeekModalOpen, setIsPeekModalOpen] = useState(false);
-  const [peekPlayerIndex, setPeekPlayerIndex] = useState(0);
 
-  const selectedPlayer =
-    players.find((p) => p.id === selectedPlayerId) ?? players[0] ?? null;
+  // Measure the velvet stage dynamically so tokens never overflow laptop viewports
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 120 && rect.height > 120) {
+        setStageSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
+      }
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [viewMode]);
 
-  const currentDrunkPlayer = players.find((p) => p.trueRoleId === 'drunk');
-  const [isDrunkModalOpen, setIsDrunkModalOpen] = useState(() => {
-    return Boolean(isDrunkActive && !currentDrunkPlayer);
-  });
+  // Keyboard Ctrl+Z Undo & Escape close
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        const tag = (e.target as HTMLElement | null)?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        if (onUndo && canUndo) {
+          e.preventDefault();
+          onUndo();
+        }
+      } else if (e.key === 'Escape') {
+        setMenuSeatId(null);
+        setSwapSourceSeatIdx(null);
+        setArrangeGapsVisible(false);
+        setReminderPickerSeatId(null);
+        setPendingNomineeId(null);
+        setEditingNote(null);
+        setBluffEditorOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [canUndo, onUndo]);
 
   const voteStats = calculateVoteThreshold(players);
-  const totalSeats = players.length;
+  const thresholds = calculateNominationThresholds(players, nominationsToday);
+  const activeNomination = useMemo(
+    () => nominationsToday.find((n) => !n.cancelled && !n.markedForExecution) ?? null,
+    [nominationsToday]
+  );
 
-  // Proportional circular geometry so seat tokens & badges stay comfortably inside the arena
-  const radiusPct = totalSeats <= 7 ? 33.5 : totalSeats <= 10 ? 35.5 : 37.5;
-  const tokenSize =
-    totalSeats <= 7 ? 'circle-lg' : totalSeats <= 10 ? 'circle-md' : 'circle-sm';
+  const inPlayRoleIds = useMemo(() => {
+    const set = new Set<string>();
+    players.forEach((p) => {
+      set.add(p.trueRoleId);
+      set.add(p.perceivedRoleId);
+    });
+    return set;
+  }, [players]);
 
-  // Active roles set for filtering relevant reminder tokens
-  const inPlayRoleSet = new Set<string>();
-  players.forEach((p) => {
-    inPlayRoleSet.add(p.trueRoleId);
-    inPlayRoleSet.add(p.perceivedRoleId);
-  });
+  const ring = useMemo(() => {
+    const padX = stageSize.width < 640 ? 20 : 140;
+    const padY = stageSize.width < 640 ? 96 : 112;
+    const bandWidth = Math.max(260, stageSize.width - padX);
+    const bandHeight = Math.max(280, stageSize.height - padY);
+    const maxToken = stageSize.width < 640 ? 64 : 96;
+    return fitRing({ width: bandWidth, height: bandHeight }, players.length, maxToken);
+  }, [players.length, stageSize.height, stageSize.width]);
 
-  const hasDrunkInPlay = Boolean(currentDrunkPlayer);
+  const ringOffsetLeft = (stageSize.width - ring.band.width) / 2;
+  const ringOffsetTop = (stageSize.height - ring.band.height) / 2;
+  const centreInStage = { x: stageSize.width / 2, y: stageSize.height / 2 };
 
-  // Strict dynamic reminder filter:
-  // If Poisoner is not in play, 'poisoned' is NOT shown!
-  // If Drunk is not in play OR if Drunk already exists, 'is_the_drunk' is NOT shown!
-  // If Undertaker is not in play, 'executed' is NOT shown!
-  const baseReminders =
-    reminderFilter === 'all'
-      ? REMINDER_TOKENS
-      : REMINDER_TOKENS.filter((rem) => {
-          if (rem.id === 'executed') {
-            return inPlayRoleSet.has('undertaker');
-          }
-          return inPlayRoleSet.has(rem.roleId);
-        });
-
-  // User requirement: "trus kalau udh ada drunk nihhh gabisa drunk lagi lah jadi hapus tuhhh bagian yg ada di is the drunk itu yaaa"
-  const displayedReminders = baseReminders.filter((rem) => {
-    if (rem.id === 'is_the_drunk' && hasDrunkInPlay) {
-      return false;
-    }
-    return true;
-  });
+  const menuSeatIndex = players.findIndex((p) => p.id === menuSeatId);
+  const menuSeat = menuSeatIndex >= 0 ? players[menuSeatIndex] : null;
+  const menuAnchor =
+    menuSeat && ring.positions[menuSeatIndex]
+      ? placeSeatMenu({
+          at: {
+            x: ringOffsetLeft + ring.positions[menuSeatIndex].x,
+            y: ringOffsetTop + ring.positions[menuSeatIndex].y,
+          },
+          size: ring.size,
+          centre: centreInStage,
+          room: {
+            left: 8,
+            top: 8,
+            right: stageSize.width - 8,
+            bottom: stageSize.height - 8,
+          },
+          others: ring.positions.map((pos) => ({
+            x: ringOffsetLeft + pos.x,
+            y: ringOffsetTop + pos.y,
+          })),
+          menu: { width: 268, height: 390 },
+        })
+      : null;
 
   const phaseLabel =
     phase === 'first_night'
@@ -147,1051 +272,1006 @@ export default function GrimoireBoard({
       ? `Siang Hari ke-${dayNumber}`
       : `Malam ke-${dayNumber + 1}`;
 
-  const handleSeatClick = (player: PlayerSeat) => {
-    // 1. If a reminder token brush is active, attach that reminder to the clicked seat
-    if (activeBrushReminderId) {
-      onAddReminder(player.id, activeBrushReminderId);
-      setSelectedPlayerId(player.id);
-      setActiveBrushReminderId(null);
-      return;
-    }
-
-    // 2. If seat swap mode is active
-    if (isSwapModeActive) {
-      if (swapModeSourceIdx === null) {
-        setSwapModeSourceIdx(player.seatIndex);
-      } else {
-        onSwapSeats(swapModeSourceIdx, player.seatIndex);
-        setSwapModeSourceIdx(null);
-        setIsSwapModeActive(false);
+  const handleSeatInteraction = (player: PlayerSeat) => {
+    if (swapSourceSeatIdx !== null) {
+      if (swapSourceSeatIdx !== player.seatIndex) {
+        onSwapSeats(swapSourceSeatIdx, player.seatIndex);
       }
+      setSwapSourceSeatIdx(null);
       return;
     }
 
-    // 3. Normal inspect selection
-    setSelectedPlayerId(player.id);
+    // During active vote, clicking a seat in the clock can toggle their hand!
+    if (phase === 'day' && activeNomination && onToggleNominationVote) {
+      const canVote =
+        player.isAlive || player.hasGhostVote || activeNomination.voterIds.includes(player.id);
+      if (canVote) {
+        onToggleNominationVote(activeNomination.id, player.id);
+        return;
+      }
+    }
+
+    setMenuSeatId((prev) => (prev === player.id ? null : player.id));
   };
 
-  const handleSafeKill = (
-    playerId: string,
-    cause: 'demon' | 'execution' | 'slayer'
-  ) => {
-    const target = players.find((p) => p.id === playerId);
-    if (!target) return;
-    if (onKillPlayer) onKillPlayer(playerId, cause);
-    else onToggleAlive(playerId, cause);
-  };
-
-  const handleSafeResurrect = (playerId: string) => {
-    const target = players.find((p) => p.id === playerId);
-    if (!target) return;
-    if (onResurrectPlayer) onResurrectPlayer(playerId);
-    else onToggleAlive(playerId);
-  };
+  const reminderPickerSeat = players.find((p) => p.id === reminderPickerSeatId) ?? null;
 
   return (
-    <div className="space-y-6">
-      {/* Drunk Alert Banner if Drunk is active but no player designated yet */}
-      {isDrunkActive && !currentDrunkPlayer && !spyCleanMode && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="px-4 py-3.5 rounded-2xl bg-amber-50 dark:bg-[#2C1808] border-2 border-amber-400 dark:border-[#F59E0B] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs sm:text-sm text-amber-950 dark:text-[#FDE68A] shadow-xl"
-        >
-          <div className="flex items-center gap-2.5">
-            <Beer className="w-5 h-5 text-amber-600 dark:text-[#F59E0B] shrink-0" />
-            <div>
-              <strong className="block font-bold text-amber-900 dark:text-white">
-                Perhatian Storyteller: The Drunk Belum Ditentukan!
-              </strong>
-              <span>
-                Tas karakter memiliki +1 Townsfolk ekstra untuk The Drunk. Tentukan pemain Townsfolk mana yang sebenarnya adalah The Drunk sebelum Malam Pertama dimulai.
-              </span>
-            </div>
+    <div className="space-y-3">
+      {/* Unassigned Drunk Warning Strip (only if Drunk active and not yet picked) */}
+      {isDrunkActive && !currentDrunkPlayer && !spyStealth && (
+        <div className="px-4 py-2.5 rounded-2xl bg-[#2a2018] border border-[#c9963a] flex flex-wrap items-center justify-between gap-2 text-xs text-[#efe6d2] shadow-md">
+          <div className="flex items-center gap-2">
+            <Beer className="w-4 h-4 text-[#c9963a] shrink-0" />
+            <span>
+              <strong>The Drunk</strong> aktif di kantong, belum dipilih ke kursi pemain mana.
+            </span>
           </div>
           <button
             type="button"
             onClick={() => setIsDrunkModalOpen(true)}
-            className="brass-sheen-btn min-h-[40px] px-4 py-2 rounded-xl bg-[#D97706] hover:bg-[#F59E0B] text-white dark:text-[#121016] text-xs font-black uppercase tracking-wider shrink-0 cursor-pointer transition-colors shadow"
+            className="px-3 py-1 rounded-xl bg-[#c9963a] text-[#2a2018] font-bold cursor-pointer hover:bg-[#d8a74c]"
           >
-            Pilih Drunk Sekarang
-          </button>
-        </motion.div>
-      )}
-
-      {/* Top Toolbar above Grimoire */}
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-white dark:bg-[#181520] border border-purple-200 dark:border-[#2A2636] rounded-2xl px-4 py-3 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700 dark:text-[#C8C0B3]">
-          <span className="font-semibold text-slate-900 dark:text-[#F5EFE6]">{phaseLabel}</span>
-          <span aria-hidden="true">·</span>
-          <span className="font-mono tabular-nums">
-            Hidup: <strong className="text-emerald-700 dark:text-[#6EE7B7]">{voteStats.aliveCount}</strong>/{voteStats.totalPlayers}
-          </span>
-          <span aria-hidden="true">·</span>
-          <span className="font-mono tabular-nums">
-            Ambang Eksekusi: <strong className="text-amber-700 dark:text-[#FDE68A]">{voteStats.votesNeeded} suara</strong>
-          </span>
-          <span aria-hidden="true">·</span>
-          <span className="font-mono tabular-nums">
-            Suara Hantu: <strong>{voteStats.ghostVotesRemaining}</strong>
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Drunk Designation Button in Toolbar */}
-          {isDrunkActive && (
-            <button
-              type="button"
-              onClick={() => setIsDrunkModalOpen(true)}
-              className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-amber-100 dark:bg-[#2D1B08] hover:bg-amber-200 dark:hover:bg-[#3D250C] border border-amber-400 dark:border-[#F59E0B] text-amber-900 dark:text-[#FDE68A] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors whitespace-nowrap"
-            >
-              <Beer className="w-4 h-4 text-amber-600 dark:text-[#F59E0B]" />
-              <span>
-                {currentDrunkPlayer ? `Drunk: ${currentDrunkPlayer.name}` : 'Tentukan Drunk'}
-              </span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setDisplayMode((prev) => (prev === 'circle' ? 'cards' : 'circle'))}
-            className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-purple-50 dark:bg-[#1E1E28] hover:bg-purple-100 dark:hover:bg-[#282838] border border-purple-200 dark:border-white/[0.1] text-xs font-semibold text-purple-900 dark:text-[#EDEAF0] flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm whitespace-nowrap"
-          >
-            {displayMode === 'circle' ? (
-              <>
-                <LayoutGrid className="w-4 h-4 text-[#D4AF37]" />
-                <span>Mode Daftar Kursi</span>
-              </>
-            ) : (
-              <>
-                <Compass className="w-4 h-4 text-[#D4AF37]" />
-                <span>Mode Meja Bundar</span>
-              </>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setPeekPlayerIndex(selectedPlayer ? selectedPlayer.seatIndex : 0);
-              setIsPeekModalOpen(true);
-            }}
-            className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F59E0B] hover:brightness-105 text-[#121016] text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-md transition-all whitespace-nowrap"
-          >
-            <Eye className="w-4 h-4" />
-            <span>Intip Kartu Pemain</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveBrushReminderId(null);
-              if (isSwapModeActive) {
-                setIsSwapModeActive(false);
-                setSwapModeSourceIdx(null);
-              } else {
-                setIsSwapModeActive(true);
-                setSwapModeSourceIdx(null);
-              }
-            }}
-            aria-pressed={isSwapModeActive}
-            className={`min-h-[40px] px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap ${
-              isSwapModeActive
-                ? 'bg-[#D4AF37] text-[#121016] border-[#D4AF37]'
-                : 'bg-purple-50 dark:bg-[#221E2E] hover:bg-purple-100 dark:hover:bg-[#2E293E] text-purple-900 dark:text-[#EDE7DB] border-purple-200 dark:border-[#363049]'
-            }`}
-          >
-            <ArrowLeftRight className="w-3.5 h-3.5" />
-            <span>{isSwapModeActive ? 'Batal Tukar Kursi' : 'Tukar Posisi Kursi'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setSpyCleanMode((prev) => !prev)}
-            aria-pressed={spyCleanMode}
-            className={`min-h-[40px] px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap ${
-              spyCleanMode
-                ? 'bg-[#991B1B] text-white border-[#EF4444]'
-                : 'bg-purple-50 dark:bg-[#221E2E] hover:bg-purple-100 dark:hover:bg-[#2E293E] text-purple-900 dark:text-[#EDE7DB] border-purple-200 dark:border-[#363049]'
-            }`}
-          >
-            {spyCleanMode ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            <span>{spyCleanMode ? 'Keluar Mode Spy' : 'Mode Spy'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Interactive Mode Instruction Banner */}
-      {(isSwapModeActive || activeBrushReminderId) && (
-        <div className="px-4 py-3 rounded-xl bg-amber-100 dark:bg-[#272115] border border-amber-300 dark:border-[#D4AF37]/60 flex items-center justify-between gap-3 text-xs sm:text-sm text-amber-950 dark:text-[#FDE68A] shadow-md">
-          {isSwapModeActive ? (
-            <div className="flex items-center gap-2 min-w-0">
-              <ArrowLeftRight className="w-4 h-4 text-amber-700 dark:text-[#D4AF37] shrink-0" />
-              <span>
-                {swapModeSourceIdx === null
-                  ? 'Mode Tukar Kursi: Ketuk pemain pertama di lingkaran Grimoire yang ingin dipindah.'
-                  : `Pemain Kursi ${swapModeSourceIdx + 1} (${players[swapModeSourceIdx]?.name}) dipilih — sekarang ketuk kursi tujuan untuk menukar posisi!`}
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="relative w-7 h-7 rounded-full overflow-hidden border border-amber-400 dark:border-amber-300 shrink-0 bg-[#100E17] shadow-sm">
-                <img
-                  src={`/reminders/${activeBrushReminderId}.png`}
-                  alt={REMINDER_MAP[activeBrushReminderId!]?.label}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <span className="truncate">
-                Mode Pasang Token <strong>{REMINDER_MAP[activeBrushReminderId!]?.label}</strong> ({REMINDER_MAP[activeBrushReminderId!]?.indonesianLabel}): Ketuk kursi pemain untuk menempelkannya!
-              </span>
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              setIsSwapModeActive(false);
-              setSwapModeSourceIdx(null);
-              setActiveBrushReminderId(null);
-            }}
-            className="px-3 py-1 rounded-lg bg-amber-200 dark:bg-black/30 hover:bg-amber-300 dark:hover:bg-black/50 text-xs font-semibold text-amber-950 dark:text-white cursor-pointer shrink-0 transition-colors"
-          >
-            Batal
+            Pilih Pemain Drunk
           </button>
         </div>
       )}
 
-      {/* Main Split: 3 Columns on PC (Grimoire Canvas + Inspector + Reminder Tray Side-by-Side) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        {/* Column 1: Arena Meja Grimoire / Daftar Kursi */}
-        <div className="lg:col-span-5 xl:col-span-5 bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] rounded-3xl p-3 sm:p-5 shadow-xl">
-          {displayMode === 'cards' ? (
-            /* Mode Daftar Kursi (Responsive Grid / Mobile Friendly) */
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-purple-200 dark:border-white/[0.08]">
-                <span className="text-xs font-mono uppercase tracking-wider text-amber-800 dark:text-[#D4AF37] font-bold">
-                  Daftar Kursi Pemain ({voteStats.aliveCount} Hidup · {voteStats.totalPlayers - voteStats.aliveCount} Mati)
+      {/* Main Velvet Grimoire Felt Surface */}
+      <VelvetBackdrop
+        colour={velvetColour}
+        className="rounded-3xl shadow-2xl border border-[#c9963a]/30"
+        style={{
+          minHeight: viewMode === 'circle' ? '540px' : undefined,
+          height: viewMode === 'circle' ? 'calc(100vh - 138px)' : undefined,
+        }}
+      >
+        {viewMode === 'cards' ? (
+          /* Mobile / Accessibility Warm Card List Mode */
+          <div className="p-4 sm:p-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 rounded-xl bg-black/50 border border-[#c9963a]/40 font-display text-sm font-bold text-[#efe6d2]">
+                  {phaseLabel} · {voteStats.aliveCount}H / {voteStats.votesNeeded} Suara
                 </span>
-                <span className="text-[11px] text-slate-600 dark:text-[#8E8A9E] font-mono">
-                  Ambang: {voteStats.votesNeeded} Suara
-                </span>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[640px] overflow-y-auto pr-1">
-                {players.map((player) => {
-                  const isSelected = selectedPlayer?.id === player.id;
-                  const role = ROLE_MAP[player.perceivedRoleId];
-                  const isDrunk = player.trueRoleId === 'drunk';
-                  return (
-                    <motion.div
-                      key={player.id}
-                      whileHover={{ y: -2 }}
-                      onClick={() => handleSeatClick(player)}
-                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
-                        isSelected
-                          ? 'bg-amber-50/80 dark:bg-[#1E1E28] border-amber-500 dark:border-[#D4AF37] shadow-lg ring-1 ring-[#D4AF37]/50'
-                          : 'bg-purple-50/40 dark:bg-[#0C0C10] border-purple-200 dark:border-white/[0.08] hover:border-purple-400 dark:hover:border-white/[0.18]'
-                      } ${!player.isAlive ? 'opacity-85' : ''}`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="shrink-0 mt-0.5">
-                          <CharacterToken
-                            roleId={player.perceivedRoleId}
-                            size="sm"
-                            isDead={!player.isAlive}
-                            isDrunkSecret={isDrunk}
-                          />
-                        </div>
-
-                        <div className="min-w-0 flex-1 space-y-0.5">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-mono text-[10px] font-bold text-amber-800 dark:text-[#D4AF37] uppercase">
-                              Kursi {player.seatIndex + 1}
-                            </span>
-                            <span
-                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                player.isAlive
-                                  ? 'bg-emerald-100 text-emerald-900 dark:bg-[#34D399]/20 dark:text-[#34D399]'
-                                  : 'bg-red-100 text-red-900 dark:bg-[#EF4444]/20 dark:text-[#EF4444]'
-                              }`}
-                            >
-                              {player.isAlive ? 'Hidup' : 'Mati'}
-                            </span>
-                          </div>
-
-                          <div className="font-bold text-sm text-slate-900 dark:text-[#EDEAF0] truncate">
-                            {player.name}
-                          </div>
-
-                          <div className="text-xs text-slate-600 dark:text-[#8E8A9E] truncate">
-                            {role?.name} {isDrunk ? '(Drunk)' : ''}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Reminders chips */}
-                      {player.reminders.length > 0 && (
-                        <div className="flex flex-wrap gap-1 pt-1 border-t border-purple-100 dark:border-white/[0.06]">
-                          {player.reminders.map((rem) => (
-                            <ReminderTokenChip
-                              key={rem.instanceId}
-                              reminderId={rem.reminderId}
-                              size="xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onRemoveReminder(player.id, rem.instanceId);
-                              }}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Quick Actions row */}
-                      <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-purple-100 dark:border-white/[0.06]">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (player.isAlive) {
-                              handleSafeKill(player.id, 'execution');
-                            } else {
-                              handleSafeResurrect(player.id);
-                            }
-                          }}
-                          className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold transition-colors cursor-pointer ${
-                            player.isAlive
-                              ? 'bg-red-100 hover:bg-red-200 text-red-900 border border-red-300 dark:bg-[#EF4444]/20 dark:hover:bg-[#EF4444]/30 dark:text-[#FECACA] dark:border-[#EF4444]/40'
-                              : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 dark:bg-[#34D399]/20 dark:hover:bg-[#34D399]/30 dark:text-[#A7F3D0] dark:border-[#34D399]/40'
-                          }`}
-                        >
-                          {player.isAlive ? 'Gantung' : 'Hidupkan'}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPeekPlayerIndex(player.seatIndex);
-                            setIsPeekModalOpen(true);
-                          }}
-                          className="py-1.5 px-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-[11px] font-semibold text-purple-950 dark:text-[#EDEAF0] flex items-center gap-1 cursor-pointer transition-colors"
-                        >
-                          <Eye className="w-3 h-3 text-amber-700 dark:text-[#D4AF37]" />
-                          <span>Intip</span>
-                        </button>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            /* Mode Lingkaran Grimoire Klasik */
-            <div className="py-2 sm:py-3">
-              <div
-                data-testid="grimoire-circle"
-                className="relative w-full aspect-square max-w-[430px] sm:max-w-[465px] xl:max-w-[485px] mx-auto rounded-full bg-radial from-[#1F1B2B] via-[#13111B] to-[#0B0A10] border-2 border-[#D4AF37]/35 shadow-[0_14px_45px_rgba(0,0,0,0.6),inset_0_0_50px_rgba(212,175,55,0.06)]"
-              >
-                {/* Dual Counter-Rotating Luxury Clocktower Compass Rings */}
-                <div className="absolute inset-[11%] rounded-full border border-dotted border-[#D4AF37]/25 animate-clockwork-slow pointer-events-none" />
-                <div className="absolute inset-[18%] rounded-full border-2 border-dashed border-[#D4AF37]/25 animate-clockwork-reverse pointer-events-none" />
-
-                {/* Center Clocktower Hub with subtle breathing glow */}
-                <motion.div
-                  data-testid="grimoire-center-hub"
-                  animate={{ scale: [1, 1.03, 1] }}
-                  transition={{ repeat: Infinity, duration: 4.5, ease: 'easeInOut' }}
-                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[23%] h-[23%] rounded-full bg-white/95 dark:bg-[#14141B]/95 border-2 border-purple-200 dark:border-[#D4AF37]/35 flex flex-col items-center justify-center text-center p-1.5 pointer-events-none shadow-xl z-10"
-                >
-                  <span className="font-display text-[9px] sm:text-[11px] font-black tracking-widest text-amber-800 dark:text-[#D4AF37] leading-tight font-mono">
-                    GRIMOIRE
-                  </span>
-                  <span className="text-[8.5px] sm:text-[10.5px] font-bold text-slate-900 dark:text-[#EDEAF0] mt-0.5 truncate max-w-full px-1">
-                    {phaseLabel}
-                  </span>
-                  <span className="font-mono text-[8.5px] sm:text-[10.5px] font-bold text-emerald-700 dark:text-[#34D399] mt-0.5 tabular-nums">
-                    {voteStats.aliveCount}H · {voteStats.votesNeeded}V
-                  </span>
-                </motion.div>
-
-                {/* Circular Player Seats */}
-                {players.map((player, index) => {
-                  const angle = (index / totalSeats) * 2 * Math.PI - Math.PI / 2;
-                  const leftPct = 50 + radiusPct * Math.cos(angle);
-                  const topPct = 50 + radiusPct * Math.sin(angle);
-
-                  const isSelected = !spyCleanMode && selectedPlayer?.id === player.id;
-                  const isSwapSource = swapModeSourceIdx === index;
-                  const isDragTarget = dragOverSeatIdx === index;
-                  const isDrunk = player.trueRoleId === 'drunk';
-                  const isPoisoned = player.reminders.some((r) => r.reminderId === 'poisoned');
-                  const displayRoleId = spyCleanMode ? player.trueRoleId : player.perceivedRoleId;
-                  const nonDrunkReminders = player.reminders.filter(
-                    (r) => r.reminderId !== 'is_the_drunk' && r.reminderId !== 'executed'
-                  );
-
-                  return (
-                    <React.Fragment key={player.id}>
-                      <div
-                        style={{
-                          left: `${leftPct}%`,
-                          top: `${topPct}%`,
-                        }}
-                        draggable={!spyCleanMode}
-                        onDragStart={(e) => {
-                          setDragPayload({ type: 'seat', seatIndex: index });
-                          e.dataTransfer.effectAllowed = 'move';
-                        }}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          if (dragOverSeatIdx !== index) setDragOverSeatIdx(index);
-                        }}
-                        onDragLeave={() => {
-                          if (dragOverSeatIdx === index) setDragOverSeatIdx(null);
-                        }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          setDragOverSeatIdx(null);
-                          if (!dragPayload) return;
-                          if (dragPayload.type === 'seat') {
-                            onSwapSeats(dragPayload.seatIndex, index);
-                          } else if (dragPayload.type === 'reminder') {
-                            onAddReminder(player.id, dragPayload.reminderId);
-                            setSelectedPlayerId(player.id);
-                          }
-                          setDragPayload(null);
-                        }}
-                        className={`absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center ${
-                          isSelected ? 'z-20' : 'z-10'
-                        }`}
-                      >
-                        <motion.div
-                          initial={{ scale: 0.78, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ delay: index * 0.03, type: 'spring', stiffness: 280, damping: 22 }}
-                          className="flex flex-col items-center"
-                        >
-                          <motion.button
-                            type="button"
-                            whileHover={{ scale: 1.07 }}
-                            whileTap={{ scale: 0.94 }}
-                            onClick={() => handleSeatClick(player)}
-                            aria-label={`Kursi ${index + 1}: ${player.name}, peran ${
-                              ROLE_MAP[player.perceivedRoleId]?.name
-                            }${isDrunk ? ' (Sebenarnya Drunk)' : ''}, status ${
-                              player.isAlive ? 'Hidup' : 'Mati'
-                            }`}
-                            className={`group relative rounded-full p-0.5 transition-shadow cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FBBF24] ${
-                              isSelected
-                                ? 'ring-[3px] ring-[#D4AF37] scale-105 shadow-[0_0_22px_rgba(212,175,55,0.55)]'
-                                : isSwapSource || isDragTarget
-                                ? 'ring-[3px] ring-[#38BDF8] scale-110 shadow-[0_0_20px_rgba(56,189,248,0.5)]'
-                                : 'hover:shadow-[0_0_16px_rgba(212,175,55,0.28)]'
-                            }`}
-                          >
-                            <CharacterToken
-                              roleId={displayRoleId}
-                              size={tokenSize}
-                              isDead={!player.isAlive}
-                              deathCause={player.deathCause}
-                              isDrunkSecret={isDrunk && !spyCleanMode}
-                              isPoisoned={isPoisoned && !spyCleanMode}
-                            />
-
-                            {/* Seat Number Tag */}
-                            <span className="absolute -top-0.5 -left-0.5 w-[18px] h-[18px] sm:w-[22px] sm:h-[22px] rounded-full bg-white dark:bg-[#0C0C10] border-[1.5px] sm:border-2 border-[#D4AF37] font-mono text-[9px] sm:text-[11px] font-black text-amber-800 dark:text-[#FDE68A] flex items-center justify-center tabular-nums shadow-md z-30">
-                              {index + 1}
-                            </span>
-
-                            {/* Ghost Vote Pip */}
-                            {!player.isAlive && player.hasGhostVote && (
-                              <span
-                                title="Suara Hantu masih tersedia"
-                                className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] sm:w-[22px] sm:h-[22px] rounded-full bg-[#1E293B] border-[1.5px] sm:border-2 border-[#94A3B8] flex items-center justify-center shadow-md z-30"
-                              >
-                                <Ghost className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#E2E8F0]" />
-                              </span>
-                            )}
-                          </motion.button>
-
-                          {/* Player Name */}
-                          <div className="flex flex-col items-center gap-0.5 mt-1">
-                            <span
-                              className={`px-1.5 sm:px-2.5 py-[2px] rounded-md text-[9.5px] sm:text-[11px] font-extrabold tracking-wide max-w-[74px] sm:max-w-[106px] truncate text-center shadow-md border leading-tight ${
-                                player.isAlive
-                                  ? 'bg-white dark:bg-[#14141B]/95 text-slate-900 dark:text-white border-purple-300 dark:border-white/[0.14]'
-                                  : 'bg-slate-100 dark:bg-[#0C0C10]/95 text-slate-500 dark:text-[#8E8A9E] border-slate-300 dark:border-white/[0.08] line-through'
-                              }`}
-                            >
-                              {player.name}
-                            </span>
-
-                            {/* Distinct Status Badges */}
-                            {!spyCleanMode && (isDrunk || isPoisoned || !player.isAlive) && (
-                              <div className="flex flex-wrap items-center justify-center gap-0.5 max-w-[96px] sm:max-w-[120px]">
-                                {!player.isAlive && (
-                                  player.deathCause === 'demon' ? (
-                                    <span className="text-[7px] sm:text-[8px] font-black text-[#FECACA] bg-[#450A0A] border border-[#DC2626] px-1.5 py-[1px] rounded-full uppercase tracking-wider shadow whitespace-nowrap">
-                                      DEMON
-                                    </span>
-                                  ) : player.deathCause === 'execution' ? (
-                                    <span className="text-[7px] sm:text-[8px] font-black text-[#FDE68A] bg-[#3B2808] border border-[#D4AF37] px-1.5 py-[1px] rounded-full uppercase tracking-wider shadow whitespace-nowrap">
-                                      GANTUNG
-                                    </span>
-                                  ) : (
-                                    <span className="text-[7px] sm:text-[8px] font-black text-[#E4E4E7] bg-[#18181B] border border-[#52525B] px-1.5 py-[1px] rounded-full uppercase tracking-wider shadow whitespace-nowrap">
-                                      MATI
-                                    </span>
-                                  )
-                                )}
-
-                                {isDrunk && (
-                                  <span className="text-[7px] sm:text-[8px] font-black text-[#FDE68A] bg-[#451A03] border border-[#F59E0B] px-1.5 py-[1px] rounded-full uppercase tracking-wider shadow flex items-center gap-0.5 whitespace-nowrap">
-                                    <Beer className="w-2.5 h-2.5 text-[#F59E0B]" />
-                                    <span>DRUNK</span>
-                                  </span>
-                                )}
-
-                                {isPoisoned && (
-                                  <span className="text-[7px] sm:text-[8px] font-black text-[#FECACA] bg-[#7F1D1D] border border-[#EF4444] px-1.5 py-[1px] rounded-full uppercase tracking-wider shadow flex items-center gap-0.5 whitespace-nowrap">
-                                    <FlaskConical className="w-2.5 h-2.5 text-[#F87171]" />
-                                    <span>RACUN</span>
-                                  </span>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Attached Reminder Tokens with Authentic Images */}
-                            {!spyCleanMode && nonDrunkReminders.length > 0 && (
-                              <div className="flex flex-wrap items-center justify-center gap-0.5 max-w-[96px] sm:max-w-[116px] mt-0.5">
-                                {nonDrunkReminders.map((rem) => (
-                                  <ReminderTokenChip
-                                    key={rem.instanceId}
-                                    reminderId={rem.reminderId}
-                                    size="xxs"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onRemoveReminder(player.id, rem.instanceId);
-                                    }}
-                                  />
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-                      </div>
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-
-              {!spyCleanMode && (
-                <p className="text-center text-[11px] text-slate-500 dark:text-[#8E8A9E] mt-4">
-                  Klik kursi pemain untuk melihat info & kelola token, atau klik <strong>Mode Daftar Kursi</strong> untuk tampilan kartu.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Column 2: Selected Player Inspector Card (Gambar 3) */}
-        {!spyCleanMode && (
-          <div className="lg:col-span-4 xl:col-span-4 space-y-4">
-            <AnimatePresence mode="wait">
-              {selectedPlayer ? (
-                <motion.div
-                  key={selectedPlayer.id}
-                  initial={{ opacity: 0, y: 8, scale: 0.985 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -6, scale: 0.985 }}
-                  transition={{ duration: 0.18, ease: 'easeOut' }}
-                  className="bg-white dark:bg-[#181520] border border-purple-200 dark:border-[#2A2636] rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-xl"
-                >
-                {/* Header: Token + Big Role & Player Details */}
-                <div className="flex items-start justify-between gap-3 pb-3 border-b border-purple-100 dark:border-[#2C263B]">
-                  <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
-                    {/* Enlarged Authentic Token Medallion */}
-                    <div
-                      className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shrink-0 shadow-xl ${
-                        !selectedPlayer.isAlive
-                          ? 'bg-slate-200 dark:bg-[#14111B] border-[3px] border-slate-400 dark:border-[#38324B]'
-                          : 'bg-white dark:bg-[#14111B] border-[3px] border-[#D4AF37] ring-2 ring-[#D4AF37]/40'
-                      }`}
-                    >
-                      <img
-                        src={`/tokens/${selectedPlayer.perceivedRoleId}.png`}
-                        alt={selectedPlayer.perceivedRoleId}
-                        className={`w-full h-full object-contain filter drop-shadow ${
-                          !selectedPlayer.isAlive
-                            ? 'grayscale-[85%] opacity-65 contrast-[1.1] dark:brightness-[0.75] dark:opacity-75'
-                            : ''
-                        }`}
-                      />
-                      {!selectedPlayer.isAlive && (
-                        <div className="absolute inset-0 bg-slate-900/15 dark:bg-black/35 pointer-events-none" />
-                      )}
-                    </div>
-
-                    {/* Prominent Role & Player Info */}
-                    <div className="min-w-0 flex-1 space-y-1">
-                      {/* Seat Badge & Alive Status */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-[#251F33] border border-amber-300 dark:border-[#3C3450] font-mono text-xs font-black text-amber-900 dark:text-[#D4AF37]">
-                          Kursi {selectedPlayer.seatIndex + 1}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-md text-xs font-black uppercase tracking-wider border ${
-                            selectedPlayer.isAlive
-                              ? 'bg-emerald-50 dark:bg-[#142A20] border-emerald-300 dark:border-[#10B981]/60 text-emerald-800 dark:text-[#6EE7B7]'
-                              : selectedPlayer.deathCause === 'demon'
-                              ? 'bg-red-50 dark:bg-[#35070A] border-red-300 dark:border-[#EF4444]/70 text-red-800 dark:text-[#FECACA]'
-                              : selectedPlayer.deathCause === 'execution'
-                              ? 'bg-amber-50 dark:bg-[#291B06] border-amber-300 dark:border-[#D4AF37]/80 text-amber-900 dark:text-[#FDE68A]'
-                              : selectedPlayer.deathCause === 'slayer'
-                              ? 'bg-orange-50 dark:bg-[#35160A] border-orange-300 dark:border-[#F97316]/80 text-orange-900 dark:text-[#FED7AA]'
-                              : 'bg-slate-100 dark:bg-[#1F1F23] border-slate-300 dark:border-[#52525B] text-slate-800 dark:text-[#D4D4D8]'
-                          }`}
-                        >
-                          {selectedPlayer.isAlive
-                            ? 'Masih Hidup'
-                            : selectedPlayer.deathCause === 'demon'
-                            ? 'Mati: Dibunuh Demon'
-                            : selectedPlayer.deathCause === 'execution'
-                            ? 'Mati: Digantung'
-                            : selectedPlayer.deathCause === 'slayer'
-                            ? 'Mati: Ditembak Slayer'
-                            : 'Telah Mati'}
-                        </span>
-                      </div>
-
-                      <div>
-                        <span className="text-xs text-slate-600 dark:text-[#8E8A9E] font-medium">
-                          Nama:{' '}
-                          <strong
-                            className={`text-slate-900 dark:text-white font-extrabold ${
-                              !selectedPlayer.isAlive ? 'line-through text-slate-500 dark:text-[#9CA3AF]' : ''
-                            }`}
-                          >
-                            {selectedPlayer.name}
-                          </strong>
-                        </span>
-                      </div>
-
-                      {/* Giant, High-Contrast Role Title */}
-                      {selectedPlayer.trueRoleId === 'drunk' ? (
-                        <div className="space-y-1 pt-0.5">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-display text-lg sm:text-xl font-black text-[#F59E0B] tracking-wide uppercase bg-amber-100 dark:bg-[#3D2008] border-2 border-[#F59E0B] px-2.5 py-0.5 rounded-lg shadow-md">
-                              ASLI: THE DRUNK
-                            </span>
-                            <span className="text-sm font-extrabold text-amber-950 dark:text-[#FDE68A]">
-                              (Pemabuk)
-                            </span>
-                            <span className="px-2 py-0.5 rounded bg-sky-100 text-sky-950 border border-sky-300 dark:bg-[#075985] dark:text-[#BAE6FD] dark:border-[#0284C7] text-[10px] font-black uppercase tracking-wider">
-                              Outsider
-                            </span>
-                          </div>
-                          <p className="text-xs sm:text-sm font-semibold text-blue-950 dark:text-[#93C5FD]">
-                            Peran Samaran / Mengira:{' '}
-                            <strong className="text-slate-900 dark:text-white text-sm font-black uppercase">
-                              {ROLE_MAP[selectedPlayer.perceivedRoleId]?.name}
-                            </strong>{' '}
-                            ({ROLE_MAP[selectedPlayer.perceivedRoleId]?.indonesianName})
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-0.5 pt-0.5">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-display text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-wide uppercase">
-                              {ROLE_MAP[selectedPlayer.trueRoleId]?.name}
-                            </span>
-                            <span className="text-base sm:text-lg font-extrabold text-amber-950 dark:text-[#FDE68A]">
-                              ({ROLE_MAP[selectedPlayer.trueRoleId]?.indonesianName})
-                            </span>
-                            <span
-                              className={`px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border ${
-                                ROLE_MAP[selectedPlayer.trueRoleId]?.team === 'townsfolk'
-                                  ? 'bg-blue-100 text-blue-900 border-blue-300 dark:bg-[#1E3A8A] dark:text-[#BFDBFE] dark:border-[#3B82F6]'
-                                  : ROLE_MAP[selectedPlayer.trueRoleId]?.team === 'outsider'
-                                  ? 'bg-sky-100 text-sky-900 border-sky-300 dark:bg-[#075985] dark:text-[#BAE6FD] dark:border-[#0284C7]'
-                                  : ROLE_MAP[selectedPlayer.trueRoleId]?.team === 'minion'
-                                  ? 'bg-orange-100 text-orange-950 border-orange-300 dark:bg-[#7F1D1D] dark:text-[#FECACA] dark:border-[#DC2626]'
-                                  : 'bg-red-100 text-red-950 border-red-300 dark:bg-[#450A0A] dark:text-[#FCA5A5] dark:border-[#EF4444]'
-                              }`}
-                            >
-                              {ROLE_MAP[selectedPlayer.trueRoleId]?.team}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Seat Shift Left / Right Buttons */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => onMoveSeat(selectedPlayer.seatIndex, 'ccw')}
-                      title="Geser Kursi Berlawanan Jarum Jam"
-                      aria-label={`Geser kursi ${selectedPlayer.name} ke kiri`}
-                      className="min-w-[36px] min-h-[36px] rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-[#231F30] dark:hover:bg-[#2F2A40] text-purple-900 dark:text-[#EDE7DB] flex items-center justify-center cursor-pointer transition-colors"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onMoveSeat(selectedPlayer.seatIndex, 'cw')}
-                      title="Geser Kursi Searah Jarum Jam"
-                      aria-label={`Geser kursi ${selectedPlayer.name} ke kanan`}
-                      className="min-w-[36px] min-h-[36px] rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-[#231F30] dark:hover:bg-[#2F2A40] text-purple-900 dark:text-[#EDE7DB] flex items-center justify-center cursor-pointer transition-colors"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Role Ability Box */}
-                <div className="p-3.5 rounded-xl bg-purple-50/70 dark:bg-[#120F1A] border border-purple-200/80 dark:border-[#2B253D] space-y-1">
-                  <div className="text-[11px] font-bold text-slate-600 dark:text-[#A8A092] uppercase tracking-wider">
-                    Kemampuan Karakter:
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-800 dark:text-[#F5EFE6] leading-relaxed">
-                    {ROLE_MAP[selectedPlayer.trueRoleId]?.ability}
-                  </p>
-                </div>
-
-                {/* Intip Kartu Rahasia Pemain Ini - High Contrast Solid Gold */}
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setPeekPlayerIndex(selectedPlayer.seatIndex);
-                    setIsPeekModalOpen(true);
-                  }}
-                  className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#121016] text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-md border border-[#F59E0B]"
+                  onClick={() => setViewMode('circle')}
+                  className="px-3 py-1.5 rounded-xl bg-[#c9963a] text-[#2a2018] font-bold text-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Eye className="w-4 h-4 text-[#121016]" />
-                  <span>Intip Kartu Rahasia {selectedPlayer.name}</span>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Meja Lingkaran</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setIsRefDrawerOpen(true)}
+                  className="px-3 py-1.5 rounded-xl bg-black/50 border border-[#c9963a]/35 text-[#efe6d2] font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-[#c9963a]" />
+                  <span>Skrip</span>
+                </button>
+              </div>
+            </div>
 
-                {/* Drunk Alert Banner in Inspector */}
-                {selectedPlayer.trueRoleId === 'drunk' && (
-                  <div className="p-3 rounded-xl bg-amber-50 dark:bg-[#281C10] border border-amber-300 dark:border-[#D97706]/70 text-xs text-amber-950 dark:text-[#FDE68A] flex items-start gap-2.5">
-                    <Beer className="w-4 h-4 text-amber-600 dark:text-[#F59E0B] shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="block text-amber-900 dark:text-[#FDE68A]">Pemain Ini Adalah THE DRUNK!</strong>
-                      <span className="leading-relaxed">
-                        Pemain mengira dirinya adalah <strong>{ROLE_MAP[selectedPlayer.perceivedRoleId]?.name}</strong>. Kemampuannya tidak berfungsi nyata atau berikan info palsu.
-                      </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {players.map((player) => {
+                const role = ROLE_MAP[spyStealth ? player.perceivedRoleId : player.trueRoleId];
+                const isPoisoned = isPlayerPoisoned(player);
+                const alignment = getPlayerAlignment(player);
+
+                return (
+                  <ParchmentSurface
+                    key={player.id}
+                    className="rounded-2xl p-3.5 space-y-2.5 cursor-pointer"
+                  >
+                    <div
+                      onClick={() => setMenuSeatId(player.id)}
+                      className="flex items-center gap-3"
+                    >
+                      {role && (
+                        <CharacterTokenFront
+                          role={role}
+                          size={58}
+                          alignment={alignment}
+                          dead={!player.isAlive}
+                          isPoisoned={isPoisoned && !spyStealth}
+                          hasGhostVote={player.hasGhostVote}
+                          deathCause={player.deathCause}
+                          showSetupLeaf={!spyStealth}
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[10px] font-mono uppercase tracking-wider text-[#5c4a37]">
+                          Kursi #{player.seatIndex + 1} · {player.isAlive ? 'Hidup' : 'Mati'}
+                        </div>
+                        <div className="font-display text-base font-bold text-[#2a2018] truncate">
+                          {player.name}
+                        </div>
+                        <div className="text-xs font-semibold text-[#5c4a37] truncate">
+                          {role?.name}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
 
-                {/* Primary Status Action Buttons - Both hanging and demon kills mark the player DEAD & BLACK */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  {selectedPlayer.isAlive ? (
-                    <>
+                    {!spyStealth && player.reminders.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-2 border-t border-[#655342]/20">
+                        {player.reminders.map((rem) => (
+                          <ReminderDisc
+                            key={rem.instanceId}
+                            reminderId={rem.reminderId}
+                            customNote={rem.customNote}
+                            size={34}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-1.5 pt-1">
                       <button
                         type="button"
-                        onClick={() => handleSafeKill(selectedPlayer.id, 'demon')}
-                        className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-red-50 hover:bg-red-100 dark:bg-[#2C1619] dark:hover:bg-[#3D1E22] border border-red-300 dark:border-[#EF4444]/60 text-red-700 dark:text-[#FECACA]"
+                        onClick={() => setReminderPickerSeatId(player.id)}
+                        className="flex-1 py-1.5 rounded-xl bg-[#2a2018] text-[#efe6d2] text-xs font-bold cursor-pointer"
                       >
-                        <Swords className="w-4 h-4 text-red-600 dark:text-[#F87171] shrink-0" />
-                        <span>Mati Dibunuh Demon</span>
+                        + Pengingat
                       </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleSafeKill(selectedPlayer.id, 'execution')}
-                        className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-amber-50 hover:bg-amber-100 dark:bg-[#2B2011] dark:hover:bg-[#3A2C18] border border-amber-300 dark:border-[#F59E0B]/60 text-amber-800 dark:text-[#FDE68A]"
-                      >
-                        <Gavel className="w-4 h-4 text-amber-600 dark:text-[#F59E0B] shrink-0" />
-                        <span>Mati Digantung</span>
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => handleSafeResurrect(selectedPlayer.id)}
-                        className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-emerald-50 hover:bg-emerald-100 dark:bg-[#142922] dark:hover:bg-[#1B382E] border border-emerald-300 dark:border-[#10B981]/50 text-emerald-800 dark:text-[#A7F3D0]"
-                      >
-                        <HeartPulse className="w-4 h-4 text-emerald-600 dark:text-[#34D399] shrink-0" />
-                        <span>Hidupkan Kembali</span>
-                      </button>
-
                       <button
                         type="button"
                         onClick={() => {
-                          const nextCause =
-                            selectedPlayer.deathCause === 'demon' ? 'execution' : 'demon';
-                          if (onChangeDeathCause) {
-                            onChangeDeathCause(selectedPlayer.id, nextCause);
+                          if (player.isAlive) {
+                            if (onKillPlayer) onKillPlayer(player.id, 'demon');
+                            else onToggleAlive(player.id, 'demon');
                           } else {
-                            onToggleAlive(selectedPlayer.id, nextCause);
+                            if (onResurrectPlayer) onResurrectPlayer(player.id);
+                            else onToggleAlive(player.id);
                           }
                         }}
-                        className="min-h-[44px] px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-purple-50 hover:bg-purple-100 dark:bg-[#231F30] dark:hover:bg-[#2F2A40] border border-purple-200 dark:border-[#38324C] text-purple-900 dark:text-[#EDE7DB]"
+                        className="px-3 py-1.5 rounded-xl border border-[#655342]/30 text-xs font-bold text-[#2a2018] cursor-pointer"
                       >
-                        {selectedPlayer.deathCause === 'demon' ? (
-                          <>
-                            <Gavel className="w-4 h-4 text-amber-600 dark:text-[#F59E0B] shrink-0" />
-                            <span>Ubah: Digantung</span>
-                          </>
-                        ) : (
-                          <>
-                            <Swords className="w-4 h-4 text-red-600 dark:text-[#F87171] shrink-0" />
-                            <span>Ubah: Dibunuh Demon</span>
-                          </>
-                        )}
+                        {player.isAlive ? 'Matikan' : 'Hidupkan'}
                       </button>
-                    </>
-                  )}
-                </div>
+                    </div>
+                  </ParchmentSurface>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          /* Authentic Measured Elliptical Velvet Grimoire Ring */
+          <div
+            ref={stageRef}
+            onClick={() => {
+              setMenuSeatId(null);
+            }}
+            className="relative w-full h-full min-h-[540px] select-none overflow-hidden"
+          >
+            {/* Top-Left Block: Undo, Rotate, Add Seats, Layout toggle */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="absolute top-3 left-3 sm:top-4 sm:left-4 z-30 flex flex-wrap items-center gap-1.5 p-1.5 rounded-2xl backdrop-blur-md"
+              style={{
+                backgroundColor: BOARD_CHROME.blockBg,
+                border: `1px solid ${BOARD_CHROME.blockBorder}`,
+                boxShadow: BOARD_CHROME.liftedShadow,
+              }}
+            >
+              {onUndo && (
+                <button
+                  type="button"
+                  disabled={!canUndo}
+                  onClick={onUndo}
+                  title="Undo perubahan terakhir (Ctrl+Z)"
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 text-[#efe6d2] hover:bg-white/10 disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                >
+                  <Undo2 className="w-3.5 h-3.5 text-[#c9963a]" />
+                  <span className="hidden sm:inline">Undo</span>
+                </button>
+              )}
 
-                {/* Secondary Actions: Ghost Vote + Silent Show Card + Emergency Role Change */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-purple-100 dark:border-[#292535]">
-                  {!selectedPlayer.isAlive && (
-                    <button
-                      type="button"
-                      onClick={() => onToggleGhostVote(selectedPlayer.id)}
-                      className="min-h-[40px] px-3 py-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-[#221E2E] dark:hover:bg-[#2E293F] text-xs font-medium text-purple-950 dark:text-[#D6CFC2] flex items-center gap-1.5 cursor-pointer transition-colors"
-                    >
-                      <Ghost className="w-3.5 h-3.5 text-indigo-600 dark:text-[#93C5FD]" />
-                      <span>
-                        {selectedPlayer.hasGhostVote
-                          ? 'Pakai Suara Hantu'
-                          : 'Pulihkan Suara Hantu'}
-                      </span>
-                    </button>
-                  )}
-
+              {onRotateRing && (
+                <div className="flex items-center border-l border-[#c9963a]/25 pl-1.5 gap-0.5">
                   <button
                     type="button"
-                    onClick={() => {
-                      const roleDef = ROLE_MAP[selectedPlayer.perceivedRoleId];
-                      if (!roleDef) return;
-                      onShowSilentCard({
-                        heading: `Karakter: ${roleDef.name}`,
-                        subheading: roleDef.indonesianName,
-                        roleIds: [roleDef.id],
-                      });
-                    }}
-                    className="min-h-[40px] px-3 py-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-[#221E2E] dark:hover:bg-[#2E293F] text-xs font-medium text-purple-950 dark:text-[#EDE7DB] flex items-center gap-1.5 cursor-pointer transition-colors"
+                    onClick={() => onRotateRing('ccw')}
+                    title="Putar semua kursi berlawanan jarum jam"
+                    className="p-1.5 rounded-lg text-[#efe6d2] hover:bg-white/10 cursor-pointer"
                   >
-                    <Eye className="w-3.5 h-3.5 text-amber-700 dark:text-[#D4AF37]" />
-                    <span>Tunjuk Token di Layar</span>
+                    <RotateCcw className="w-3.5 h-3.5" />
                   </button>
-
-                  {/* Role change dropdown (e.g. Imp Starpass or Scarlet Woman becoming Imp) */}
-                  <div className="flex items-center gap-1.5">
-                    <label
-                      htmlFor="change-true-role"
-                      className="text-[11px] text-slate-600 dark:text-[#A8A092]"
-                    >
-                      Ubah Peran:
-                    </label>
-                    <select
-                      id="change-true-role"
-                      value={selectedPlayer.trueRoleId}
-                      onChange={(e) =>
-                        onChangePlayerTrueRole(selectedPlayer.id, e.target.value)
-                      }
-                      className="min-h-[38px] rounded-lg bg-purple-50 dark:bg-[#14111B] border border-purple-200 dark:border-[#322D42] px-2 py-1 text-xs text-slate-900 dark:text-[#EDE7DB]"
-                    >
-                      {ROLES.map((r) => {
-                        const isAnotherDrunk =
-                          r.id === 'drunk' &&
-                          players.some(
-                            (p) => p.id !== selectedPlayer.id && p.trueRoleId === 'drunk'
-                          );
-                        return (
-                          <option
-                            key={r.id}
-                            value={r.id}
-                            disabled={isAnotherDrunk}
-                          >
-                            {r.name}
-                            {isAnotherDrunk ? ' (Maksimal 1 Drunk)' : ''}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onRotateRing('cw')}
+                    title="Putar semua kursi searah jarum jam"
+                    className="p-1.5 rounded-lg text-[#efe6d2] hover:bg-white/10 cursor-pointer"
+                  >
+                    <RotateCw className="w-3.5 h-3.5" />
+                  </button>
                 </div>
+              )}
 
-                {/* Active Reminder Tokens on Selected Player */}
-                <div className="pt-2 border-t border-purple-100 dark:border-[#292535] space-y-2">
-                  <div className="text-xs font-semibold text-slate-700 dark:text-[#B8B0A2]">
-                    Token Pengingat di Kursi {selectedPlayer.name}:
-                  </div>
-                  {selectedPlayer.reminders.filter((r) => r.reminderId !== 'executed').length === 0 ? (
-                    <p className="text-xs text-slate-500 dark:text-[#7D758A]">
-                      Belum ada token pengingat menempel di kursi ini.
-                    </p>
+              {onAddSeat && (
+                <button
+                  type="button"
+                  onClick={() => setArrangeGapsVisible((prev) => !prev)}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors ${
+                    arrangeGapsVisible
+                      ? 'bg-[#c9963a] text-[#2a2018]'
+                      : 'text-[#efe6d2] hover:bg-white/10'
+                  }`}
+                  title="Tambahkan kursi Traveller / pemain baru di celah cincin"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Kursi</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setViewMode('cards')}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 text-[#efe6d2] hover:bg-white/10 cursor-pointer"
+                title="Buka tampilan daftar kartu"
+              >
+                <LayoutGrid className="w-3.5 h-3.5 text-[#c9963a]" />
+                <span className="hidden md:inline">Daftar</span>
+              </button>
+            </div>
+
+            {/* Top-Right Block: Show Cards, Script Reference, Velvet Swatches, Stealth Spy */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex flex-wrap items-center justify-end gap-1.5 p-1.5 rounded-2xl backdrop-blur-md"
+              style={{
+                backgroundColor: BOARD_CHROME.blockBg,
+                border: `1px solid ${BOARD_CHROME.blockBorder}`,
+                boxShadow: BOARD_CHROME.liftedShadow,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSheetInitialRoleId(undefined);
+                  setIsShowSheetOpen(true);
+                }}
+                className="px-2.5 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#d8a74c] text-[#2a2018] text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Tunjuk</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsRefDrawerOpen(true)}
+                className="px-2.5 py-1.5 rounded-xl text-[#efe6d2] hover:bg-white/10 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              >
+                <ScrollText className="w-3.5 h-3.5 text-[#c9963a]" />
+                <span className="hidden sm:inline">Skrip</span>
+              </button>
+
+              {onVelvetColourChange && (
+                <div className="hidden sm:flex items-center pl-1 border-l border-[#c9963a]/25">
+                  <VelvetColourSelector
+                    value={velvetColour}
+                    onChange={onVelvetColourChange}
+                    compact
+                  />
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setSpyStealth((prev) => !prev)}
+                title={spyStealth ? 'Matikan mode stealth' : 'Sembunyikan reminder & rahasia Drunk'}
+                className={`p-1.5 rounded-xl cursor-pointer transition-colors ${
+                  spyStealth
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-[#efe6d2] hover:bg-white/10'
+                }`}
+              >
+                {spyStealth ? <EyeOff className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+
+            {/* Mode Swap Hint Bar */}
+            {swapSourceSeatIdx !== null && (
+              <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 px-4 py-1.5 rounded-full bg-[#c9963a] text-[#2a2018] text-xs font-bold flex items-center gap-2 shadow-xl">
+                <ArrowLeftRight className="w-3.5 h-3.5" />
+                <span>Klik kursi tujuan untuk tukar posisi dengan Kursi #{swapSourceSeatIdx + 1}</span>
+                <button
+                  type="button"
+                  onClick={() => setSwapSourceSeatIdx(null)}
+                  className="underline ml-1 cursor-pointer"
+                >
+                  Batal
+                </button>
+              </div>
+            )}
+
+            {/* Measured Ring Coordinate Box */}
+            <div
+              className="absolute"
+              style={{
+                left: ringOffsetLeft,
+                top: ringOffsetTop,
+                width: ring.band.width,
+                height: ring.band.height,
+              }}
+            >
+              {/* Faint brass ellipse guide connecting all seats */}
+              <svg
+                width={ring.band.width}
+                height={ring.band.height}
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0"
+              >
+                <ellipse
+                  cx={ring.band.width / 2}
+                  cy={ring.band.height / 2}
+                  rx={ring.rx}
+                  ry={ring.ry}
+                  fill="none"
+                  stroke="rgba(201, 150, 58, 0.16)"
+                  strokeWidth={1.5}
+                  strokeDasharray="6 6"
+                />
+              </svg>
+
+              {/* Active Day Clockwork Voting Sweep SVG */}
+              {phase === 'day' && activeNomination && (
+                <VotingArcSvg
+                  ring={ring}
+                  players={players}
+                  nomination={activeNomination}
+                />
+              )}
+
+              {/* Gap Add-Seat Buttons when toggled */}
+              {arrangeGapsVisible &&
+                onAddSeat &&
+                ring.positions.map((pos, idx) => {
+                  const nextPos = ring.positions[(idx + 1) % ring.positions.length];
+                  if (!nextPos) return null;
+                  const gx = (pos.x + nextPos.x) / 2;
+                  const gy = (pos.y + nextPos.y) / 2;
+                  return (
+                    <button
+                      key={`gap_${idx}`}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddSeat(idx + 1);
+                      }}
+                      title={`Sisipkan pemain baru antara #${idx + 1} dan #${
+                        ((idx + 1) % players.length) + 1
+                      }`}
+                      style={{
+                        left: gx - 14,
+                        top: gy - 14,
+                        width: 28,
+                        height: 28,
+                      }}
+                      className="absolute z-20 rounded-full bg-[#c9963a] hover:bg-[#f2c56b] text-[#2a2018] flex items-center justify-center shadow-lg cursor-pointer transition-transform hover:scale-110"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  );
+                })}
+
+              {/* Center-of-Ring Focal Content */}
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="pointer-events-none absolute inset-0 flex items-center justify-center z-20"
+              >
+                <div className="pointer-events-auto flex flex-col items-center text-center gap-2 max-w-[290px]">
+                  {winner ? (
+                    /* Center-of-Ring Victory Announcement (zero intrusive edge banners!) */
+                    <div
+                      className="rounded-3xl px-5 py-4 backdrop-blur-md shadow-2xl space-y-2 border"
+                      style={{
+                        backgroundColor: 'rgba(18, 22, 20, 0.88)',
+                        borderColor:
+                          winner === 'good'
+                            ? 'rgba(95, 163, 230, 0.65)'
+                            : 'rgba(224, 87, 75, 0.65)',
+                      }}
+                    >
+                      <Trophy
+                        className="w-8 h-8 mx-auto"
+                        style={{ color: winner === 'good' ? '#5fa3e6' : '#e0574b' }}
+                      />
+                      <h3
+                        className="font-display text-2xl font-bold tracking-wide"
+                        style={{ color: winner === 'good' ? '#7ec3ff' : '#ffa299' }}
+                      >
+                        {winner === 'good' ? 'TIM GOOD MENANG' : 'TIM EVIL MENANG'}
+                      </h3>
+                      <p className="text-[11px] text-[#a89f8c]">
+                        {winner === 'good'
+                          ? 'Demon berhasil dieksekusi di Ravenswood Bluff.'
+                          : 'Kegelapan menguasai Ravenswood Bluff.'}
+                      </p>
+                      {onSetWinnerManual && (
+                        <button
+                          type="button"
+                          onClick={() => onSetWinnerManual(null)}
+                          className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-[10px] font-mono uppercase tracking-wider text-[#efe6d2] cursor-pointer"
+                        >
+                          Bersihkan Status
+                        </button>
+                      )}
+                    </div>
+                  ) : phase === 'day' && (activeNomination || pendingNomineeId) && onStartNomination && onToggleNominationVote && onResetNominationVotes && onMarkNominationExecution && onCancelNomination ? (
+                    <DayNominationControls
+                      players={players}
+                      nominationsToday={nominationsToday}
+                      activeNomination={activeNomination}
+                      pendingNomineeId={pendingNomineeId}
+                      onSelectNomineeForSetup={setPendingNomineeId}
+                      onStartNomination={onStartNomination}
+                      onToggleVoter={onToggleNominationVote}
+                      onResetVotes={onResetNominationVotes}
+                      onMarkExecution={onMarkNominationExecution}
+                      onCancelNomination={onCancelNomination}
+                    />
                   ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedPlayer.reminders
-                        .filter((r) => r.reminderId !== 'executed')
-                        .map((rem) => {
-                          const def = REMINDER_MAP[rem.reminderId];
-                          if (!def) return null;
-                          return (
-                            <div
-                              key={rem.instanceId}
-                              className="inline-flex items-center gap-2 pl-1.5 pr-2 py-1 rounded-full bg-purple-50 dark:bg-[#201B2E] border border-purple-200 dark:border-[#38314A] shadow-sm text-xs"
-                            >
-                              <div className="relative w-6 h-6 rounded-full overflow-hidden border border-white/30 shrink-0 bg-[#100E17]">
-                                <img
-                                  src={`/reminders/${def.id}.png`}
-                                  alt={def.label}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                              <span className="font-bold text-slate-900 dark:text-[#EDEAF0]">
-                                {def.label}
-                              </span>
-                              <span className="text-[10px] text-purple-700 dark:text-[#D4AF37]">
-                                ({def.indonesianLabel})
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => onRemoveReminder(selectedPlayer.id, rem.instanceId)}
-                                className="p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 cursor-pointer transition-colors"
-                                title={`Hapus token ${def.label}`}
-                                aria-label={`Hapus token ${def.label}`}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          );
-                        })}
+                    <div className="flex flex-col items-center gap-1.5 opacity-90">
+                      <img
+                        src={ART_ASSETS.editionTb}
+                        alt="Trouble Brewing"
+                        draggable={false}
+                        className="w-12 h-12 sm:w-14 sm:h-14 object-contain drop-shadow"
+                      />
+                      <div className="text-[11px] font-mono uppercase tracking-[0.16em] text-[#efe6d2]">
+                        {players.length} Pemain · {voteStats.aliveCount} Hidup
+                      </div>
+                      {phase === 'day' && onStartNomination && (
+                        <button
+                          type="button"
+                          onClick={() => setPendingNomineeId(players[0]?.id ?? null)}
+                          className="mt-1 px-3 py-1 rounded-full bg-black/55 hover:bg-black/75 border border-[#c9963a]/45 text-[11px] font-bold text-[#c9963a] flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Gavel className="w-3.5 h-3.5" />
+                          <span>Mulai Nominasi (Butuh {thresholds.execute})</span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="empty-inspector"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="bg-white dark:bg-[#181520] border border-purple-200 dark:border-[#2A2636] rounded-2xl p-6 text-center text-xs text-slate-500 dark:text-[#8E8A9E] shadow-xl"
-              >
-                Pilih salah satu kursi di lingkaran Grimoire untuk memeriksa detail peran dan mengelola status pemain.
-              </motion.div>
-            )}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* Column 3: Baki Token Pengingat (Side-by-side with Inspector on PC, No Page Scroll) */}
-        {!spyCleanMode && (
-          <div className="lg:col-span-3 xl:col-span-3">
-            <div className="bg-white dark:bg-[#181520] border border-purple-200 dark:border-[#2A2636] rounded-2xl p-4 space-y-3 shadow-xl max-h-[calc(100vh-175px)] flex flex-col">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
-                <div>
-                  <h3 className="font-display text-sm sm:text-base font-bold text-slate-900 dark:text-[#F5EFE6]">
-                    Baki Token Pengingat
-                  </h3>
-                  <p className="text-[11px] text-slate-600 dark:text-[#A8A092] mt-0.5 line-clamp-2">
-                    {selectedPlayer
-                      ? `Ketuk token untuk menempelkan ke ${selectedPlayer.name} (Kursi ${selectedPlayer.seatIndex + 1}).`
-                      : 'Ketuk token lalu ketuk kursi di lingkaran.'}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-1.5 self-start sm:self-auto shrink-0">
-                  {/* Detail Aturan Toggle Button */}
-                  <button
-                    type="button"
-                    onClick={() => setShowReminderRules((prev) => !prev)}
-                    aria-pressed={showReminderRules}
-                    className={`min-h-[32px] px-2 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 cursor-pointer border transition-colors ${
-                      showReminderRules
-                        ? 'bg-amber-100 dark:bg-amber-950/80 border-amber-300 dark:border-amber-500/50 text-amber-900 dark:text-amber-200'
-                        : 'bg-purple-100 dark:bg-[#1E1E28] border-purple-200 dark:border-white/[0.1] text-purple-900 dark:text-[#EDEAF0]'
-                    }`}
-                    title="Tampilkan keterangan aturan efek token"
-                  >
-                    <Info className="w-3.5 h-3.5 text-amber-600 dark:text-[#D4AF37]" />
-                    <span>Detail</span>
-                  </button>
-
-                  <div className="flex items-center gap-0.5 p-0.5 bg-purple-100 dark:bg-[#121018] rounded-lg shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setReminderFilter('active')}
-                      className={`px-2 py-0.5 rounded text-[10px] font-semibold cursor-pointer ${
-                        reminderFilter === 'active'
-                          ? 'bg-purple-200 dark:bg-[#2C263B] text-purple-950 dark:text-[#F5EFE6]'
-                          : 'text-slate-600 dark:text-[#9C9486]'
-                      }`}
-                    >
-                      Aktif
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setReminderFilter('all')}
-                      className={`px-2 py-0.5 rounded text-[10px] font-semibold cursor-pointer ${
-                        reminderFilter === 'all'
-                          ? 'bg-purple-200 dark:bg-[#2C263B] text-purple-950 dark:text-[#F5EFE6]'
-                          : 'text-slate-600 dark:text-[#9C9486]'
-                      }`}
-                    >
-                      Semua
-                    </button>
-                  </div>
-                </div>
               </div>
 
-              {/* Scrollable list inside tray card so page doesn't scroll */}
-              <div className="grid grid-cols-1 gap-2 overflow-y-auto pr-1 flex-1">
-                {displayedReminders.map((rem) => (
-                  <ReminderTokenTrayCard
-                    key={rem.id}
-                    reminderId={rem.id}
-                    isSelected={activeBrushReminderId === rem.id}
-                    showRuleDetail={showReminderRules}
-                    onDragStart={(e) => {
-                      setDragPayload({ type: 'reminder', reminderId: rem.id });
-                      e.dataTransfer.effectAllowed = 'copy';
-                    }}
-                    onClick={() => {
-                      if (selectedPlayer) {
-                        onAddReminder(selectedPlayer.id, rem.id);
-                      } else {
-                        setIsSwapModeActive(false);
-                        setSwapModeSourceIdx(null);
-                        setActiveBrushReminderId((prev) =>
-                          prev === rem.id ? null : rem.id
-                        );
+              {/* Player Seats Around Ellipse */}
+              {players.map((player, idx) => {
+                const pos = ring.positions[idx];
+                if (!pos) return null;
+
+                const trueRole = ROLE_MAP[player.trueRoleId];
+                const perceivedRole = ROLE_MAP[player.perceivedRoleId];
+                const displayRole = spyStealth ? perceivedRole || trueRole : trueRole;
+                const alignment = getPlayerAlignment(player);
+                const isPoisoned = isPlayerPoisoned(player);
+                const isDrunkSecret = player.trueRoleId === 'drunk' && !spyStealth;
+                const isMenuOpen = menuSeatId === player.id;
+                const isHovered = hoveredSeatId === player.id || isMenuOpen;
+                const isSwapSource = swapSourceSeatIdx === player.seatIndex;
+                const isDragTarget = dragTargetSeatId === player.id;
+
+                // Reminder chips leaned cleanly toward ring center via reminderStack
+                const stackAngleDeg = stackAngle(
+                  pos,
+                  { x: ring.band.width / 2, y: ring.band.height / 2 },
+                  ring.rx,
+                  ring.ry,
+                  { size: ring.size, chip: SEAT_METRICS.reminderSize(ring.size) }
+                );
+                const visibleReminders = spyStealth ? [] : player.reminders;
+                const stack = reminderStack(
+                  ring.size,
+                  stackAngleDeg,
+                  visibleReminders.length,
+                  isHovered
+                );
+
+                return (
+                  <React.Fragment key={player.id}>
+                    {/* Seat Token Container */}
+                    <div
+                      style={{
+                        left: pos.x - ring.size / 2,
+                        top: pos.y - ring.size / 2,
+                        width: ring.size,
+                      }}
+                      onMouseEnter={() => setHoveredSeatId(player.id)}
+                      onMouseLeave={() => setHoveredSeatId((prev) => (prev === player.id ? null : prev))}
+                      onDragOver={(e) => {
+                        if (dragReminder) {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          setDragTargetSeatId(player.id);
+                        }
+                      }}
+                      onDragLeave={() =>
+                        setDragTargetSeatId((prev) => (prev === player.id ? null : prev))
                       }
-                    }}
-                  />
-                ))}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragReminder && onMoveReminder && dragReminder.fromPlayerId !== player.id) {
+                          onMoveReminder(dragReminder.fromPlayerId, dragReminder.instanceId, player.id);
+                        }
+                        setDragReminder(null);
+                        setDragTargetSeatId(null);
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSeatInteraction(player);
+                      }}
+                      className={`absolute flex flex-col items-center cursor-pointer transition-transform duration-150 ${
+                        isMenuOpen ? 'z-30 scale-[1.06]' : 'z-20 hover:scale-[1.04]'
+                      }`}
+                    >
+                      <div
+                        className={`relative rounded-full ${
+                          isDragTarget
+                            ? 'ring-3 ring-[#c9963a]'
+                            : isSwapSource
+                            ? 'ring-3 ring-amber-400 animate-pulse'
+                            : ''
+                        }`}
+                      >
+                        {displayRole && (
+                          <CharacterTokenFront
+                            role={displayRole}
+                            size={ring.size}
+                            alignment={spyStealth ? undefined : alignment}
+                            dead={!player.isAlive}
+                            selected={isMenuOpen}
+                            isPoisoned={isPoisoned && !spyStealth}
+                            hasGhostVote={player.hasGhostVote}
+                            deathCause={player.deathCause}
+                            showSetupLeaf={!spyStealth}
+                          />
+                        )}
+
+                        {/* Drunk indicator badge on seat corner (hidden in spy mode) */}
+                        {isDrunkSecret && (
+                          <span
+                            title={`Drunk mengira dirinya ${perceivedRole?.name}`}
+                            className="absolute -top-1 -right-1 z-20 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#2a2018] border border-[#c9963a] text-[#f2c56b] shadow"
+                          >
+                            <Beer className="w-3 h-3" />
+                          </span>
+                        )}
+
+                        {/* Executed today ribbon */}
+                        {executedTodayPlayerId === player.id && (
+                          <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-20 rounded-full bg-[#760a0d] border border-[#c9963a]/70 px-1.5 py-0.5 text-[8px] font-mono font-bold uppercase text-[#efe6d2] whitespace-nowrap">
+                            Eksekusi
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Seat Name Label under Token */}
+                      <div
+                        style={{
+                          marginTop: SEAT_METRICS.nameGap,
+                          fontSize: SEAT_METRICS.seatNameSize(ring.size),
+                        }}
+                        className={`max-w-[116px] px-2 py-0.5 rounded-full font-sans font-bold tracking-tight truncate text-center shadow ${
+                          player.isAlive
+                            ? 'bg-black/65 text-[#efe6d2] border border-white/10'
+                            : 'bg-black/45 text-[#a89f8c] line-through border border-white/5'
+                        }`}
+                      >
+                        <span className="font-mono text-[#c9963a] mr-1">{player.seatIndex + 1}</span>
+                        {player.name}
+                      </div>
+                    </div>
+
+                    {/* Inward Stacked Reminder Chips (Draggable between seats!) */}
+                    {visibleReminders.map((rem, rIdx) => {
+                      const pt = stack.points[rIdx];
+                      if (!pt) return null;
+                      const cx = pos.x + pt.x;
+                      const cy = pos.y + pt.y;
+                      const isCustom = rem.reminderId.startsWith('note:');
+
+                      return (
+                        <div
+                          key={rem.instanceId}
+                          draggable
+                          onDragStart={(e) => {
+                            e.stopPropagation();
+                            setDragReminder({
+                              fromPlayerId: player.id,
+                              instanceId: rem.instanceId,
+                            });
+                            e.dataTransfer.effectAllowed = 'move';
+                          }}
+                          onDragEnd={() => {
+                            setDragReminder(null);
+                            setDragTargetSeatId(null);
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isCustom && onEditCustomNoteReminder) {
+                              setEditingNote({
+                                playerId: player.id,
+                                instanceId: rem.instanceId,
+                                text:
+                                  rem.customNote ||
+                                  (rem.reminderId.startsWith('note:')
+                                    ? rem.reminderId.slice(5)
+                                    : ''),
+                              });
+                            } else {
+                              onRemoveReminder(player.id, rem.instanceId);
+                            }
+                          }}
+                          title={
+                            isCustom
+                              ? 'Klik untuk edit/hapus catatan, atau seret ke pemain lain'
+                              : 'Klik untuk melepas, atau seret ke pemain lain'
+                          }
+                          style={{
+                            left: cx - stack.chipSize / 2,
+                            top: cy - stack.chipSize / 2,
+                            zIndex: 22 + rIdx,
+                            transition: 'left 180ms ease, top 180ms ease, transform 150ms ease',
+                          }}
+                          className="absolute cursor-grab active:cursor-grabbing hover:scale-110"
+                        >
+                          <ReminderDisc
+                            reminderId={rem.reminderId}
+                            customNote={rem.customNote}
+                            size={stack.chipSize}
+                            showTooltip
+                          />
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+
+            {/* Bottom-Left Block: 3 Demon Bluff Wells */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 z-30 flex items-center gap-2 p-2 rounded-2xl backdrop-blur-md"
+              style={{
+                backgroundColor: BOARD_CHROME.blockBg,
+                border: `1px solid ${BOARD_CHROME.blockBorder}`,
+                boxShadow: BOARD_CHROME.liftedShadow,
+              }}
+            >
+              <div className="flex flex-col pr-1 border-r border-[#c9963a]/25">
+                <span className="text-[9px] font-mono uppercase tracking-widest text-[#c9963a]">
+                  Demon Bluffs
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSheetInitialRoleId(undefined);
+                    setIsShowSheetOpen(true);
+                  }}
+                  className="text-[11px] font-bold text-[#efe6d2] hover:underline text-left cursor-pointer"
+                >
+                  Tunjuk Bluff
+                </button>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {[0, 1, 2].map((slot) => {
+                  const bid = demonBluffIds[slot];
+                  const role = bid ? ROLE_MAP[bid] : null;
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => !spyStealth && setBluffEditorOpen(true)}
+                      title={role && !spyStealth ? `Bluff: ${role.name}` : 'Atur Bluff'}
+                      className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-105"
+                      style={{
+                        backgroundColor: BOARD_CHROME.wellBg,
+                        border: `1px solid ${BOARD_CHROME.wellBorder}`,
+                      }}
+                    >
+                      {role && !spyStealth ? (
+                        <CharacterTokenFront role={role} size={36} showSetupLeaf={false} />
+                      ) : (
+                        <span className="text-[10px] font-mono text-[#a89f8c]">?</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
+
+            {/* Bottom-Right Block: Dawn / Dusk Phase Clock Plaque */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-30 flex items-center gap-2.5 p-2 rounded-2xl backdrop-blur-md"
+              style={{
+                backgroundColor: BOARD_CHROME.blockBg,
+                border: `1px solid ${BOARD_CHROME.blockBorder}`,
+                boxShadow: BOARD_CHROME.liftedShadow,
+              }}
+            >
+              <img
+                src={phase === 'day' ? ART_ASSETS.generic.dawn : ART_ASSETS.generic.dusk}
+                alt=""
+                className="w-8 h-8 object-contain shrink-0 hidden sm:block"
+              />
+              <div className="min-w-[96px]">
+                <div className="font-display text-sm font-bold text-[#efe6d2] leading-tight">
+                  {phaseLabel}
+                </div>
+                <div className="text-[10px] font-mono text-[#a89f8c] tabular-nums">
+                  {voteStats.aliveCount}H · {voteStats.votesNeeded} Mayoritas
+                </div>
+              </div>
+
+              {onAdvancePhase && (
+                <button
+                  type="button"
+                  onClick={onAdvancePhase}
+                  className="px-3 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#d8a74c] text-[#2a2018] text-xs font-bold flex items-center gap-1 cursor-pointer shadow"
+                >
+                  {phase === 'day' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+                  <span>{phase === 'day' ? 'Senja' : 'Fajar'}</span>
+                </button>
+              )}
+
+              {onSetWinnerManual && !winner && (
+                <div className="hidden md:flex items-center border-l border-[#c9963a]/25 pl-2 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onSetWinnerManual('good')}
+                    title="Tandai Tim Good Menang"
+                    className="px-2 py-1 rounded-lg bg-[#0064ac]/35 hover:bg-[#0064ac]/60 text-[#efe6d2] text-[10px] font-bold cursor-pointer"
+                  >
+                    Good
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSetWinnerManual('evil')}
+                    title="Tandai Tim Evil Menang"
+                    className="px-2 py-1 rounded-lg bg-[#760a0d]/45 hover:bg-[#760a0d]/70 text-[#efe6d2] text-[10px] font-bold cursor-pointer"
+                  >
+                    Evil
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Collision-avoidant Floating Seat Context Popover */}
+            {menuSeat && menuAnchor && (
+              <SeatContextMenu
+                seat={menuSeat}
+                totalSeats={players.length}
+                isDayPhase={phase === 'day'}
+                style={{
+                  position: 'absolute',
+                  left: menuAnchor.left,
+                  top: menuAnchor.top,
+                }}
+                onOpenReminderPicker={() => setReminderPickerSeatId(menuSeat.id)}
+                onStartNomination={() => setPendingNomineeId(menuSeat.id)}
+                onKill={(cause) => {
+                  if (onKillPlayer) onKillPlayer(menuSeat.id, cause);
+                  else onToggleAlive(menuSeat.id, cause);
+                }}
+                onResurrect={() => {
+                  if (onResurrectPlayer) onResurrectPlayer(menuSeat.id);
+                  else onToggleAlive(menuSeat.id);
+                }}
+                onToggleGhostVote={() => onToggleGhostVote(menuSeat.id)}
+                onToggleAlignment={() => {
+                  const next = getPlayerAlignment(menuSeat) === 'good' ? 'evil' : 'good';
+                  if (onSetPlayerAlignment) onSetPlayerAlignment(menuSeat.id, next);
+                }}
+                onChangeRole={(newRoleId) => onChangePlayerTrueRole(menuSeat.id, newRoleId)}
+                onRename={(newName) => onRenamePlayer?.(menuSeat.id, newName)}
+                onMoveSeat={(dir) => onMoveSeat(menuSeat.seatIndex, dir)}
+                onStartSwap={() => setSwapSourceSeatIdx(menuSeat.seatIndex)}
+                onPeekSeat={() => {
+                  setPeekIndex(menuSeatIndex >= 0 ? menuSeatIndex : 0);
+                  setIsPeekOpen(true);
+                }}
+                onShowSeatToken={() =>
+                  onShowSilentCard({
+                    heading: 'PERAN ANDA ADALAH',
+                    subheading: `Pemain di Kursi #${menuSeat.seatIndex + 1}`,
+                    playerName: menuSeat.name,
+                    roleIds: [menuSeat.perceivedRoleId],
+                    requireTapToReveal: true,
+                    footerNote:
+                      'Rahasia Trouble Brewing: Ketuk di atas bila pemain sudah siap melihat perannya.',
+                  })
+                }
+                onRemoveSeat={() => onRemoveSeat?.(menuSeat.id)}
+                onClose={() => setMenuSeatId(null)}
+              />
+            )}
           </div>
         )}
-      </div>
+      </VelvetBackdrop>
 
-      {/* Secret Peek Modal for Storyteller & Private Player Show */}
-      <PeekCardModal
-        isOpen={isPeekModalOpen}
+      {/* Modals & Drawers */}
+      {reminderPickerSeat && (
+        <ReminderPicker
+          targetPlayerName={reminderPickerSeat.name}
+          inPlayRoleIds={inPlayRoleIds}
+          hasDrunkAssigned={Boolean(currentDrunkPlayer)}
+          onPickReminder={(remId) => onAddReminder(reminderPickerSeat.id, remId)}
+          onAddCustomNote={(txt) => {
+            if (onAddCustomNoteReminder) {
+              onAddCustomNoteReminder(reminderPickerSeat.id, txt);
+            } else {
+              onAddReminder(reminderPickerSeat.id, `note:${txt}`);
+            }
+          }}
+          onClose={() => setReminderPickerSeatId(null)}
+        />
+      )}
+
+      {/* Inline Custom Note Editor Modal */}
+      {editingNote && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65"
+          onClick={() => setEditingNote(null)}
+        >
+          <div className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <ParchmentSurface className="rounded-2xl p-4 space-y-3">
+              <h4 className="font-display text-lg font-bold text-[#2a2018]">
+                Ubah Catatan Pengingat
+              </h4>
+              <input
+                type="text"
+                autoFocus
+                maxLength={32}
+                value={editingNote.text}
+                onChange={(e) => setEditingNote({ ...editingNote, text: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl border border-[#655342]/35 bg-white/80 text-sm text-[#2a2018]"
+              />
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRemoveReminder(editingNote.playerId, editingNote.instanceId);
+                    setEditingNote(null);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-[#760a0d] text-[#efe6d2] text-xs font-bold cursor-pointer"
+                >
+                  Hapus Chip
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingNote(null)}
+                    className="px-3 py-1.5 rounded-xl border border-[#655342]/30 text-xs font-semibold text-[#5c4a37] cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (editingNote.text.trim() && onEditCustomNoteReminder) {
+                        onEditCustomNoteReminder(
+                          editingNote.playerId,
+                          editingNote.instanceId,
+                          editingNote.text.trim()
+                        );
+                      }
+                      setEditingNote(null);
+                    }}
+                    className="px-4 py-1.5 rounded-xl bg-[#2a2018] text-[#efe6d2] text-xs font-bold cursor-pointer"
+                  >
+                    Simpan
+                  </button>
+                </div>
+              </div>
+            </ParchmentSurface>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Bluff Editor Modal */}
+      {bluffEditorOpen && onUpdateBluffs && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65"
+          onClick={() => setBluffEditorOpen(false)}
+        >
+          <div className="w-full max-w-xl" onClick={(e) => e.stopPropagation()}>
+            <ParchmentSurface className="rounded-2xl p-4 sm:p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-display text-lg font-bold text-[#2a2018]">
+                    Pilih 3 Peran Bluff Demon
+                  </h4>
+                  <p className="text-xs text-[#5c4a37]">
+                    Karakter Townsfolk/Outsider yang tidak dimainkan di ring.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setBluffEditorOpen(false)}
+                  className="px-3 py-1 rounded-xl bg-[#2a2018] text-[#efe6d2] text-xs font-bold cursor-pointer"
+                >
+                  Selesai
+                </button>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[52vh] overflow-y-auto">
+                {ALL_TB_ROLES.filter((r) => r.team === 'townsfolk' || r.team === 'outsider').map(
+                  (role) => {
+                    const isSelected = demonBluffIds.includes(role.id);
+                    const isUsed = inPlayRoleIds.has(role.id);
+                    return (
+                      <button
+                        key={role.id}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            onUpdateBluffs(demonBluffIds.filter((id) => id !== role.id));
+                          } else {
+                            const next = [...demonBluffIds, role.id].slice(-3);
+                            onUpdateBluffs(next);
+                          }
+                        }}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-center cursor-pointer ${
+                          isSelected
+                            ? 'border-[#c9963a] bg-[#c9963a]/25 ring-1 ring-[#c9963a]'
+                            : isUsed
+                            ? 'opacity-45 border-[#655342]/15 bg-[#66533f]/[0.03]'
+                            : 'border-[#655342]/25 bg-[#66533f]/[0.06] hover:bg-[#66533f]/[0.15]'
+                        }`}
+                      >
+                        <CharacterTokenFront role={role} size={42} showSetupLeaf={false} />
+                        <span className="text-[11px] font-bold text-[#2a2018] truncate w-full">
+                          {role.name}
+                        </span>
+                      </button>
+                    );
+                  }
+                )}
+              </div>
+            </ParchmentSurface>
+          </div>
+        </div>
+      )}
+
+      <ShowSheetModal
+        isOpen={isShowSheetOpen}
         players={players}
-        initialPlayerIndex={peekPlayerIndex}
         demonBluffIds={demonBluffIds}
-        onClose={() => setIsPeekModalOpen(false)}
+        velvetColour={velvetColour}
+        initialRoleId={showSheetInitialRoleId}
+        onClose={() => setIsShowSheetOpen(false)}
       />
 
-      {/* Designate Drunk Modal */}
-      {isDrunkActive && onSetDrunkPlayer && (
+      <ReferenceDrawer
+        isOpen={isRefDrawerOpen}
+        inPlayRoleIds={inPlayRoleIds}
+        onClose={() => setIsRefDrawerOpen(false)}
+      />
+
+      <PeekCardModal
+        isOpen={isPeekOpen}
+        players={players}
+        initialPlayerIndex={peekIndex}
+        demonBluffIds={demonBluffIds}
+        onClose={() => setIsPeekOpen(false)}
+      />
+
+      {onSetDrunkPlayer && (
         <DesignateDrunkModal
           isOpen={isDrunkModalOpen}
           players={players}
           currentDrunkPlayerId={currentDrunkPlayer?.id ?? null}
-          onSelectDrunkPlayer={(playerId) => {
-            onSetDrunkPlayer(playerId);
+          onSelectDrunkPlayer={(pid) => {
+            onSetDrunkPlayer(pid);
             setIsDrunkModalOpen(false);
           }}
           onClose={() => setIsDrunkModalOpen(false)}

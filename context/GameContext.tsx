@@ -11,14 +11,19 @@ import React, {
 } from 'react';
 import { ROLE_MAP } from '@/lib/botc-data';
 import {
+  DayNomination,
   GamePhase,
   PlayerSeat,
+  addPlayerSeat,
   createDemoSession,
   isPlayerPoisoned,
   movePlayerSeat,
+  removePlayerSeat,
+  rotatePlayerSeats,
   sanitizePlayerSeats,
   swapPlayerSeats,
 } from '@/lib/botc-engine';
+import type { VelvetColour } from '@/lib/grimoire-theme';
 import { SilentCardPayload } from '@/components/FullscreenCardModal';
 
 export const ROOMS_STORAGE_KEY = 'botc_tb_rooms_v3';
@@ -58,6 +63,9 @@ export interface PersistedGameSession {
   gameAlertBanner: string | null;
   winner: 'good' | 'evil' | null;
   storyHistory: GameStoryEntry[];
+  velvetColour?: VelvetColour;
+  startedAt?: number;
+  nominationsToday?: DayNomination[];
 }
 
 export interface GameRoom {
@@ -90,6 +98,9 @@ function createEmptySession(name = 'Game Baru'): PersistedGameSession {
     gameAlertBanner: null,
     winner: null,
     storyHistory: [],
+    velvetColour: 'midnight',
+    startedAt: undefined,
+    nominationsToday: [],
   };
 }
 
@@ -120,6 +131,10 @@ export interface GameContextType {
   gameAlertBanner: string | null;
   winner: 'good' | 'evil' | null;
   storyHistory: GameStoryEntry[];
+  velvetColour: VelvetColour;
+  startedAt?: number;
+  nominationsToday: DayNomination[];
+  canUndo: boolean;
   silentCard: SilentCardPayload | null;
   isRefModalOpen: boolean;
   isStoryModalOpen: boolean;
@@ -128,6 +143,8 @@ export interface GameContextType {
   // Actions
   startDemoGame: () => void;
   resetSession: () => void;
+  undoLastAction: () => void;
+  setVelvetColour: (colour: VelvetColour) => void;
   completeSetup: (payload: {
     playerCount: number;
     isDrunkActive: boolean;
@@ -147,12 +164,20 @@ export interface GameContextType {
 
   handleSwapSeats: (fromIdx: number, toIdx: number) => void;
   handleMoveSeat: (seatIdx: number, dir: 'cw' | 'ccw') => void;
+  handleRotateRing: (dir: 'cw' | 'ccw') => void;
+  handleAddSeat: (atIndex?: number) => void;
+  handleRemoveSeat: (playerId: string) => void;
+  handleRenamePlayer: (playerId: string, name: string) => void;
+  handleSetPlayerAlignment: (playerId: string, alignment: 'good' | 'evil') => void;
   handleKillPlayer: (playerId: string, cause: 'demon' | 'execution' | 'slayer') => void;
   handleResurrectPlayer: (playerId: string) => void;
   handleChangeDeathCause: (playerId: string, cause: 'demon' | 'execution' | 'slayer') => void;
   handleToggleAlive: (playerId: string, cause?: 'demon' | 'execution' | 'slayer') => void;
   handleToggleGhostVote: (playerId: string) => void;
   handleAddReminder: (playerId: string, reminderId: string) => void;
+  handleAddCustomNoteReminder: (playerId: string, noteText: string) => void;
+  handleEditCustomNoteReminder: (playerId: string, instanceId: string, noteText: string) => void;
+  handleMoveReminder: (fromPlayerId: string, instanceId: string, toPlayerId: string) => void;
   handleRemoveReminder: (playerId: string, instanceId: string) => void;
   handleSetSingleReminderTarget: (reminderId: string, targetPlayerId: string) => void;
   handleChangePlayerTrueRole: (playerId: string, newTrueRoleId: string) => void;
@@ -161,6 +186,12 @@ export interface GameContextType {
   handleTransitionNightToDay: () => void;
   handleTransitionDayToNextNight: () => void;
   handleExecutePlayerInDay: (playerId: string | null) => void;
+  handleEndGameManual: (winner: 'good' | 'evil' | null) => void;
+  handleNominatePlayer: (nominatorId: string, nomineeId: string) => string;
+  handleToggleVoteForNomination: (nominationId: string, seatId: string) => void;
+  handleResetNominationVotes: (nominationId: string) => void;
+  handleMarkNomination: (nominationId: string, mark: boolean) => void;
+  handleCancelNomination: (nominationId: string) => void;
   handleTriggerSlayerShot: (slayerPlayerId: string, targetPlayerId: string) => string;
   handleTriggerVirginNomination: (virginPlayerId: string, nominatorPlayerId: string) => string;
 }
@@ -262,6 +293,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [isRefModalOpen, setIsRefModalOpen] = useState<boolean>(false);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState<boolean>(false);
   const [starpassPending, setStarpassPending] = useState<StarpassPendingData | null>(null);
+  const [undoStacks, setUndoStacks] = useState<Record<string, PersistedGameSession[]>>({});
+  const sessionRef = React.useRef(session);
+  sessionRef.current = session;
 
   // Sync to localStorage
   useEffect(() => {
@@ -277,7 +311,22 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [mounted, rooms, activeRoomId]);
 
   const updateSession = useCallback(
-    (updater: (prev: PersistedGameSession) => PersistedGameSession) => {
+    (
+      updater: (prev: PersistedGameSession) => PersistedGameSession,
+      options?: { recordUndo?: boolean }
+    ) => {
+      const shouldRecord = options?.recordUndo !== false;
+      const current = sessionRef.current;
+      if (shouldRecord && current.hasActiveGame) {
+        const snapshot = JSON.parse(JSON.stringify(current)) as PersistedGameSession;
+        setUndoStacks((stacks) => {
+          const roomStack = stacks[activeRoomId] || [];
+          return {
+            ...stacks,
+            [activeRoomId]: [...roomStack.slice(-29), snapshot],
+          };
+        });
+      }
       setRooms((prevRooms) =>
         prevRooms.map((r) => {
           if (r.id !== activeRoomId) return r;
@@ -291,6 +340,30 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       );
     },
     [activeRoomId]
+  );
+
+  const canUndo = (undoStacks[activeRoomId]?.length ?? 0) > 0;
+
+  const undoLastAction = useCallback(() => {
+    const stack = undoStacks[activeRoomId] || [];
+    if (stack.length === 0) return;
+    const previousSnapshot = stack[stack.length - 1];
+    setUndoStacks((stacks) => ({
+      ...stacks,
+      [activeRoomId]: (stacks[activeRoomId] || []).slice(0, -1),
+    }));
+    setRooms((prevRooms) =>
+      prevRooms.map((r) =>
+        r.id === activeRoomId ? { ...r, lastActiveAt: Date.now(), session: previousSnapshot } : r
+      )
+    );
+  }, [activeRoomId, undoStacks]);
+
+  const setVelvetColour = useCallback(
+    (colour: VelvetColour) => {
+      updateSession((s) => ({ ...s, velvetColour: colour }), { recordUndo: false });
+    },
+    [updateSession]
   );
 
   const appendStory = useCallback(
@@ -389,26 +462,24 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       if (aliveDemons.length === 0) {
         const msg =
-          'KONDISI KEMENANGAN: Seluruh Demon telah mati dan tidak ada pengganti aktif. TIM GOOD (WARGA BAIK) MENANG!';
+          'Tim Good Menang — Seluruh Demon telah mati.';
         updateSession((s) => ({
           ...s,
           winner: 'good',
-          gameAlertBanner: msg,
-        }));
+          gameAlertBanner: null,
+        }), { recordUndo: false });
         appendStory(currentPhaseName, msg, 'win');
-        setIsStoryModalOpen(true);
       } else if (alive.length <= 2) {
         const msg =
-          'KONDISI KEMENANGAN: Hanya tersisa 2 pemain hidup dan Demon masih bertahan. TIM EVIL (JAHAT) MENANG!';
+          'Tim Evil Menang — Hanya tersisa 2 pemain hidup dan Demon bertahan.';
         updateSession((s) => ({
           ...s,
           winner: 'evil',
-          gameAlertBanner: msg,
-        }));
+          gameAlertBanner: null,
+        }), { recordUndo: false });
         appendStory(currentPhaseName, msg, 'win');
-        setIsStoryModalOpen(true);
       } else {
-        updateSession((s) => ({ ...s, gameAlertBanner: null }));
+        updateSession((s) => ({ ...s, winner: null, gameAlertBanner: null }), { recordUndo: false });
       }
     },
     [appendStory, session.dayNumber, session.phase, updateSession]
@@ -433,7 +504,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       perceivedRoleId: p.perceivedRoleId,
       team: ROLE_MAP[p.trueRoleId]?.team || 'townsfolk',
     }));
-    updateSession(() => ({
+    setUndoStacks((stacks) => ({ ...stacks, [activeRoomId]: [] }));
+    updateSession((s) => ({
+      ...s,
       hasActiveGame: true,
       playerCount: demo.playerCount,
       selectedRoleIds: demo.selectedRoleIds,
@@ -449,13 +522,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       winner: null,
       storyHistory: [initialStory],
       isDrunkActive: demo.players.some((p) => p.trueRoleId === 'drunk'),
-    }));
-  }, [updateSession]);
+      velvetColour: s.velvetColour || 'midnight',
+      startedAt: Date.now(),
+      nominationsToday: [],
+    }), { recordUndo: false });
+  }, [activeRoomId, updateSession]);
 
   const resetSession = useCallback(() => {
-    updateSession(() => createEmptySession(activeRoom.name));
+    setUndoStacks((stacks) => ({ ...stacks, [activeRoomId]: [] }));
+    updateSession((s) => ({ ...createEmptySession(activeRoom.name), velvetColour: s.velvetColour || 'midnight' }), { recordUndo: false });
     setStarpassPending(null);
-  }, [activeRoom.name, updateSession]);
+  }, [activeRoom.name, activeRoomId, updateSession]);
 
   const completeSetup = useCallback(
     (payload: {
@@ -483,6 +560,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         category: 'start',
       };
 
+      setUndoStacks((stacks) => ({ ...stacks, [activeRoomId]: [] }));
       updateSession((s) => ({
         ...s,
         hasActiveGame: true,
@@ -500,9 +578,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         gameAlertBanner: null,
         winner: null,
         storyHistory: [initialStory],
-      }));
+        velvetColour: s.velvetColour || 'midnight',
+        startedAt: Date.now(),
+        nominationsToday: [],
+      }), { recordUndo: false });
     },
-    [updateSession]
+    [activeRoomId, updateSession]
   );
 
   const handleSwapSeats = useCallback(
@@ -769,13 +850,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             });
             const winMsg = `SAINT DIEKSEKUSI! ${target.name} adalah Saint asli yang sehat. Sesuai aturan, TIM EVIL LANGSUNG MENANG!`;
             appendStory(currentRoundLabel, winMsg, 'win');
-            setIsStoryModalOpen(true);
             return {
               ...s,
               winner: 'evil',
               executedTodayPlayerId: playerId,
               players: sanitizePlayerSeats(next),
-              gameAlertBanner: winMsg,
+              gameAlertBanner: null,
             };
           }
 
@@ -1039,6 +1119,156 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     [updateSession]
   );
 
+  const handleAddCustomNoteReminder = useCallback(
+    (playerId: string, noteText: string) => {
+      const cleaned = noteText.trim();
+      if (!cleaned) return;
+      updateSession((s) => ({
+        ...s,
+        players: sanitizePlayerSeats(
+          s.players.map((p) =>
+            p.id === playerId
+              ? {
+                  ...p,
+                  reminders: [
+                    ...p.reminders,
+                    {
+                      instanceId: `rem-note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                      reminderId: `note:${cleaned}`,
+                      customNote: cleaned,
+                    },
+                  ],
+                }
+              : p
+          )
+        ),
+      }));
+    },
+    [updateSession]
+  );
+
+  const handleEditCustomNoteReminder = useCallback(
+    (playerId: string, instanceId: string, noteText: string) => {
+      const cleaned = noteText.trim();
+      if (!cleaned) {
+        handleRemoveReminder(playerId, instanceId);
+        return;
+      }
+      updateSession((s) => ({
+        ...s,
+        players: s.players.map((p) =>
+          p.id === playerId
+            ? {
+                ...p,
+                reminders: p.reminders.map((r) =>
+                  r.instanceId === instanceId
+                    ? { ...r, reminderId: `note:${cleaned}`, customNote: cleaned }
+                    : r
+                ),
+              }
+            : p
+        ),
+      }));
+    },
+    [handleRemoveReminder, updateSession]
+  );
+
+  const handleMoveReminder = useCallback(
+    (fromPlayerId: string, instanceId: string, toPlayerId: string) => {
+      if (fromPlayerId === toPlayerId) return;
+      updateSession((s) => {
+        const sourceSeat = s.players.find((p) => p.id === fromPlayerId);
+        const token = sourceSeat?.reminders.find((r) => r.instanceId === instanceId);
+        if (!token) return s;
+
+        const next = s.players.map((p) => {
+          if (p.id === fromPlayerId) {
+            return {
+              ...p,
+              reminders: p.reminders.filter((r) => r.instanceId !== instanceId),
+            };
+          }
+          if (p.id === toPlayerId) {
+            const withoutSameId = token.reminderId.startsWith('note:')
+              ? p.reminders
+              : p.reminders.filter((r) => r.reminderId !== token.reminderId);
+            return {
+              ...p,
+              reminders: [...withoutSameId, token],
+            };
+          }
+          return p;
+        });
+
+        return {
+          ...s,
+          players: sanitizePlayerSeats(next),
+        };
+      });
+    },
+    [updateSession]
+  );
+
+  const handleRotateRing = useCallback(
+    (dir: 'cw' | 'ccw') => {
+      updateSession((s) => ({
+        ...s,
+        players: rotatePlayerSeats(s.players, dir),
+      }));
+    },
+    [updateSession]
+  );
+
+  const handleAddSeat = useCallback(
+    (atIndex?: number) => {
+      updateSession((s) => {
+        const nextPlayers = addPlayerSeat(s.players, atIndex ?? s.players.length);
+        return {
+          ...s,
+          playerCount: nextPlayers.length,
+          players: nextPlayers,
+        };
+      });
+    },
+    [updateSession]
+  );
+
+  const handleRemoveSeat = useCallback(
+    (playerId: string) => {
+      updateSession((s) => {
+        const nextPlayers = removePlayerSeat(s.players, playerId);
+        return {
+          ...s,
+          playerCount: nextPlayers.length,
+          players: nextPlayers,
+        };
+      });
+    },
+    [updateSession]
+  );
+
+  const handleRenamePlayer = useCallback(
+    (playerId: string, name: string) => {
+      const cleaned = name.trim();
+      if (!cleaned) return;
+      updateSession((s) => ({
+        ...s,
+        players: s.players.map((p) => (p.id === playerId ? { ...p, name: cleaned } : p)),
+      }));
+    },
+    [updateSession]
+  );
+
+  const handleSetPlayerAlignment = useCallback(
+    (playerId: string, alignment: 'good' | 'evil') => {
+      updateSession((s) => ({
+        ...s,
+        players: s.players.map((p) => (p.id === playerId ? { ...p, alignment } : p)),
+      }));
+    },
+    [updateSession]
+  );
+
   const handleChangePlayerTrueRole = useCallback(
     (playerId: string, newTrueRoleId: string) => {
       updateSession((s) => {
@@ -1270,14 +1500,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             (p) => p.trueRoleId === 'mayor' && !isPlayerPoisoned(p)
           );
           if (alive.length === 3 && healthyMayor) {
-            const winMsg = `KEMENANGAN MAYOR! Tersisa 3 pemain hidup tanpa eksekusi dan ${healthyMayor.name} adalah Mayor sehat. TIM GOOD MENANG!`;
+            const winMsg = `Tim Good Menang (Mayor) — Tersisa 3 pemain hidup tanpa eksekusi.`;
             appendStory(`Siang #${session.dayNumber}`, winMsg, 'win');
-            setIsStoryModalOpen(true);
             return {
               ...s,
               winner: 'good',
               executedTodayPlayerId: null,
-              gameAlertBanner: winMsg,
+              gameAlertBanner: null,
             };
           }
           return {
@@ -1298,8 +1527,151 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       ...s,
       dayNumber: s.dayNumber + 1,
       phase: 'other_night',
+      nominationsToday: [],
     }));
   }, [updateSession]);
+
+  const handleEndGameManual = useCallback(
+    (winnerChoice: 'good' | 'evil' | null) => {
+      updateSession((s) => ({
+        ...s,
+        winner: winnerChoice,
+        gameAlertBanner: null,
+      }));
+      if (winnerChoice) {
+        appendStory(
+          session.phase === 'day' ? `Siang #${session.dayNumber}` : `Malam #${session.dayNumber}`,
+          `Permainan dinyatakan berakhir oleh Storyteller: Tim ${
+            winnerChoice === 'good' ? 'Good' : 'Evil'
+          } Menang!`,
+          'win'
+        );
+      }
+    },
+    [appendStory, session.dayNumber, session.phase, updateSession]
+  );
+
+  const handleNominatePlayer = useCallback(
+    (nominatorId: string, nomineeId: string): string => {
+      const id = `nom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      updateSession((s) => {
+        const current = s.nominationsToday || [];
+        const newNom: DayNomination = {
+          id,
+          dayNumber: s.dayNumber,
+          nominatorId,
+          nomineeId,
+          voterIds: [],
+          voteTotal: 0,
+          markedForExecution: false,
+        };
+        return {
+          ...s,
+          nominationsToday: [...current, newNom],
+        };
+      });
+      return id;
+    },
+    [updateSession]
+  );
+
+  const handleToggleVoteForNomination = useCallback(
+    (nominationId: string, seatId: string) => {
+      updateSession((s) => {
+        const seat = s.players.find((p) => p.id === seatId);
+        if (!seat) return s;
+        const current = s.nominationsToday || [];
+        const nom = current.find((n) => n.id === nominationId);
+        if (!nom) return s;
+
+        const hasVoted = nom.voterIds.includes(seatId);
+        const nextVoters = hasVoted
+          ? nom.voterIds.filter((v) => v !== seatId)
+          : [...nom.voterIds, seatId];
+
+        const updatedPlayers = !seat.isAlive
+          ? s.players.map((p) =>
+              p.id === seatId ? { ...p, hasGhostVote: hasVoted ? true : false } : p
+            )
+          : s.players;
+
+        const weightOf = (vid: string) => {
+          const vp = s.players.find((p) => p.id === vid);
+          if (!vp) return 1;
+          if (vp.reminders.some((r) => r.reminderId === 'thief_neg')) return -1;
+          if (vp.reminders.some((r) => r.reminderId === 'bureaucrat_3x')) return 3;
+          return 1;
+        };
+
+        const voteTotal = nextVoters.reduce((sum, vid) => sum + weightOf(vid), 0);
+
+        return {
+          ...s,
+          players: updatedPlayers,
+          nominationsToday: current.map((n) =>
+            n.id === nominationId ? { ...n, voterIds: nextVoters, voteTotal } : n
+          ),
+        };
+      });
+    },
+    [updateSession]
+  );
+
+  const handleResetNominationVotes = useCallback(
+    (nominationId: string) => {
+      updateSession((s) => {
+        const current = s.nominationsToday || [];
+        const nom = current.find((n) => n.id === nominationId);
+        if (!nom) return s;
+        const refundedSet = new Set(nom.voterIds);
+        return {
+          ...s,
+          players: s.players.map((p) =>
+            !p.isAlive && refundedSet.has(p.id) ? { ...p, hasGhostVote: true } : p
+          ),
+          nominationsToday: current.map((n) =>
+            n.id === nominationId ? { ...n, voterIds: [], voteTotal: 0 } : n
+          ),
+        };
+      });
+    },
+    [updateSession]
+  );
+
+  const handleMarkNomination = useCallback(
+    (nominationId: string, mark: boolean) => {
+      updateSession((s) => ({
+        ...s,
+        nominationsToday: (s.nominationsToday || []).map((n) => ({
+          ...n,
+          markedForExecution: n.id === nominationId ? mark : mark ? false : n.markedForExecution,
+        })),
+      }));
+    },
+    [updateSession]
+  );
+
+  const handleCancelNomination = useCallback(
+    (nominationId: string) => {
+      updateSession((s) => {
+        const current = s.nominationsToday || [];
+        const target = current.find((n) => n.id === nominationId);
+        const refundedSet = new Set(target?.voterIds || []);
+        return {
+          ...s,
+          players: s.players.map((p) =>
+            !p.isAlive && refundedSet.has(p.id) ? { ...p, hasGhostVote: true } : p
+          ),
+          nominationsToday: current.map((n) =>
+            n.id === nominationId
+              ? { ...n, cancelled: true, markedForExecution: false, voterIds: [], voteTotal: 0 }
+              : n
+          ),
+        };
+      });
+    },
+    [updateSession]
+  );
 
   const handleTriggerSlayerShot = useCallback(
     (slayerPlayerId: string, targetPlayerId: string): string => {
@@ -1467,6 +1839,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       gameAlertBanner: session.gameAlertBanner,
       winner: session.winner || null,
       storyHistory: session.storyHistory || [],
+      velvetColour: session.velvetColour || 'midnight',
+      startedAt: session.startedAt,
+      nominationsToday: session.nominationsToday || [],
+      canUndo,
       silentCard,
       isRefModalOpen,
       isStoryModalOpen,
@@ -1474,6 +1850,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       startDemoGame,
       resetSession,
+      undoLastAction,
+      setVelvetColour,
       completeSetup,
       setPhase,
       setGameAlertBanner,
@@ -1486,12 +1864,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       handleSwapSeats,
       handleMoveSeat,
+      handleRotateRing,
+      handleAddSeat,
+      handleRemoveSeat,
+      handleRenamePlayer,
+      handleSetPlayerAlignment,
       handleKillPlayer,
       handleResurrectPlayer,
       handleChangeDeathCause,
       handleToggleAlive,
       handleToggleGhostVote,
       handleAddReminder,
+      handleAddCustomNoteReminder,
+      handleEditCustomNoteReminder,
+      handleMoveReminder,
       handleRemoveReminder,
       handleSetSingleReminderTarget,
       handleChangePlayerTrueRole,
@@ -1500,6 +1886,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       handleTransitionNightToDay,
       handleTransitionDayToNextNight,
       handleExecutePlayerInDay,
+      handleEndGameManual,
+      handleNominatePlayer,
+      handleToggleVoteForNomination,
+      handleResetNominationVotes,
+      handleMarkNomination,
+      handleCancelNomination,
       handleTriggerSlayerShot,
       handleTriggerVirginNomination,
     }),
@@ -1513,12 +1905,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       deleteRoom,
       renameRoom,
       session,
+      canUndo,
       silentCard,
       isRefModalOpen,
       isStoryModalOpen,
       starpassPending,
       startDemoGame,
       resetSession,
+      undoLastAction,
+      setVelvetColour,
       completeSetup,
       setPhase,
       setGameAlertBanner,
@@ -1528,12 +1923,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       handleDismissStarpassModal,
       handleSwapSeats,
       handleMoveSeat,
+      handleRotateRing,
+      handleAddSeat,
+      handleRemoveSeat,
+      handleRenamePlayer,
+      handleSetPlayerAlignment,
       handleKillPlayer,
       handleResurrectPlayer,
       handleChangeDeathCause,
       handleToggleAlive,
       handleToggleGhostVote,
       handleAddReminder,
+      handleAddCustomNoteReminder,
+      handleEditCustomNoteReminder,
+      handleMoveReminder,
       handleRemoveReminder,
       handleSetSingleReminderTarget,
       handleChangePlayerTrueRole,
@@ -1542,6 +1945,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       handleTransitionNightToDay,
       handleTransitionDayToNextNight,
       handleExecutePlayerInDay,
+      handleEndGameManual,
+      handleNominatePlayer,
+      handleToggleVoteForNomination,
+      handleResetNominationVotes,
+      handleMarkNomination,
+      handleCancelNomination,
       handleTriggerSlayerShot,
       handleTriggerVirginNomination,
     ]

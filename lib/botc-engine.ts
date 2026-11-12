@@ -1,17 +1,21 @@
 import {
   CHARACTER_COUNTS,
-  CharacterCountRow,
   DEFAULT_INDONESIAN_NAMES,
   REMINDER_TOKENS,
-  ReminderDefinition,
   ROLE_MAP,
   ROLES,
+} from './botc-data.ts';
+import type {
+  CharacterCountRow,
+  ReminderDefinition,
   RoleDefinition,
-} from './botc-data';
+} from './botc-data.ts';
 
 export interface PlacedReminder {
   instanceId: string;
   reminderId: string;
+  customNote?: string;
+  sourceSeatId?: string;
 }
 
 export interface PlayerSeat {
@@ -20,10 +24,22 @@ export interface PlayerSeat {
   name: string;
   trueRoleId: string; // e.g. 'drunk' if actually the Drunk
   perceivedRoleId: string; // e.g. 'empath' if Drunk thinks they are Empath; otherwise === trueRoleId
+  alignment?: 'good' | 'evil'; // Storyteller manual override (defaults to role team alignment)
   isAlive: boolean;
   hasGhostVote: boolean;
   reminders: PlacedReminder[];
   deathCause?: 'demon' | 'execution' | 'slayer';
+}
+
+export interface DayNomination {
+  id: string;
+  dayNumber: number;
+  nominatorId: string;
+  nomineeId: string;
+  voterIds: string[];
+  voteTotal: number;
+  markedForExecution: boolean;
+  cancelled?: boolean;
 }
 
 export type GamePhase = 'first_night' | 'day' | 'other_night';
@@ -490,9 +506,68 @@ export function movePlayerSeat(
   return swapPlayerSeats(players, seatIndex, targetIndex);
 }
 
-export function isPlayerEvil(player: PlayerSeat): boolean {
+export function addPlayerSeat(
+  players: PlayerSeat[],
+  atIndex: number,
+  customName?: string,
+  roleId = 'washerwoman'
+): PlayerSeat[] {
+  if (players.length >= 20) return players;
+  const clampedIdx = Math.max(0, Math.min(players.length, atIndex));
+  let num = players.length + 1;
+  while (players.some((p) => p.name === `Kursi ${num}` || p.name === `Pemain ${num}`)) {
+    num++;
+  }
+  const roleMeta = ROLE_MAP[roleId];
+  const isEvilRole = roleMeta?.team === 'minion' || roleMeta?.team === 'demon';
+  const newSeat: PlayerSeat = {
+    id: `seat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    seatIndex: clampedIdx,
+    name: customName?.trim() || `Pemain ${num}`,
+    trueRoleId: roleId,
+    perceivedRoleId: roleId,
+    alignment: isEvilRole ? 'evil' : 'good',
+    isAlive: true,
+    hasGhostVote: true,
+    reminders: [],
+  };
+  const next = [...players];
+  next.splice(clampedIdx, 0, newSeat);
+  return next.map((p, i) => ({ ...p, seatIndex: i }));
+}
+
+export function removePlayerSeat(
+  players: PlayerSeat[],
+  playerId: string
+): PlayerSeat[] {
+  if (players.length <= 5) return players;
+  return players
+    .filter((p) => p.id !== playerId)
+    .map((p, i) => ({ ...p, seatIndex: i }));
+}
+
+export function rotatePlayerSeats(
+  players: PlayerSeat[],
+  direction: 'cw' | 'ccw'
+): PlayerSeat[] {
+  if (players.length < 2) return players;
+  const rotated =
+    direction === 'cw'
+      ? [players[players.length - 1], ...players.slice(0, -1)]
+      : [...players.slice(1), players[0]];
+  return rotated.map((p, i) => ({ ...p, seatIndex: i }));
+}
+
+export function getPlayerAlignment(player: PlayerSeat): 'good' | 'evil' {
+  if (player.alignment === 'good' || player.alignment === 'evil') {
+    return player.alignment;
+  }
   const role = ROLE_MAP[player.trueRoleId];
-  return role?.team === 'minion' || role?.team === 'demon';
+  return role?.team === 'minion' || role?.team === 'demon' ? 'evil' : 'good';
+}
+
+export function isPlayerEvil(player: PlayerSeat): boolean {
+  return getPlayerAlignment(player) === 'evil';
 }
 
 export function isPlayerPoisoned(player: PlayerSeat): boolean {
@@ -505,13 +580,45 @@ export function getActiveReminderTokensForSeats(players: PlayerSeat[]): Reminder
   const inPlaySet = new Set([...trueRoleSet, ...perceivedRoleSet]);
 
   return REMINDER_TOKENS.filter((rem) => {
-    // Undertaker's executed reminder is relevant if Undertaker is in play
-    if (rem.id === 'executed') {
+    // Undertaker's Died Today reminder is relevant if Undertaker is in play
+    if (rem.id === 'died_today' || rem.id === 'executed') {
       return inPlaySet.has('undertaker');
     }
-    // Only include reminder token if the owning character is actually in the game
     return inPlaySet.has(rem.roleId);
   });
+}
+
+export function canSeatNominate(
+  nominationsToday: DayNomination[],
+  nominatorId: string,
+  nomineeId: string,
+  players: PlayerSeat[]
+): boolean {
+  const active = nominationsToday.filter((n) => !n.cancelled);
+  const nominator = players.find((p) => p.id === nominatorId);
+  const nominee = players.find((p) => p.id === nomineeId);
+  if (!nominator || !nominee || !nominator.isAlive) return false;
+  if (active.some((n) => n.nominatorId === nominatorId)) return false;
+  if (active.some((n) => n.nomineeId === nomineeId)) return false;
+  return true;
+}
+
+export function calculateNominationThresholds(
+  players: PlayerSeat[],
+  nominationsToday: DayNomination[]
+): { execute: number; tie?: number; highestVotes: number; onBlockSeatId: string | null } {
+  const { votesNeeded } = calculateVoteThreshold(players);
+  const active = nominationsToday.filter((n) => !n.cancelled);
+  const marked = active.find((n) => n.markedForExecution);
+  const highestVotes = Math.max(0, ...active.map((n) => n.voteTotal));
+  const threshold = Math.max(votesNeeded, highestVotes > 0 ? highestVotes + 1 : votesNeeded);
+  const tie = highestVotes >= votesNeeded ? highestVotes : undefined;
+  return {
+    execute: threshold,
+    ...(tie !== undefined ? { tie } : {}),
+    highestVotes,
+    onBlockSeatId: marked?.nomineeId ?? null,
+  };
 }
 
 /**
@@ -544,8 +651,13 @@ export function sanitizePlayerSeats(players: PlayerSeat[]): PlayerSeat[] {
     for (const r of p.reminders || []) {
       if (!r || !r.reminderId || r.reminderId === 'executed') continue;
 
-      // Deduplicate per seat: only 1 instance of any reminder token per player
-      if (seatSeen.has(r.reminderId)) continue;
+      const isCustomNote = r.reminderId.startsWith('note:');
+      const dedupeKey = isCustomNote
+        ? `note:${(r.customNote ?? r.reminderId.slice(5)).trim().toLowerCase()}`
+        : r.reminderId;
+
+      // Deduplicate per seat
+      if (seatSeen.has(dedupeKey)) continue;
 
       // Single-target global uniqueness: only 1 player gets poisoned/protected/die_imp/is_the_drunk
       if (singleTargetTokens.has(r.reminderId)) {
@@ -553,7 +665,7 @@ export function sanitizePlayerSeats(players: PlayerSeat[]): PlayerSeat[] {
         claimedSingleTokens.add(r.reminderId);
       }
 
-      seatSeen.add(r.reminderId);
+      seatSeen.add(dedupeKey);
       uniqueReminders.push(r);
     }
 
@@ -838,7 +950,9 @@ export function buildNightOrder(
     } else if (actingRole.id === 'undertaker') {
       const executedPlayer = executedTodayPlayerId
         ? players.find((p) => p.id === executedTodayPlayerId)
-        : players.find((p) => p.reminders.some((r) => r.reminderId === 'executed'));
+        : players.find((p) =>
+            p.reminders.some((r) => r.reminderId === 'died_today' || r.reminderId === 'executed')
+          );
       if (executedPlayer) {
         const execTrueRole = ROLE_MAP[executedPlayer.trueRoleId];
         dynamicHelperText = `Dieksekusi Siang Tadi: ${executedPlayer.name} — Peran Asli: ${execTrueRole?.name ?? executedPlayer.trueRoleId}.`;

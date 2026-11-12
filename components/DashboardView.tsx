@@ -263,10 +263,10 @@ export default function DashboardView({
             </div>
             <div>
               <h3 className="font-display text-xl font-bold text-slate-900 dark:text-[#EDEAF0]">
-                Setup Permainan Baru
+                Mode Setup Biasa
               </h3>
               <p className="text-xs text-slate-600 dark:text-[#8E8A9E] mt-1 leading-relaxed">
-                Atur 5–15 pemain, komposisi Townsfolk/Outsider/Minion/Demon, pilih karakter otomatis atau acak, serta beri nama kursi pemain.
+                Atur 5–15 pemain, komposisi Townsfolk/Outsider/Minion/Demon, rumus pengacak seimbang, serta pilih pembagian bergilir (Discovery) atau langsung ke Grimoire.
               </p>
             </div>
           </div>
@@ -276,11 +276,11 @@ export default function DashboardView({
             className="w-full py-3 px-5 rounded-full bg-purple-100 dark:bg-[#1E1E28] hover:bg-purple-200 dark:hover:bg-[#282838] border border-purple-300 dark:border-white/[0.1] text-xs font-bold text-purple-900 dark:text-[#EDEAF0] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm"
           >
             <Play className="w-3.5 h-3.5 text-amber-600 dark:text-[#D4AF37] fill-current" />
-            <span>Mulai Wizard Setup</span>
+            <span>Buka Mode Setup Biasa</span>
           </Link>
         </motion.div>
 
-        {/* Card 2: Main di Web (Roll Koin) */}
+        {/* Card 2: Mode 1 — Ambil Token dari Kantong Velvet */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -294,10 +294,10 @@ export default function DashboardView({
             </div>
             <div>
               <h3 className="font-display text-xl font-bold text-slate-900 dark:text-[#EDEAF0]">
-                Bermain di Web (Roll Koin)
+                Ambil Token (Kantong Velvet)
               </h3>
               <p className="text-xs text-slate-600 dark:text-[#8E8A9E] mt-1 leading-relaxed">
-                Bermain langsung tanpa kartu fisik dengan koin rahasia satu per satu. Setiap pemain melihat peran dengan aman di layar.
+                Aduk kepingan tertutup di dalam kantong velvet, biarkan setiap pemain memilih tokennya sendiri dengan animasi flip 3D rahasia sebelum masuk ke Grimoire.
               </p>
             </div>
           </div>
@@ -307,7 +307,7 @@ export default function DashboardView({
             className="w-full py-3 px-5 rounded-full bg-purple-100 dark:bg-[#1E1E28] hover:bg-purple-200 dark:hover:bg-[#282838] border border-purple-300 dark:border-white/[0.1] text-xs font-bold text-purple-900 dark:text-[#EDEAF0] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm"
           >
             <Coins className="w-3.5 h-3.5 text-amber-600 dark:text-[#D4AF37]" />
-            <span>Buka Mode Roll Koin</span>
+            <span>Buka Kantong Velvet</span>
           </Link>
         </motion.div>
 

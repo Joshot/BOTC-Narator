@@ -25,6 +25,7 @@ import {
   isPlayerPoisoned,
 } from '@/lib/botc-engine';
 import { SilentCardPayload } from './FullscreenCardModal';
+import { CharacterToken } from './TokenArtwork';
 
 interface NarratorViewProps {
   phase: GamePhase;
@@ -266,10 +267,10 @@ export default function NarratorView({
                     <div className="flex items-center gap-3.5">
                       <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-[#231E30] border border-purple-200 dark:border-[#3B3450] flex items-center justify-center shrink-0 shadow-sm">
                         {currentStep.roleId ? (
-                          <img
-                            src={`/tokens/${currentStep.roleId}.png`}
-                            alt={currentStep.roleId}
-                            className="w-10 h-10 rounded-full object-contain filter drop-shadow shrink-0"
+                          <CharacterToken
+                            roleId={currentStep.roleId}
+                            size="sm"
+                            showSetupLeaf={false}
                           />
                         ) : currentStep.order === 999 ? (
                           <Sunrise className="w-6 h-6 text-amber-500 dark:text-[#FBBF24]" />
@@ -458,7 +459,7 @@ export default function NarratorView({
                     const executedTarget = executedTodayPlayerId
                       ? players.find((p) => p.id === executedTodayPlayerId)
                       : players.find((p) =>
-                          p.reminders.some((r) => r.reminderId === 'executed')
+                          p.reminders.some((r) => r.reminderId === 'died_today')
                         );
                     const executedTrueRole = executedTarget
                       ? ROLE_MAP[executedTarget.trueRoleId]
@@ -473,7 +474,7 @@ export default function NarratorView({
                           {executedTarget && (
                             <button
                               type="button"
-                              onClick={() => onSetSingleReminderTarget('executed', '')}
+                              onClick={() => onSetSingleReminderTarget('died_today', '')}
                               className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#221E2E] dark:hover:bg-[#312B42] text-[11px] font-semibold text-slate-700 dark:text-[#C4BCD0] cursor-pointer transition-colors"
                             >
                               Kosongkan Eksekusi
@@ -490,7 +491,7 @@ export default function NarratorView({
                                 key={p.id}
                                 type="button"
                                 onClick={() =>
-                                  onSetSingleReminderTarget('executed', isExec ? '' : p.id)
+                                  onSetSingleReminderTarget('died_today', isExec ? '' : p.id)
                                 }
                                 className={`min-h-[40px] px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer transition-colors ${
                                   isExec

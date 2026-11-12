@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { BookMarked, Search, X } from 'lucide-react';
 import { CHARACTER_COUNTS, ROLES, TeamType } from '@/lib/botc-data';
+import { CharacterToken } from './TokenArtwork';
 
 export default function ReferenceSheetModal({
   isOpen,
@@ -109,12 +110,8 @@ export default function ReferenceSheetModal({
                   key={role.id}
                   className="p-4 rounded-xl bg-purple-50/50 dark:bg-[#1D1927] border border-purple-200 dark:border-[#2C273A] flex items-start gap-3.5 shadow-xs"
                 >
-                  <div className="w-12 h-12 rounded-full bg-white dark:bg-[#121018] border border-purple-200 dark:border-[#352F45] overflow-hidden flex items-center justify-center shrink-0 shadow">
-                    <img
-                      src={`/tokens/${role.id}.png`}
-                      alt={role.name}
-                      className="w-full h-full object-contain"
-                    />
+                  <div className="shrink-0">
+                    <CharacterToken roleId={role.id} size="sm" showSetupLeaf />
                   </div>
                   <div className="space-y-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-[#A8A092]">

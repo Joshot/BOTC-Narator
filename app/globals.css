@@ -1,13 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  --font-display: "Cinzel", "Palatino Linotype", Georgia, serif;
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: var(--font-grenze), "Palatino Linotype", Georgia, serif;
+  --font-sans: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, monospace;
 }
 
 /* ========================================================
@@ -391,4 +390,34 @@ html.light .fixed.bg-black\/80 {
   .brass-sheen-btn:hover::after {
     animation: none !important;
   }
+}
+
+/* ========================================================
+   AUTHENTIC GRIMOIRE PARCHMENT, FELT & 3D TOKEN SURFACES
+   ======================================================== */
+.grimoire-vellum {
+  background-color: #eadbbf;
+  background-image: url('/art/paper/warm-vellum.webp');
+  background-size: 440px 440px;
+  background-repeat: repeat;
+  color: #2a2018;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ensure tactile parchment cards & velvet table keep true ink/cloth contrast in all themes */
+.grimoire-vellum,
+[data-grimoire-velvet] {
+  isolation: isolate;
 }

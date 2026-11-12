@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Eye, EyeOff, X } from 'lucide-react';
 import { ROLE_MAP } from '@/lib/botc-data';
 import { CharacterToken } from './TokenArtwork';
+import VelvetBackdrop from './grimoire/VelvetBackdrop';
 
 export interface SilentCardPayload {
   heading: string;
@@ -31,18 +32,18 @@ export default function FullscreenCardModal({
   const isLocked = Boolean(card.requireTapToReveal && !revealed);
 
   return (
-    <motion.div
+    <div
       role="dialog"
       aria-modal="true"
       aria-label={card.heading}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-50 bg-[#F1F8F4]/98 dark:bg-[#0C0C10]/98 backdrop-blur-md flex flex-col items-center justify-between p-6 sm:p-10 text-center"
+      className="fixed inset-0 z-50"
     >
+      <VelvetBackdrop
+        colour="midnight"
+        className="w-full h-full flex flex-col items-center justify-between p-6 sm:p-10 text-center"
+      >
       <div className="w-full max-w-2xl flex items-center justify-between">
-        <span className="text-xs font-mono font-semibold uppercase tracking-wider text-purple-800 dark:text-[#8E8A9E]">
+        <span className="text-xs font-mono font-semibold uppercase tracking-wider text-[#c9963a]">
           Layar Tunjuk Bisu Storyteller
         </span>
         <button
@@ -53,7 +54,7 @@ export default function FullscreenCardModal({
             onClose();
           }}
           aria-label="Tutup layar kartu"
-          className="min-h-[44px] min-w-[44px] px-4 py-2 rounded-xl border border-purple-200 dark:border-white/[0.1] bg-white dark:bg-[#14141B] text-sm font-semibold text-slate-900 dark:text-[#EDEAF0] hover:bg-purple-50 dark:hover:bg-[#1E1E28] flex items-center gap-2 cursor-pointer transition-colors shadow-sm"
+          className="min-h-[44px] min-w-[44px] px-4 py-2 rounded-xl border border-[#c9963a]/40 bg-black/50 text-sm font-semibold text-[#efe6d2] hover:bg-black/75 flex items-center gap-2 cursor-pointer transition-colors shadow-sm"
         >
           <X className="w-4 h-4" />
           <span>Tutup</span>
@@ -70,28 +71,28 @@ export default function FullscreenCardModal({
             transition={{ type: 'spring', stiffness: 320, damping: 26 }}
             className="flex flex-col items-center justify-center max-w-md my-auto gap-6"
           >
-            <p className="text-sm font-medium text-slate-600 dark:text-[#8E8A9E]">
+            <p className="text-sm font-medium text-[#a89f8c]">
               Tampilan Kartu Rahasia Pemain
             </p>
 
-            {/* Hidden Name Box (Per user requirement: always hide name to prevent leaks) */}
+            {/* Hidden Name Box (Always hides player name on velvet reveal) */}
             <div className="flex flex-col items-center gap-2">
-              <div className="px-5 py-2.5 rounded-2xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.1] flex items-center gap-3 shadow-md">
-                <span className="font-display text-xl sm:text-2xl font-bold text-slate-900 dark:text-[#EDEAF0]">
+              <div className="px-5 py-2.5 rounded-2xl bg-black/55 border border-[#c9963a]/40 flex items-center gap-3 shadow-md">
+                <span className="font-display text-xl sm:text-2xl font-bold text-[#efe6d2]">
                   {showSecretName && card.playerName ? card.playerName : '•••••••• (Nama Disembunyikan)'}
                 </span>
                 {card.playerName && (
                   <button
                     type="button"
                     onClick={() => setShowSecretName((prev) => !prev)}
-                    className="p-1 rounded text-slate-500 dark:text-[#8E8A9E] hover:text-amber-700 dark:hover:text-[#D4AF37] cursor-pointer"
+                    className="p-1 rounded text-[#a89f8c] hover:text-[#c9963a] cursor-pointer"
                     title={showSecretName ? 'Sembunyikan Nama' : 'Tampilkan Nama'}
                   >
                     {showSecretName ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 )}
               </div>
-              <span className="text-[11px] text-slate-500 dark:text-[#6E6A7E]">
+              <span className="text-[11px] text-[#a89f8c]">
                 Nama pemain disembunyikan untuk mencegah kebocoran intipan
               </span>
             </div>
@@ -101,12 +102,12 @@ export default function FullscreenCardModal({
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.96 }}
               onClick={() => setRevealed(true)}
-              className="brass-sheen-btn min-h-[52px] px-8 py-3.5 rounded-2xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] font-bold text-base flex items-center gap-3 shadow-xl cursor-pointer transition-colors"
+              className="brass-sheen-btn min-h-[52px] px-8 py-3.5 rounded-2xl bg-[#c9963a] hover:bg-[#d8a74c] text-[#2a2018] font-bold text-base flex items-center gap-3 shadow-xl cursor-pointer transition-colors"
             >
               <Eye className="w-5 h-5" />
               <span>Ketuk untuk Melihat Peran Rahasia</span>
             </motion.button>
-            <p className="text-xs text-slate-500 dark:text-[#8E8A9E]">
+            <p className="text-xs text-[#a89f8c]">
               Pastikan pemain di sebelah Anda tidak melihat layar saat kartu dibuka.
             </p>
           </motion.div>
@@ -119,11 +120,11 @@ export default function FullscreenCardModal({
             className="flex flex-col items-center justify-center max-w-2xl my-auto gap-6 w-full"
           >
             <div className="space-y-2">
-              <h2 className="font-display text-2xl sm:text-4xl font-bold text-slate-900 dark:text-[#EDEAF0] text-balance">
+              <h2 className="font-display text-2xl sm:text-4xl font-bold text-[#efe6d2] text-balance">
                 {card.heading}
               </h2>
               {card.subheading && (
-                <p className="text-base sm:text-lg font-medium text-purple-800 dark:text-[#A6A2B2]">
+                <p className="text-base sm:text-lg font-medium text-[#c9963a]">
                   {card.subheading}
                 </p>
               )}
@@ -134,9 +135,9 @@ export default function FullscreenCardModal({
                 initial={{ scale: 0.75 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 360, damping: 20 }}
-                className="my-2 px-10 py-6 rounded-3xl border-2 border-amber-500 dark:border-[#D4AF37]/50 bg-white dark:bg-[#14141B] shadow-2xl"
+                className="my-2 px-10 py-6 rounded-3xl border-2 border-[#c9963a]/60 bg-black/55 shadow-2xl"
               >
-                <span className="font-mono text-6xl sm:text-8xl font-bold text-amber-800 dark:text-[#FDE68A] tabular-nums">
+                <span className="font-mono text-6xl sm:text-8xl font-bold text-[#f2c56b] tabular-nums">
                   {card.bigText}
                 </span>
               </motion.div>
@@ -153,16 +154,16 @@ export default function FullscreenCardModal({
                       initial={{ opacity: 0, y: 16, scale: 0.9 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       transition={{ delay: i * 0.08, type: 'spring', stiffness: 280, damping: 22 }}
-                      className="flex flex-col items-center gap-2 max-w-[175px] p-4 rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] shadow-xl"
+                      className="flex flex-col items-center gap-2 max-w-[185px] p-4 rounded-3xl bg-black/45 border border-[#c9963a]/35 shadow-xl"
                     >
-                      <CharacterToken roleId={id} size="lg" />
-                      <span className="font-display text-base font-bold text-slate-900 dark:text-[#EDEAF0] mt-1">
+                      <CharacterToken roleId={id} size="lg" showAbility />
+                      <span className="font-display text-lg font-bold text-[#efe6d2] mt-1">
                         {role.name}
                       </span>
-                      <span className="text-[11px] text-amber-800 dark:text-[#D4AF37] font-semibold">
+                      <span className="text-[11px] text-[#c9963a] font-semibold">
                         {role.indonesianName}
                       </span>
-                      <p className="text-[11px] text-slate-600 dark:text-[#8E8A9E] leading-relaxed line-clamp-3">
+                      <p className="text-[11px] text-[#a89f8c] leading-relaxed line-clamp-3">
                         {role.ability}
                       </p>
                     </motion.div>
@@ -172,7 +173,7 @@ export default function FullscreenCardModal({
             )}
 
             {card.footerNote && (
-              <p className="text-xs text-slate-600 dark:text-[#8E8A9E] max-w-md leading-relaxed border-t border-purple-200 dark:border-white/[0.08] pt-3">
+              <p className="text-xs text-[#a89f8c] max-w-md leading-relaxed border-t border-[#c9963a]/25 pt-3">
                 {card.footerNote}
               </p>
             )}
@@ -180,9 +181,10 @@ export default function FullscreenCardModal({
         )}
       </AnimatePresence>
 
-      <div className="text-[11px] text-slate-500 dark:text-[#5A5766] font-mono">
+      <div className="text-[11px] text-[#a89f8c] font-mono">
         Tekan tombol Tutup di atas setelah pemain selesai melihat.
       </div>
-    </motion.div>
+      </VelvetBackdrop>
+    </div>
   );
 }

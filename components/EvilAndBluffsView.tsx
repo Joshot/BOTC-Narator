@@ -99,10 +99,11 @@ export default function EvilAndBluffsView({
                     roleId={demon.trueRoleId}
                     size="sm"
                     isDead={!demon.isAlive}
+                    deathCause={demon.deathCause}
                   />
                 </div>
                 <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-[#8E8A9E]">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-[#A89F8C]">
                     <span className="font-mono tabular-nums text-amber-800 dark:text-[#D4AF37] font-bold">
                       Kursi {demon.seatIndex + 1}
                     </span>
@@ -117,7 +118,7 @@ export default function EvilAndBluffsView({
                       {ROLE_MAP[demon.trueRoleId]?.name}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-600 dark:text-[#8E8A9E] leading-relaxed pt-0.5">
+                  <p className="text-xs text-slate-700 dark:text-[#A89F8C] leading-relaxed pt-0.5">
                     {ROLE_MAP[demon.trueRoleId]?.ability}
                   </p>
                 </div>
