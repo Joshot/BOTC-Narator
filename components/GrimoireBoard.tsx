@@ -12,6 +12,9 @@ import {
   LayoutGrid,
   Moon,
   Plus,
+  RotateCcw,
+  RotateCw,
+  ScrollText,
   SlidersHorizontal,
   Sparkles,
   Sun,
@@ -22,6 +25,7 @@ import {
 import { ALL_TB_ROLES, ROLE_MAP } from '@/lib/botc-data';
 import {
   DayNomination,
+  DayTimerState,
   GamePhase,
   PlayerSeat,
   calculateNominationThresholds,
@@ -29,6 +33,7 @@ import {
   getPlayerAlignment,
   isPlayerPoisoned,
 } from '@/lib/botc-engine';
+import type { TimerAction } from '@/context/GameContext';
 import {
   ART_ASSETS,
   BOARD_CHROME,
@@ -40,13 +45,14 @@ import { fitRing, placeSeatMenu, reminderStack, stackAngle } from '@/lib/ring-ge
 import { SilentCardPayload } from './FullscreenCardModal';
 import DesignateDrunkModal from './DesignateDrunkModal';
 import PeekCardModal from './PeekCardModal';
-import VelvetBackdrop from './grimoire/VelvetBackdrop';
+import VelvetBackdrop, { VelvetColourSelector } from './grimoire/VelvetBackdrop';
 import ParchmentSurface from './grimoire/ParchmentSurface';
 import { CharacterTokenFront, ReminderDisc } from './grimoire/TokenPrimitives';
 import SeatContextMenu from './grimoire/SeatContextMenu';
 import ReminderPicker from './grimoire/ReminderPicker';
 import ShowSheetModal from './grimoire/ShowSheetModal';
 import ReferenceDrawer from './grimoire/ReferenceDrawer';
+import GameTimerWidget from './grimoire/GameTimerWidget';
 import BoardToolsMenu from './grimoire/BoardToolsMenu';
 import {
   DayNominationControls,
@@ -65,6 +71,9 @@ export interface GrimoireBoardProps {
   winner?: 'good' | 'evil' | null;
   velvetColour?: VelvetColour;
   nominationsToday?: DayNomination[];
+  dayTimer?: DayTimerState | null;
+  phaseStartedAt?: number;
+  onTimerAction?: (action: TimerAction) => void;
   canUndo?: boolean;
   canRedo?: boolean;
   onUndo?: () => void;
@@ -111,6 +120,9 @@ export default function GrimoireBoard({
   winner = null,
   velvetColour = 'midnight',
   nominationsToday = [],
+  dayTimer = null,
+  phaseStartedAt,
+  onTimerAction,
   canUndo = false,
   canRedo = false,
   onUndo,
@@ -408,6 +420,16 @@ export default function GrimoireBoard({
                 <span className="px-3 py-1.5 rounded-xl bg-black/50 border border-[#c9963a]/40 font-display text-xs sm:text-sm font-bold text-[#efe6d2]">
                   {phaseLabel} · {voteStats.aliveCount}H / {voteStats.votesNeeded} Suara
                 </span>
+                {onTimerAction && (
+                  <div className="hidden lg:flex">
+                    <GameTimerWidget
+                      timer={dayTimer}
+                      phaseStartedAt={phaseStartedAt}
+                      onAction={onTimerAction}
+                      variant="compact"
+                    />
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2">
                 {onAdvancePhase && (
@@ -491,6 +513,9 @@ export default function GrimoireBoard({
                     onToggleStealth={() => setSpyStealth((prev) => !prev)}
                     velvetColour={velvetColour}
                     onVelvetColourChange={onVelvetColourChange}
+                    dayTimer={dayTimer}
+                    phaseStartedAt={phaseStartedAt}
+                    onTimerAction={onTimerAction}
                     canUndo={canUndo}
                     canRedo={canRedo}
                     onUndo={onUndo}
@@ -622,17 +647,67 @@ export default function GrimoireBoard({
             }}
             className="relative w-full flex-1 min-h-[480px] select-none overflow-hidden"
           >
-            {/* Top-Left Block: Compact Click-to-Open Tools Menu (+ optional Daftar on lg+) */}
+            {/* Top-Left Block: Compact Menu on Mobile/Tablet; Direct Rotate, Kursi, Daftar & Menu on Desktop (lg+) */}
             <div
               onClick={(e) => e.stopPropagation()}
-              className="absolute top-2.5 left-2.5 sm:top-4 sm:left-4 z-30 flex items-center gap-1.5 p-1 sm:p-1.5 rounded-2xl backdrop-blur-md"
+              className="absolute top-2.5 left-2.5 sm:top-4 sm:left-4 z-30 flex items-center gap-1 p-1 sm:p-1.5 rounded-2xl backdrop-blur-md"
               style={{
                 backgroundColor: BOARD_CHROME.blockBg,
                 border: `1px solid ${BOARD_CHROME.blockBorder}`,
                 boxShadow: BOARD_CHROME.liftedShadow,
               }}
             >
-              <div className="relative flex items-center gap-1">
+              {onRotateRing && (
+                <div className="hidden lg:flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => onRotateRing('ccw')}
+                    title="Putar semua kursi berlawanan jarum jam"
+                    className="p-1.5 rounded-lg text-[#efe6d2] hover:bg-white/10 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onRotateRing('cw')}
+                    title="Putar semua kursi searah jarum jam"
+                    className="p-1.5 rounded-lg text-[#efe6d2] hover:bg-white/10 cursor-pointer"
+                  >
+                    <RotateCw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {onAddSeat && (
+                <button
+                  type="button"
+                  onClick={() => setArrangeGapsVisible((prev) => !prev)}
+                  className={`hidden lg:flex px-2.5 py-1.5 rounded-xl text-xs font-bold items-center gap-1 cursor-pointer transition-colors ${
+                    arrangeGapsVisible
+                      ? 'bg-[#c9963a] text-[#2a2018]'
+                      : 'text-[#efe6d2] hover:bg-white/10'
+                  }`}
+                  title="Tambahkan kursi Traveller / pemain baru di celah cincin"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Kursi</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMoreMenuOpen(false);
+                  setViewMode('cards');
+                }}
+                className="hidden lg:flex min-h-[36px] px-2.5 py-1.5 rounded-xl text-xs font-bold items-center gap-1.5 text-[#efe6d2] hover:bg-white/10 cursor-pointer"
+                title="Buka tampilan daftar kartu"
+              >
+                <LayoutGrid className="w-3.5 h-3.5 text-[#c9963a]" />
+                <span>Daftar</span>
+              </button>
+
+              <div className="relative flex items-center gap-1 lg:border-l lg:border-[#c9963a]/25 lg:pl-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -641,28 +716,21 @@ export default function GrimoireBoard({
                   }}
                   aria-label="Menu Alat Grimoire"
                   aria-expanded={moreMenuOpen}
-                  title="Buka Menu Alat (Putar, Kursi, Skrip, Undo/Redo, Kain)"
-                  className={`min-h-[36px] sm:min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                  title="Buka Menu Alat (Timer, Undo/Redo, Skrip, Kain, Pengaturan)"
+                  className={`min-h-[36px] sm:min-h-[38px] lg:min-h-[34px] px-2.5 sm:px-3 lg:px-2 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
                     moreMenuOpen
                       ? 'bg-[#c9963a] text-[#2a2018]'
                       : 'text-[#efe6d2] hover:bg-white/10'
                   }`}
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
-                  <span>Menu</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMoreMenuOpen(false);
-                    setViewMode('cards');
-                  }}
-                  className="hidden lg:flex min-h-[38px] px-2.5 py-1.5 rounded-xl text-xs font-bold items-center gap-1.5 text-[#efe6d2] hover:bg-white/10 cursor-pointer"
-                  title="Buka tampilan daftar kartu"
-                >
-                  <LayoutGrid className="w-3.5 h-3.5 text-[#c9963a]" />
-                  <span>Daftar</span>
+                  <span className="lg:hidden">Menu</span>
+                  {dayTimer?.deadline && (
+                    <span
+                      aria-label="Timer aktif"
+                      className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse lg:hidden"
+                    />
+                  )}
                 </button>
 
                 {onAddSeat && arrangeGapsVisible && (
@@ -670,7 +738,7 @@ export default function GrimoireBoard({
                     type="button"
                     onClick={() => setArrangeGapsVisible(false)}
                     title="Selesai menambah kursi"
-                    className="min-h-[36px] px-2.5 py-1.5 rounded-xl bg-[#c9963a] text-[#2a2018] text-xs font-bold flex items-center gap-1 cursor-pointer shadow"
+                    className="lg:hidden min-h-[36px] px-2.5 py-1.5 rounded-xl bg-[#c9963a] text-[#2a2018] text-xs font-bold flex items-center gap-1 cursor-pointer shadow"
                   >
                     <X className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">+Kursi</span>
@@ -694,6 +762,9 @@ export default function GrimoireBoard({
                   onToggleStealth={() => setSpyStealth((prev) => !prev)}
                   velvetColour={velvetColour}
                   onVelvetColourChange={onVelvetColourChange}
+                  dayTimer={dayTimer}
+                  phaseStartedAt={phaseStartedAt}
+                  onTimerAction={onTimerAction}
                   canUndo={canUndo}
                   canRedo={canRedo}
                   onUndo={onUndo}
@@ -704,7 +775,7 @@ export default function GrimoireBoard({
               </div>
             </div>
 
-            {/* Top-Right Block: Show Cards (+ active Stealth badge if enabled) */}
+            {/* Top-Right Block: Show Cards (+ Skrip, Velvet Swatches, Stealth direct on Desktop lg+) */}
             <div
               onClick={(e) => e.stopPropagation()}
               className="absolute top-2.5 right-2.5 sm:top-4 sm:right-4 z-30 flex items-center justify-end gap-1.5 p-1 sm:p-1.5 rounded-2xl backdrop-blur-md"
@@ -714,18 +785,6 @@ export default function GrimoireBoard({
                 boxShadow: BOARD_CHROME.liftedShadow,
               }}
             >
-              {spyStealth && (
-                <button
-                  type="button"
-                  onClick={() => setSpyStealth(false)}
-                  title="Mode Stealth aktif — ketuk untuk mematikan"
-                  className="min-h-[36px] sm:min-h-[38px] px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                >
-                  <EyeOff className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Stealth</span>
-                </button>
-              )}
-
               <button
                 type="button"
                 onClick={() => {
@@ -734,10 +793,47 @@ export default function GrimoireBoard({
                   setShowSheetInitialRoleId(undefined);
                   setIsShowSheetOpen(true);
                 }}
-                className="min-h-[36px] sm:min-h-[38px] px-3 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#d8a74c] text-[#2a2018] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow"
+                className="min-h-[36px] sm:min-h-[38px] lg:min-h-[34px] px-3 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#d8a74c] text-[#2a2018] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow"
               >
                 <Eye className="w-3.5 h-3.5" />
                 <span>Tunjuk</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsRefDrawerOpen(true)}
+                className="hidden lg:flex px-2.5 py-1.5 rounded-xl text-[#efe6d2] hover:bg-white/10 text-xs font-bold items-center gap-1.5 cursor-pointer"
+              >
+                <ScrollText className="w-3.5 h-3.5 text-[#c9963a]" />
+                <span>Skrip</span>
+              </button>
+
+              {onVelvetColourChange && (
+                <div className="hidden lg:flex items-center pl-1 border-l border-[#c9963a]/25">
+                  <VelvetColourSelector
+                    value={velvetColour}
+                    onChange={onVelvetColourChange}
+                    compact
+                  />
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setSpyStealth((prev) => !prev)}
+                title={spyStealth ? 'Matikan mode stealth' : 'Sembunyikan reminder & rahasia Drunk'}
+                className={`min-h-[36px] sm:min-h-[38px] lg:min-h-[34px] px-2 lg:p-1.5 rounded-xl cursor-pointer transition-colors items-center gap-1 text-xs font-bold ${
+                  spyStealth
+                    ? 'flex bg-emerald-600 text-white'
+                    : 'hidden lg:flex text-[#efe6d2] hover:bg-white/10'
+                }`}
+              >
+                {spyStealth ? (
+                  <EyeOff className="w-3.5 h-3.5" />
+                ) : (
+                  <Users className="w-3.5 h-3.5" />
+                )}
+                {spyStealth && <span className="hidden sm:inline lg:hidden">Stealth</span>}
               </button>
             </div>
 
@@ -827,96 +923,43 @@ export default function GrimoireBoard({
                   );
                 })}
 
-              {/* Center-of-Ring Focal Content */}
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="pointer-events-none absolute inset-0 flex items-center justify-center z-20"
-              >
-                <div className="pointer-events-auto flex flex-col items-center text-center gap-2 max-w-[290px]">
-                  {winner ? (
-                    /* Center-of-Ring Victory Announcement (zero intrusive edge banners!) */
-                    <div
-                      className="rounded-3xl px-5 py-4 backdrop-blur-md shadow-2xl space-y-2 border"
-                      style={{
-                        backgroundColor: 'rgba(18, 22, 20, 0.88)',
-                        borderColor:
-                          winner === 'good'
-                            ? 'rgba(95, 163, 230, 0.65)'
-                            : 'rgba(224, 87, 75, 0.65)',
-                      }}
-                    >
-                      <Trophy
-                        className="w-8 h-8 mx-auto"
-                        style={{ color: winner === 'good' ? '#5fa3e6' : '#e0574b' }}
-                      />
-                      <h3
-                        className="font-display text-2xl font-bold tracking-wide"
-                        style={{ color: winner === 'good' ? '#7ec3ff' : '#ffa299' }}
-                      >
-                        {winner === 'good' ? 'TIM GOOD MENANG' : 'TIM EVIL MENANG'}
-                      </h3>
-                      <p className="text-[11px] text-[#a89f8c]">
-                        {winner === 'good'
-                          ? 'Demon berhasil dieksekusi di Ravenswood Bluff.'
-                          : 'Kegelapan menguasai Ravenswood Bluff.'}
-                      </p>
-                      {onSetWinnerManual && (
-                        <button
-                          type="button"
-                          onClick={() => onSetWinnerManual(null)}
-                          className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-[10px] font-mono uppercase tracking-wider text-[#efe6d2] cursor-pointer"
-                        >
-                          Bersihkan Status
-                        </button>
-                      )}
-                    </div>
-                  ) : phase === 'day' && (activeNomination || pendingNomineeId) && onStartNomination && onToggleNominationVote && onResetNominationVotes && onMarkNominationExecution && onCancelNomination ? (
-                    <DayNominationControls
-                      players={players}
-                      nominationsToday={nominationsToday}
-                      activeNomination={activeNomination}
-                      pendingNomineeId={pendingNomineeId}
-                      onSelectNomineeForSetup={setPendingNomineeId}
-                      onStartNomination={handleCreateNomination}
-                      onToggleVoter={onToggleNominationVote}
-                      onResetVotes={onResetNominationVotes}
-                      onMarkExecution={onMarkNominationExecution}
-                      onDone={handleDismissNomination}
-                      onCancelNomination={onCancelNomination}
+              {/* Center-of-Ring Idle Emblem (Hidden while elevated Winner / Nomination popup is active) */}
+              {!winner && !(phase === 'day' && (activeNomination || pendingNomineeId)) && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="pointer-events-none absolute inset-0 flex items-center justify-center z-20"
+                >
+                  <div className="pointer-events-auto flex flex-col items-center text-center gap-1.5 max-w-[290px] opacity-95">
+                    <img
+                      src={ART_ASSETS.editionTb}
+                      alt="Trouble Brewing"
+                      draggable={false}
+                      className="w-11 h-11 sm:w-14 sm:h-14 object-contain drop-shadow"
                     />
-                  ) : (
-                    <div className="flex flex-col items-center gap-1.5 opacity-95">
-                      <img
-                        src={ART_ASSETS.editionTb}
-                        alt="Trouble Brewing"
-                        draggable={false}
-                        className="w-11 h-11 sm:w-14 sm:h-14 object-contain drop-shadow"
-                      />
-                      <div className="text-[11px] font-mono uppercase tracking-[0.14em] text-[#efe6d2]">
-                        {players.length} Pemain · {voteStats.aliveCount} Hidup
-                      </div>
-                      {phase === 'day' && onCancelNomination && (
-                        <DayNominationsSummary
-                          players={players}
-                          nominationsToday={validNominationsToday}
-                          onReopenNomination={handleReopenNomination}
-                          onCancelNomination={onCancelNomination}
-                        />
-                      )}
-                      {phase === 'day' && onStartNomination && (
-                        <button
-                          type="button"
-                          onClick={() => setPendingNomineeId(players[0]?.id ?? null)}
-                          className="mt-0.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 border border-[#c9963a]/50 text-[11px] font-bold text-[#c9963a] flex items-center gap-1.5 cursor-pointer shadow"
-                        >
-                          <Gavel className="w-3.5 h-3.5" />
-                          <span>Mulai Nominasi (Butuh {thresholds.execute})</span>
-                        </button>
-                      )}
+                    <div className="text-[11px] font-mono uppercase tracking-[0.14em] text-[#efe6d2]">
+                      {players.length} Pemain · {voteStats.aliveCount} Hidup
                     </div>
-                  )}
+                    {phase === 'day' && onCancelNomination && (
+                      <DayNominationsSummary
+                        players={players}
+                        nominationsToday={validNominationsToday}
+                        onReopenNomination={handleReopenNomination}
+                        onCancelNomination={onCancelNomination}
+                      />
+                    )}
+                    {phase === 'day' && onStartNomination && (
+                      <button
+                        type="button"
+                        onClick={() => setPendingNomineeId(players[0]?.id ?? null)}
+                        className="mt-0.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 border border-[#c9963a]/50 text-[11px] font-bold text-[#c9963a] flex items-center gap-1.5 cursor-pointer shadow"
+                      >
+                        <Gavel className="w-3.5 h-3.5" />
+                        <span>Mulai Nominasi (Butuh {thresholds.execute})</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Player Seats Around Ellipse */}
               {players.map((player, idx) => {
@@ -1275,7 +1318,7 @@ export default function GrimoireBoard({
               </div>
             </div>
 
-            {/* Bottom-Right Block: Phase Plaque & Prominent Next Phase CTA */}
+            {/* Bottom-Right Block: Phase Plaque, Desktop Timer, Next Phase CTA & Quick Winner */}
             <div
               onClick={(e) => e.stopPropagation()}
               className="absolute bottom-2.5 right-2.5 sm:bottom-4 sm:right-4 z-30 flex items-center gap-2 p-1 sm:p-1.5 lg:p-2 rounded-2xl backdrop-blur-md"
@@ -1299,6 +1342,17 @@ export default function GrimoireBoard({
                 </div>
               </div>
 
+              {onTimerAction && (
+                <div className="hidden lg:flex">
+                  <GameTimerWidget
+                    timer={dayTimer}
+                    phaseStartedAt={phaseStartedAt}
+                    onAction={onTimerAction}
+                    variant="compact"
+                  />
+                </div>
+              )}
+
               {onAdvancePhase && (
                 <button
                   type="button"
@@ -1314,7 +1368,111 @@ export default function GrimoireBoard({
                   <ChevronRight className="w-3.5 h-3.5 shrink-0" />
                 </button>
               )}
+
+              {onSetWinnerManual && !winner && (
+                <div className="hidden lg:flex items-center border-l border-[#c9963a]/25 pl-2 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onSetWinnerManual('good')}
+                    title="Tandai Tim Good Menang"
+                    className="px-2 py-1 rounded-lg bg-[#0064ac]/35 hover:bg-[#0064ac]/60 text-[#efe6d2] text-[10px] font-bold cursor-pointer"
+                  >
+                    Good
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSetWinnerManual('evil')}
+                    title="Tandai Tim Evil Menang"
+                    className="px-2 py-1 rounded-lg bg-[#760a0d]/45 hover:bg-[#760a0d]/70 text-[#efe6d2] text-[10px] font-bold cursor-pointer"
+                  >
+                    Evil
+                  </button>
+                </div>
+              )}
             </div>
+
+            {/* Elevated Stage Overlay (z-40): Always paints ABOVE seat tokens, reminder discs, and corner docks */}
+            {winner ? (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center p-3"
+              >
+                <div
+                  className="pointer-events-auto max-w-[290px] w-full text-center rounded-3xl px-5 py-4 backdrop-blur-md shadow-2xl space-y-2 border"
+                  style={{
+                    backgroundColor: 'rgba(18, 22, 20, 0.92)',
+                    borderColor:
+                      winner === 'good'
+                        ? 'rgba(95, 163, 230, 0.65)'
+                        : 'rgba(224, 87, 75, 0.65)',
+                  }}
+                >
+                  <Trophy
+                    className="w-8 h-8 mx-auto"
+                    style={{ color: winner === 'good' ? '#5fa3e6' : '#e0574b' }}
+                  />
+                  <h3
+                    className="font-display text-2xl font-bold tracking-wide"
+                    style={{ color: winner === 'good' ? '#7ec3ff' : '#ffa299' }}
+                  >
+                    {winner === 'good' ? 'TIM GOOD MENANG' : 'TIM EVIL MENANG'}
+                  </h3>
+                  <p className="text-[11px] text-[#a89f8c]">
+                    {winner === 'good'
+                      ? 'Demon berhasil dieksekusi di Ravenswood Bluff.'
+                      : 'Kegelapan menguasai Ravenswood Bluff.'}
+                  </p>
+                  {onSetWinnerManual && (
+                    <button
+                      type="button"
+                      onClick={() => onSetWinnerManual(null)}
+                      className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-[10px] font-mono uppercase tracking-wider text-[#efe6d2] cursor-pointer"
+                    >
+                      Bersihkan Status
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : phase === 'day' &&
+              (activeNomination || pendingNomineeId) &&
+              onStartNomination &&
+              onToggleNominationVote &&
+              onResetNominationVotes &&
+              onMarkNominationExecution &&
+              onCancelNomination ? (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!activeNomination && pendingNomineeId) {
+                    setPendingNomineeId(null);
+                  }
+                }}
+                className={`absolute inset-0 z-40 flex items-center justify-center p-2 sm:p-3 ${
+                  !activeNomination && pendingNomineeId
+                    ? 'bg-black/50 backdrop-blur-[2px] pointer-events-auto'
+                    : 'pointer-events-none'
+                }`}
+              >
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="pointer-events-auto flex justify-center"
+                >
+                  <DayNominationControls
+                    players={players}
+                    nominationsToday={nominationsToday}
+                    activeNomination={activeNomination}
+                    pendingNomineeId={pendingNomineeId}
+                    onSelectNomineeForSetup={setPendingNomineeId}
+                    onStartNomination={handleCreateNomination}
+                    onToggleVoter={onToggleNominationVote}
+                    onResetVotes={onResetNominationVotes}
+                    onMarkExecution={onMarkNominationExecution}
+                    onDone={handleDismissNomination}
+                    onCancelNomination={onCancelNomination}
+                  />
+                </div>
+              </div>
+            ) : null}
 
             {/* Collision-avoidant Floating Seat Context Popover */}
             {menuSeat && menuAnchor && (
@@ -1328,7 +1486,10 @@ export default function GrimoireBoard({
                   top: menuAnchor.top,
                 }}
                 onOpenReminderPicker={() => setReminderPickerSeatId(menuSeat.id)}
-                onStartNomination={() => setPendingNomineeId(menuSeat.id)}
+                onStartNomination={() => {
+                  setMenuSeatId(null);
+                  setPendingNomineeId(menuSeat.id);
+                }}
                 onKill={(cause) => {
                   if (onKillPlayer) onKillPlayer(menuSeat.id, cause);
                   else onToggleAlive(menuSeat.id, cause);

@@ -19,15 +19,18 @@ import {
 } from 'lucide-react';
 import { ROLE_MAP, ROLES } from '@/lib/botc-data';
 import {
+  DayTimerState,
   GamePhase,
   PlayerSeat,
   buildNightOrder,
   calculateVoteThreshold,
   isPlayerPoisoned,
 } from '@/lib/botc-engine';
+import type { TimerAction } from '@/context/GameContext';
 import { SilentCardPayload } from './FullscreenCardModal';
 import { CharacterToken } from './TokenArtwork';
 import ShowSheetModal from './grimoire/ShowSheetModal';
+import GameTimerWidget from './grimoire/GameTimerWidget';
 
 interface NarratorViewProps {
   phase: GamePhase;
@@ -37,6 +40,9 @@ interface NarratorViewProps {
   demonBluffIds: string[];
   lastNightDeaths: string[];
   gameAlertBanner: string | null;
+  dayTimer?: DayTimerState | null;
+  phaseStartedAt?: number;
+  onTimerAction?: (action: TimerAction) => void;
   onChangePhase: (nextPhase: GamePhase) => void;
   onSetSingleReminderTarget: (reminderId: string, targetPlayerId: string) => void;
   onResolveImpAttack: (targetPlayerId: string) => { outcomeMessage: string };
@@ -56,6 +62,9 @@ export default function NarratorView({
   demonBluffIds,
   lastNightDeaths,
   gameAlertBanner,
+  dayTimer = null,
+  phaseStartedAt,
+  onTimerAction,
   onChangePhase,
   onSetSingleReminderTarget,
   onResolveImpAttack,
@@ -932,8 +941,17 @@ export default function NarratorView({
             </div>
           </div>
 
-          {/* Right Column: Day Abilities Helper (Slayer & Virgin) */}
+          {/* Right Column: Day Timer & Abilities Helper (Slayer & Virgin) */}
           <div className="lg:col-span-5 space-y-5">
+            {onTimerAction && (
+              <GameTimerWidget
+                timer={dayTimer}
+                phaseStartedAt={phaseStartedAt}
+                onAction={onTimerAction}
+                variant="panel"
+              />
+            )}
+
             {/* Slayer Day Action */}
             <div className="bg-white dark:bg-[#181520] border border-purple-200 dark:border-[#2A2636] rounded-2xl p-5 space-y-3 shadow-lg">
               <h3 className="font-display text-base font-bold text-slate-900 dark:text-[#F5EFE6] flex items-center gap-2">

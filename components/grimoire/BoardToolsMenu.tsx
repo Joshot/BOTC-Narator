@@ -1,10 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   BookOpen,
+  Clock,
   EyeOff,
   LayoutGrid,
+  Minus,
+  Pause,
+  Play,
   Plus,
   Redo2,
   RotateCcw,
@@ -16,6 +20,13 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import {
+  DAY_TIMER_PRESETS_SEC,
+  DayTimerState,
+  computeTimerRemainingMs,
+  formatTimerClock,
+} from '@/lib/botc-engine';
+import type { TimerAction } from '@/context/GameContext';
 import type { VelvetColour } from '@/lib/grimoire-theme';
 import { VelvetColourSelector } from './VelvetBackdrop';
 
@@ -34,6 +45,9 @@ export interface BoardToolsMenuProps {
   onToggleStealth: () => void;
   velvetColour: VelvetColour;
   onVelvetColourChange?: (colour: VelvetColour) => void;
+  dayTimer?: DayTimerState | null;
+  phaseStartedAt?: number;
+  onTimerAction?: (action: TimerAction) => void;
   canUndo?: boolean;
   canRedo?: boolean;
   onUndo?: () => void;
@@ -61,6 +75,9 @@ export default function BoardToolsMenu({
   onToggleStealth,
   velvetColour,
   onVelvetColourChange,
+  dayTimer = null,
+  phaseStartedAt,
+  onTimerAction,
   canUndo = false,
   canRedo = false,
   onUndo,
@@ -68,14 +85,30 @@ export default function BoardToolsMenu({
   winner = null,
   onSetWinnerManual,
 }: BoardToolsMenuProps) {
+  const [now, setNow] = useState<number>(() => Date.now());
+  const isRunning = Boolean(dayTimer?.deadline !== null && dayTimer?.deadline !== undefined);
+
+  useEffect(() => {
+    if (!isOpen || (!isRunning && !phaseStartedAt)) return;
+    setNow(Date.now());
+    const id = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(id);
+  }, [isOpen, isRunning, phaseStartedAt]);
+
   if (!isOpen) return null;
+
+  const remainingMs = dayTimer ? computeTimerRemainingMs(dayTimer, now) : 0;
+  const elapsedMs = phaseStartedAt ? Math.max(0, now - phaseStartedAt) : 0;
+  const countdownLabel = dayTimer ? formatTimerClock(remainingMs) : '05:00';
+  const isFinished = Boolean(dayTimer && isRunning && remainingMs <= 0);
+  const isLow = Boolean(dayTimer && remainingMs > 0 && remainingMs <= 30_000);
 
   return (
     <div
       role="menu"
       className={`absolute ${
         align === 'right' ? 'right-0' : 'left-0'
-      } top-full mt-2 w-[264px] sm:w-[288px] max-w-[calc(100vw-24px)] rounded-2xl p-2.5 z-50 shadow-2xl border border-[#c9963a]/40 bg-[#141a1d]/95 backdrop-blur-md space-y-2`}
+      } top-full mt-2 w-[268px] sm:w-[292px] max-w-[calc(100vw-24px)] max-h-[calc(100dvh-100px)] overflow-y-auto rounded-2xl p-2.5 z-50 shadow-2xl border border-[#c9963a]/40 bg-[#141a1d]/95 backdrop-blur-md space-y-2`}
     >
       <div className="flex items-center justify-between px-1 pb-1 border-b border-white/10">
         <span className="text-[10px] font-bold uppercase tracking-wider text-[#c9963a]">
@@ -251,6 +284,103 @@ export default function BoardToolsMenu({
               <span className="text-[9px] font-mono text-[#a89f8c]">Ctrl+Y</span>
             </button>
           )}
+        </div>
+      )}
+
+      {/* Discussion Timer */}
+      {onTimerAction && (
+        <div className="rounded-xl bg-white/5 border border-white/10 p-2 space-y-1.5">
+          <div className="flex items-center justify-between gap-1">
+            <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#c9963a]">
+              <Clock className="w-3 h-3" />
+              <span>Timer</span>
+              {phaseStartedAt && (
+                <span className="font-mono font-normal text-[#a89f8c] lowercase">
+                  · {formatTimerClock(elapsedMs)}
+                </span>
+              )}
+            </span>
+            <div className="flex items-center gap-1">
+              {DAY_TIMER_PRESETS_SEC.slice(0, 3).map((sec) => {
+                const active = dayTimer && Math.round(dayTimer.durationMs / 1000) === sec;
+                return (
+                  <button
+                    key={sec}
+                    type="button"
+                    onClick={() => onTimerAction({ type: 'setDuration', seconds: sec })}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer ${
+                      active ? 'bg-[#c9963a] text-[#2a2018]' : 'bg-white/10 text-[#efe6d2] hover:bg-white/20'
+                    }`}
+                  >
+                    {sec / 60}m
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => onTimerAction({ type: 'reset' })}
+                title="Reset Timer"
+                aria-label="Reset Timer"
+                className="p-1 rounded bg-white/10 hover:bg-white/20 text-[#efe6d2] cursor-pointer"
+              >
+                <RotateCcw className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-1.5">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => onTimerAction({ type: 'adjustSeconds', deltaSeconds: -30 })}
+                title="Kurangi 30 detik"
+                aria-label="Kurangi 30 detik"
+                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-[#efe6d2] flex items-center justify-center cursor-pointer"
+              >
+                <Minus className="w-3 h-3" />
+              </button>
+              <span
+                className={`min-w-[54px] text-center font-mono text-sm font-black tabular-nums ${
+                  isFinished
+                    ? 'text-[#ff9c94] animate-pulse'
+                    : isLow && isRunning
+                    ? 'text-[#f2c56b]'
+                    : 'text-[#efe6d2]'
+                }`}
+              >
+                {countdownLabel}
+              </span>
+              <button
+                type="button"
+                onClick={() => onTimerAction({ type: 'adjustSeconds', deltaSeconds: 30 })}
+                title="Tambah 30 detik"
+                aria-label="Tambah 30 detik"
+                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-[#efe6d2] flex items-center justify-center cursor-pointer"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                onTimerAction({ type: isRunning && remainingMs > 0 ? 'pause' : 'start' })
+              }
+              className="min-h-[30px] px-2.5 py-1 rounded-lg bg-[#c9963a] hover:bg-[#e0b254] text-[#2a2018] text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+            >
+              {isRunning && remainingMs > 0 ? (
+                <>
+                  <Pause className="w-3 h-3" />
+                  <span>Jeda</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3 h-3" />
+                  <span>Mulai</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 

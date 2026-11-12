@@ -248,7 +248,7 @@ export function DayNominationControls({
 
     return (
       <div
-        className="w-[272px] max-w-[92vw] rounded-2xl p-3 text-xs shadow-2xl backdrop-blur-md space-y-2.5"
+        className="w-[276px] max-w-[92vw] rounded-2xl p-3 text-xs backdrop-blur-md space-y-2.5 ring-1 ring-[#c9963a]/50 shadow-[0_20px_50px_rgba(0,0,0,0.85)]"
         style={{
           backgroundColor: BOARD_CHROME.voteSurface,
           border: `1px solid ${BOARD_CHROME.voteEdge}`,
@@ -362,7 +362,7 @@ export function DayNominationControls({
 
   return (
     <div
-      className="w-[282px] max-w-[94vw] rounded-2xl p-3 text-xs shadow-2xl backdrop-blur-md space-y-2"
+      className="w-[286px] max-w-[94vw] rounded-2xl p-3 text-xs backdrop-blur-md space-y-2 ring-1 ring-[#c9963a]/50 shadow-[0_20px_50px_rgba(0,0,0,0.85)]"
       style={{
         backgroundColor: BOARD_CHROME.voteSurface,
         border: `1px solid ${BOARD_CHROME.voteEdge}`,
