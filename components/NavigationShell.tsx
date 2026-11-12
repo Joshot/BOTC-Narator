@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Check,
   ChevronDown,
-  Compass,
   Moon,
   Plus,
   Sun,
@@ -76,11 +75,15 @@ export default function NavigationShell({ children }: { children: React.ReactNod
               href="/"
               className="flex items-center gap-2.5 focus:outline-none group cursor-pointer"
             >
-              <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.1] flex items-center justify-center group-hover:border-[#D4AF37] transition-colors shadow-inner">
-                <Compass className="w-4 h-4 text-amber-600 dark:text-[#D4AF37] transition-transform duration-500 group-hover:rotate-45" />
+              <div className="w-8 h-8 rounded-lg bg-[#230911] border border-purple-200 dark:border-[#D4AF37]/40 flex items-center justify-center overflow-hidden group-hover:border-[#D4AF37] transition-colors shadow-inner">
+                <img
+                  src="/icons/icon-192.png"
+                  alt="Logo BOTC"
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
               </div>
               <span className="font-display text-base font-bold tracking-tight text-slate-900 dark:text-[#EDEAF0] group-hover:text-amber-700 dark:group-hover:text-[#D4AF37] transition-colors">
-                Grimoire BOTC
+                {process.env.NEXT_PUBLIC_APP_MODE === 'desktop' ? 'BOTC Desktop' : 'Grimoire BOTC'}
               </span>
             </Link>
           </div>

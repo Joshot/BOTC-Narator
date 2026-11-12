@@ -947,9 +947,12 @@ export default function StorytellerApp({
         <button
           type="button"
           onClick={() => navigateToView('dashboard')}
-          className="font-display text-base sm:text-lg font-bold tracking-tight text-[#F5EFE6] cursor-pointer hover:text-[#D4AF37] transition-colors"
+          className="flex items-center gap-2.5 font-display text-base sm:text-lg font-bold tracking-tight text-[#F5EFE6] cursor-pointer hover:text-[#D4AF37] transition-colors"
         >
-          Grimoire BOTC
+          <span className="w-7 h-7 rounded-lg bg-[#230911] border border-[#D4AF37]/40 overflow-hidden inline-flex items-center justify-center shrink-0">
+            <img src="/icons/icon-192.png" alt="Logo BOTC" className="w-full h-full object-cover" />
+          </span>
+          <span>{process.env.NEXT_PUBLIC_APP_MODE === 'desktop' ? 'BOTC Desktop' : 'Grimoire BOTC'}</span>
         </button>
       </header>
 
