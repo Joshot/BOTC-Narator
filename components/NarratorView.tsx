@@ -19,17 +19,14 @@ import {
 } from 'lucide-react';
 import { ROLE_MAP, ROLES } from '@/lib/botc-data';
 import {
-  DayTimerState,
   GamePhase,
   PlayerSeat,
   buildNightOrder,
   calculateVoteThreshold,
   isPlayerPoisoned,
 } from '@/lib/botc-engine';
-import type { TimerAction } from '@/context/GameContext';
 import { SilentCardPayload } from './FullscreenCardModal';
 import { CharacterToken } from './TokenArtwork';
-import GameTimerWidget from './grimoire/GameTimerWidget';
 import ShowSheetModal from './grimoire/ShowSheetModal';
 
 interface NarratorViewProps {
@@ -40,9 +37,6 @@ interface NarratorViewProps {
   demonBluffIds: string[];
   lastNightDeaths: string[];
   gameAlertBanner: string | null;
-  dayTimer?: DayTimerState | null;
-  phaseStartedAt?: number;
-  onTimerAction?: (action: TimerAction) => void;
   onChangePhase: (nextPhase: GamePhase) => void;
   onSetSingleReminderTarget: (reminderId: string, targetPlayerId: string) => void;
   onResolveImpAttack: (targetPlayerId: string) => { outcomeMessage: string };
@@ -62,9 +56,6 @@ export default function NarratorView({
   demonBluffIds,
   lastNightDeaths,
   gameAlertBanner,
-  dayTimer = null,
-  phaseStartedAt,
-  onTimerAction,
   onChangePhase,
   onSetSingleReminderTarget,
   onResolveImpAttack,
@@ -148,53 +139,55 @@ export default function NarratorView({
           </h2>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveStepIdx(0);
-              setCompletedStepIds([]);
-              setImpFeedback(null);
-              setDayActionResult(null);
-              if (phase === 'day') onTransitionDayToNextNight();
-              else onTransitionNightToDay();
-            }}
-            className={`brass-sheen-btn min-h-[42px] px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-md whitespace-nowrap ${
-              phase === 'day'
-                ? 'bg-[#991B1B] hover:bg-[#B91C1C] text-white'
-                : 'bg-[#D4AF37] hover:bg-[#E5C365] text-[#121016]'
-            }`}
-          >
-            {phase === 'day' ? (
-              <>
-                <Moon className="w-3.5 h-3.5 shrink-0" />
-                <span>Lanjut Malam {dayNumber + 1}</span>
-              </>
-            ) : (
-              <>
-                <Sun className="w-3.5 h-3.5 shrink-0" />
-                <span>
-                  Lanjut Siang {phase === 'first_night' ? 1 : Math.max(2, dayNumber)}
-                </span>
-              </>
-            )}
-            <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-          </button>
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
+          <div className="grid grid-cols-2 sm:flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveStepIdx(0);
+                setCompletedStepIds([]);
+                setImpFeedback(null);
+                setDayActionResult(null);
+                if (phase === 'day') onTransitionDayToNextNight();
+                else onTransitionNightToDay();
+              }}
+              className={`brass-sheen-btn min-h-[40px] px-3 sm:px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-md whitespace-nowrap ${
+                phase === 'day'
+                  ? 'bg-[#991B1B] hover:bg-[#B91C1C] text-white'
+                  : 'bg-[#D4AF37] hover:bg-[#E5C365] text-[#121016]'
+              }`}
+            >
+              {phase === 'day' ? (
+                <>
+                  <Moon className="w-3.5 h-3.5 shrink-0" />
+                  <span>Lanjut Malam {dayNumber + 1}</span>
+                </>
+              ) : (
+                <>
+                  <Sun className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    Lanjut Siang {phase === 'first_night' ? 1 : Math.max(2, dayNumber)}
+                  </span>
+                </>
+              )}
+              <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setIsShowSheetOpen(true)}
-            className="min-h-[42px] px-3.5 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-[#231F30] dark:hover:bg-[#312B44] border border-purple-200 dark:border-[#39324D] text-purple-950 dark:text-[#F5EFE6] text-xs font-semibold flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-          >
-            <Eye className="w-3.5 h-3.5 text-amber-700 dark:text-[#D4AF37]" />
-            <span>Tunjuk Kartu</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setIsShowSheetOpen(true)}
+              className="min-h-[40px] px-3 sm:px-3.5 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-[#231F30] dark:hover:bg-[#312B44] border border-purple-200 dark:border-[#39324D] text-purple-950 dark:text-[#F5EFE6] text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+            >
+              <Eye className="w-3.5 h-3.5 text-amber-700 dark:text-[#D4AF37]" />
+              <span>Tunjuk Kartu</span>
+            </button>
+          </div>
 
           <div className="grid grid-cols-3 gap-1 p-1 bg-purple-50 dark:bg-[#110F17] border border-purple-200 dark:border-[#292535] rounded-xl">
           <button
             type="button"
             onClick={() => handlePhaseSwitch('first_night')}
-            className={`min-h-[42px] px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap ${
+            className={`min-h-[38px] px-2 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition-colors whitespace-nowrap ${
               phase === 'first_night'
                 ? 'bg-[#991B1B] text-white shadow'
                 : 'text-slate-600 dark:text-[#B8B0A2] hover:text-purple-950 dark:hover:text-[#F5EFE6]'
@@ -207,7 +200,7 @@ export default function NarratorView({
           <button
             type="button"
             onClick={() => handlePhaseSwitch('day')}
-            className={`min-h-[42px] px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap ${
+            className={`min-h-[38px] px-2 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition-colors whitespace-nowrap ${
               phase === 'day'
                 ? 'bg-[#D4AF37] text-[#121016] shadow font-bold'
                 : 'text-slate-600 dark:text-[#B8B0A2] hover:text-purple-950 dark:hover:text-[#F5EFE6]'
@@ -220,7 +213,7 @@ export default function NarratorView({
           <button
             type="button"
             onClick={() => handlePhaseSwitch('other_night')}
-            className={`min-h-[42px] px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap ${
+            className={`min-h-[38px] px-2 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition-colors whitespace-nowrap ${
               phase === 'other_night'
                 ? 'bg-[#991B1B] text-white shadow'
                 : 'text-slate-600 dark:text-[#B8B0A2] hover:text-purple-950 dark:hover:text-[#F5EFE6]'
@@ -939,17 +932,8 @@ export default function NarratorView({
             </div>
           </div>
 
-          {/* Right Column: Storyteller Timer & Day Abilities Helper (Slayer & Virgin) */}
+          {/* Right Column: Day Abilities Helper (Slayer & Virgin) */}
           <div className="lg:col-span-5 space-y-5">
-            {onTimerAction && (
-              <GameTimerWidget
-                timer={dayTimer}
-                phaseStartedAt={phaseStartedAt}
-                onAction={onTimerAction}
-                variant="panel"
-              />
-            )}
-
             {/* Slayer Day Action */}
             <div className="bg-white dark:bg-[#181520] border border-purple-200 dark:border-[#2A2636] rounded-2xl p-5 space-y-3 shadow-lg">
               <h3 className="font-display text-base font-bold text-slate-900 dark:text-[#F5EFE6] flex items-center gap-2">

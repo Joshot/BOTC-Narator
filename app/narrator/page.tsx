@@ -17,9 +17,6 @@ export default function NarratorPage() {
     demonBluffIds,
     lastNightDeaths,
     gameAlertBanner,
-    dayTimer,
-    phaseStartedAt,
-    handleUpdateTimer,
     setPhase,
     handleSetSingleReminderTarget,
     handleResolveImpAttack,
@@ -69,9 +66,6 @@ export default function NarratorPage() {
         demonBluffIds={demonBluffIds}
         lastNightDeaths={lastNightDeaths}
         gameAlertBanner={gameAlertBanner}
-        dayTimer={dayTimer}
-        phaseStartedAt={phaseStartedAt}
-        onTimerAction={handleUpdateTimer}
         onChangePhase={setPhase}
         onSetSingleReminderTarget={handleSetSingleReminderTarget}
         onResolveImpAttack={handleResolveImpAttack}

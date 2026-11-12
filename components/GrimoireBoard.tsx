@@ -11,22 +11,17 @@ import {
   Gavel,
   LayoutGrid,
   Moon,
-  MoreVertical,
   Plus,
-  Redo2,
-  RotateCcw,
-  RotateCw,
-  ScrollText,
+  SlidersHorizontal,
   Sparkles,
   Sun,
   Trophy,
-  Undo2,
   Users,
+  X,
 } from 'lucide-react';
 import { ALL_TB_ROLES, ROLE_MAP } from '@/lib/botc-data';
 import {
   DayNomination,
-  DayTimerState,
   GamePhase,
   PlayerSeat,
   calculateNominationThresholds,
@@ -34,7 +29,6 @@ import {
   getPlayerAlignment,
   isPlayerPoisoned,
 } from '@/lib/botc-engine';
-import type { TimerAction } from '@/context/GameContext';
 import {
   ART_ASSETS,
   BOARD_CHROME,
@@ -46,14 +40,14 @@ import { fitRing, placeSeatMenu, reminderStack, stackAngle } from '@/lib/ring-ge
 import { SilentCardPayload } from './FullscreenCardModal';
 import DesignateDrunkModal from './DesignateDrunkModal';
 import PeekCardModal from './PeekCardModal';
-import VelvetBackdrop, { VelvetColourSelector } from './grimoire/VelvetBackdrop';
+import VelvetBackdrop from './grimoire/VelvetBackdrop';
 import ParchmentSurface from './grimoire/ParchmentSurface';
 import { CharacterTokenFront, ReminderDisc } from './grimoire/TokenPrimitives';
 import SeatContextMenu from './grimoire/SeatContextMenu';
 import ReminderPicker from './grimoire/ReminderPicker';
 import ShowSheetModal from './grimoire/ShowSheetModal';
 import ReferenceDrawer from './grimoire/ReferenceDrawer';
-import GameTimerWidget from './grimoire/GameTimerWidget';
+import BoardToolsMenu from './grimoire/BoardToolsMenu';
 import {
   DayNominationControls,
   DayNominationsSummary,
@@ -71,9 +65,6 @@ export interface GrimoireBoardProps {
   winner?: 'good' | 'evil' | null;
   velvetColour?: VelvetColour;
   nominationsToday?: DayNomination[];
-  dayTimer?: DayTimerState | null;
-  phaseStartedAt?: number;
-  onTimerAction?: (action: TimerAction) => void;
   canUndo?: boolean;
   canRedo?: boolean;
   onUndo?: () => void;
@@ -120,9 +111,6 @@ export default function GrimoireBoard({
   winner = null,
   velvetColour = 'midnight',
   nominationsToday = [],
-  dayTimer = null,
-  phaseStartedAt,
-  onTimerAction,
   canUndo = false,
   canRedo = false,
   onUndo,
@@ -177,6 +165,7 @@ export default function GrimoireBoard({
   const [focusedNomId, setFocusedNomId] = useState<string | null>(null);
   const [dismissedNomIds, setDismissedNomIds] = useState<string[]>([]);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [bluffMenuOpen, setBluffMenuOpen] = useState(false);
   const [bluffEditorOpen, setBluffEditorOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<{
     playerId: string;
@@ -236,6 +225,7 @@ export default function GrimoireBoard({
       } else if (e.key === 'Escape') {
         setMenuSeatId(null);
         setMoreMenuOpen(false);
+        setBluffMenuOpen(false);
         setSwapSourceSeatIdx(null);
         setArrangeGapsVisible(false);
         setReminderPickerSeatId(null);
@@ -298,14 +288,17 @@ export default function GrimoireBoard({
     return set;
   }, [players]);
 
+  const isPhoneStage = stageSize.width < 640;
+  const isTabletStage = stageSize.width >= 640 && stageSize.width < 1024;
+
   const ring = useMemo(() => {
-    const padX = stageSize.width < 640 ? 20 : 140;
-    const padY = stageSize.width < 640 ? 96 : 112;
-    const bandWidth = Math.max(260, stageSize.width - padX);
-    const bandHeight = Math.max(280, stageSize.height - padY);
-    const maxToken = stageSize.width < 640 ? 64 : 96;
+    const padX = isPhoneStage ? 20 : isTabletStage ? 88 : 132;
+    const padY = isPhoneStage ? 124 : isTabletStage ? 120 : 116;
+    const bandWidth = Math.max(256, stageSize.width - padX);
+    const bandHeight = Math.max(260, stageSize.height - padY);
+    const maxToken = isPhoneStage ? 62 : isTabletStage ? 82 : 94;
     return fitRing({ width: bandWidth, height: bandHeight }, players.length, maxToken);
-  }, [players.length, stageSize.height, stageSize.width]);
+  }, [isPhoneStage, isTabletStage, players.length, stageSize.height, stageSize.width]);
 
   const ringOffsetLeft = (stageSize.width - ring.band.width) / 2;
   const ringOffsetTop = (stageSize.height - ring.band.height) / 2;
@@ -332,7 +325,10 @@ export default function GrimoireBoard({
             x: ringOffsetLeft + pos.x,
             y: ringOffsetTop + pos.y,
           })),
-          menu: { width: 268, height: 390 },
+          menu: {
+            width: stageSize.width < 640 ? 248 : 268,
+            height: stageSize.width < 640 ? 344 : 390,
+          },
         })
       : null;
 
@@ -400,8 +396,8 @@ export default function GrimoireBoard({
         colour={velvetColour}
         className="rounded-3xl shadow-2xl border border-[#c9963a]/30"
         style={{
-          minHeight: viewMode === 'circle' ? '540px' : undefined,
-          height: viewMode === 'circle' ? 'calc(100vh - 138px)' : undefined,
+          minHeight: viewMode === 'circle' ? '480px' : undefined,
+          height: viewMode === 'circle' ? 'calc(100dvh - 116px)' : undefined,
         }}
       >
         {viewMode === 'cards' ? (
@@ -412,21 +408,13 @@ export default function GrimoireBoard({
                 <span className="px-3 py-1.5 rounded-xl bg-black/50 border border-[#c9963a]/40 font-display text-xs sm:text-sm font-bold text-[#efe6d2]">
                   {phaseLabel} · {voteStats.aliveCount}H / {voteStats.votesNeeded} Suara
                 </span>
-                {onTimerAction && (
-                  <GameTimerWidget
-                    timer={dayTimer}
-                    phaseStartedAt={phaseStartedAt}
-                    onAction={onTimerAction}
-                    variant="compact"
-                  />
-                )}
               </div>
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 {onAdvancePhase && (
                   <button
                     type="button"
                     onClick={onAdvancePhase}
-                    className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#e0b254] text-[#2a2018] font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow"
+                    className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#e0b254] text-[#2a2018] font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow whitespace-nowrap"
                   >
                     {phase === 'day' ? (
                       <Moon className="w-3.5 h-3.5" />
@@ -443,7 +431,7 @@ export default function GrimoireBoard({
                     setShowSheetInitialRoleId(undefined);
                     setIsShowSheetOpen(true);
                   }}
-                  className="px-2.5 py-1.5 rounded-xl bg-black/50 border border-[#c9963a]/45 text-[#c9963a] hover:bg-black/70 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                  className="min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl bg-black/50 border border-[#c9963a]/45 text-[#c9963a] hover:bg-black/70 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
                 >
                   <Eye className="w-3.5 h-3.5" />
                   <span>Tunjuk</span>
@@ -451,7 +439,7 @@ export default function GrimoireBoard({
                 <button
                   type="button"
                   onClick={() => setViewMode('circle')}
-                  className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-[#efe6d2] font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                  className="hidden md:flex min-h-[38px] px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-[#efe6d2] font-bold text-xs items-center gap-1.5 cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-[#c9963a]" />
                   <span>Lingkaran</span>
@@ -459,67 +447,58 @@ export default function GrimoireBoard({
                 <button
                   type="button"
                   onClick={() => setIsRefDrawerOpen(true)}
-                  className="px-2.5 py-1.5 rounded-xl bg-black/50 border border-[#c9963a]/35 text-[#efe6d2] font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                  className="hidden lg:flex min-h-[38px] px-2.5 py-1.5 rounded-xl bg-black/50 border border-[#c9963a]/35 text-[#efe6d2] font-bold text-xs items-center gap-1.5 cursor-pointer"
                 >
                   <BookOpen className="w-3.5 h-3.5 text-[#c9963a]" />
                   <span>Skrip</span>
                 </button>
-                {(onUndo || onRedo) && (
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setMoreMenuOpen((prev) => !prev)}
-                      aria-label="Menu Titik Tiga (Undo & Redo)"
-                      title="Menu Lainnya (Undo / Redo)"
-                      className="p-1.5 rounded-xl bg-black/50 border border-[#c9963a]/35 text-[#efe6d2] hover:bg-black/70 cursor-pointer"
-                    >
-                      <MoreVertical className="w-4 h-4 text-[#c9963a]" />
-                    </button>
-                    {moreMenuOpen && (
-                      <div
-                        className="absolute right-0 top-full mt-1.5 w-48 rounded-2xl p-1.5 z-50 shadow-2xl border border-[#c9963a]/40 bg-[#141a1d]/95 backdrop-blur-md space-y-1"
-                        role="menu"
-                      >
-                        {onUndo && (
-                          <button
-                            type="button"
-                            role="menuitem"
-                            disabled={!canUndo}
-                            onClick={() => {
-                              onUndo();
-                              setMoreMenuOpen(false);
-                            }}
-                            className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-[#efe6d2] hover:bg-white/10 disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-between cursor-pointer"
-                          >
-                            <span className="flex items-center gap-2">
-                              <Undo2 className="w-3.5 h-3.5 text-[#c9963a]" />
-                              Urungkan (Undo)
-                            </span>
-                            <span className="text-[10px] font-mono text-[#a89f8c]">Ctrl+Z</span>
-                          </button>
-                        )}
-                        {onRedo && (
-                          <button
-                            type="button"
-                            role="menuitem"
-                            disabled={!canRedo}
-                            onClick={() => {
-                              onRedo();
-                              setMoreMenuOpen(false);
-                            }}
-                            className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-[#efe6d2] hover:bg-white/10 disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-between cursor-pointer"
-                          >
-                            <span className="flex items-center gap-2">
-                              <Redo2 className="w-3.5 h-3.5 text-[#c9963a]" />
-                              Ulangi (Redo)
-                            </span>
-                            <span className="text-[10px] font-mono text-[#a89f8c]">Ctrl+Y</span>
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                {spyStealth && (
+                  <button
+                    type="button"
+                    onClick={() => setSpyStealth(false)}
+                    title="Matikan Mode Stealth"
+                    className="min-h-[38px] px-2 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <EyeOff className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Stealth</span>
+                  </button>
                 )}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setMoreMenuOpen((prev) => !prev)}
+                    aria-label="Menu Alat Grimoire"
+                    title="Alat & Pengaturan Grimoire"
+                    className={`min-h-[38px] px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                      moreMenuOpen
+                        ? 'bg-[#c9963a]/25 border-[#c9963a] text-[#f4e4bc]'
+                        : 'bg-black/50 border-[#c9963a]/35 text-[#efe6d2] hover:bg-black/70'
+                    }`}
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-[#c9963a]" />
+                    <span className="hidden sm:inline">Alat</span>
+                  </button>
+                  <BoardToolsMenu
+                    isOpen={moreMenuOpen}
+                    onClose={() => setMoreMenuOpen(false)}
+                    align="right"
+                    viewMode={viewMode}
+                    onToggleViewMode={() => setViewMode('circle')}
+                    arrangeGapsVisible={arrangeGapsVisible}
+                    onOpenScript={() => setIsRefDrawerOpen(true)}
+                    onOpenBluffs={() => setBluffEditorOpen(true)}
+                    spyStealth={spyStealth}
+                    onToggleStealth={() => setSpyStealth((prev) => !prev)}
+                    velvetColour={velvetColour}
+                    onVelvetColourChange={onVelvetColourChange}
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    onUndo={onUndo}
+                    onRedo={onRedo}
+                    winner={winner}
+                    onSetWinnerManual={onSetWinnerManual}
+                  />
+                </div>
               </div>
             </div>
 
@@ -639,189 +618,132 @@ export default function GrimoireBoard({
             onClick={() => {
               setMenuSeatId(null);
               setMoreMenuOpen(false);
+              setBluffMenuOpen(false);
             }}
-            className="relative w-full flex-1 min-h-[540px] select-none overflow-hidden"
+            className="relative w-full flex-1 min-h-[480px] select-none overflow-hidden"
           >
-            {/* Top-Left Block: Rotate, Add Seats, Layout toggle & Titik-3 Menu (Undo/Redo) */}
+            {/* Top-Left Block: Compact Click-to-Open Tools Menu (+ optional Daftar on lg+) */}
             <div
               onClick={(e) => e.stopPropagation()}
-              className="absolute top-3 left-3 sm:top-4 sm:left-4 z-30 flex flex-wrap items-center gap-1.5 p-1.5 rounded-2xl backdrop-blur-md"
+              className="absolute top-2.5 left-2.5 sm:top-4 sm:left-4 z-30 flex items-center gap-1.5 p-1 sm:p-1.5 rounded-2xl backdrop-blur-md"
               style={{
                 backgroundColor: BOARD_CHROME.blockBg,
                 border: `1px solid ${BOARD_CHROME.blockBorder}`,
                 boxShadow: BOARD_CHROME.liftedShadow,
               }}
             >
-              {onRotateRing && (
-                <div className="flex items-center gap-0.5">
-                  <button
-                    type="button"
-                    onClick={() => onRotateRing('ccw')}
-                    title="Putar semua kursi berlawanan jarum jam"
-                    className="p-1.5 rounded-lg text-[#efe6d2] hover:bg-white/10 cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onRotateRing('cw')}
-                    title="Putar semua kursi searah jarum jam"
-                    className="p-1.5 rounded-lg text-[#efe6d2] hover:bg-white/10 cursor-pointer"
-                  >
-                    <RotateCw className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-
-              {onAddSeat && (
+              <div className="relative flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => setArrangeGapsVisible((prev) => !prev)}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors ${
-                    arrangeGapsVisible
+                  onClick={() => {
+                    setBluffMenuOpen(false);
+                    setMoreMenuOpen((prev) => !prev);
+                  }}
+                  aria-label="Menu Alat Grimoire"
+                  aria-expanded={moreMenuOpen}
+                  title="Buka Menu Alat (Putar, Kursi, Skrip, Undo/Redo, Kain)"
+                  className={`min-h-[36px] sm:min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                    moreMenuOpen
                       ? 'bg-[#c9963a] text-[#2a2018]'
                       : 'text-[#efe6d2] hover:bg-white/10'
                   }`}
-                  title="Tambahkan kursi Traveller / pemain baru di celah cincin"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Kursi</span>
+                  <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
+                  <span>Menu</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMoreMenuOpen(false);
+                    setViewMode('cards');
+                  }}
+                  className="hidden lg:flex min-h-[38px] px-2.5 py-1.5 rounded-xl text-xs font-bold items-center gap-1.5 text-[#efe6d2] hover:bg-white/10 cursor-pointer"
+                  title="Buka tampilan daftar kartu"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5 text-[#c9963a]" />
+                  <span>Daftar</span>
+                </button>
+
+                {onAddSeat && arrangeGapsVisible && (
+                  <button
+                    type="button"
+                    onClick={() => setArrangeGapsVisible(false)}
+                    title="Selesai menambah kursi"
+                    className="min-h-[36px] px-2.5 py-1.5 rounded-xl bg-[#c9963a] text-[#2a2018] text-xs font-bold flex items-center gap-1 cursor-pointer shadow"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">+Kursi</span>
+                  </button>
+                )}
+
+                <BoardToolsMenu
+                  isOpen={moreMenuOpen}
+                  onClose={() => setMoreMenuOpen(false)}
+                  align="left"
+                  viewMode={viewMode}
+                  onToggleViewMode={() => setViewMode('cards')}
+                  onRotateRing={onRotateRing}
+                  arrangeGapsVisible={arrangeGapsVisible}
+                  onToggleArrangeGaps={
+                    onAddSeat ? () => setArrangeGapsVisible((prev) => !prev) : undefined
+                  }
+                  onOpenScript={() => setIsRefDrawerOpen(true)}
+                  onOpenBluffs={() => setBluffEditorOpen(true)}
+                  spyStealth={spyStealth}
+                  onToggleStealth={() => setSpyStealth((prev) => !prev)}
+                  velvetColour={velvetColour}
+                  onVelvetColourChange={onVelvetColourChange}
+                  canUndo={canUndo}
+                  canRedo={canRedo}
+                  onUndo={onUndo}
+                  onRedo={onRedo}
+                  winner={winner}
+                  onSetWinnerManual={onSetWinnerManual}
+                />
+              </div>
+            </div>
+
+            {/* Top-Right Block: Show Cards (+ active Stealth badge if enabled) */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="absolute top-2.5 right-2.5 sm:top-4 sm:right-4 z-30 flex items-center justify-end gap-1.5 p-1 sm:p-1.5 rounded-2xl backdrop-blur-md"
+              style={{
+                backgroundColor: BOARD_CHROME.blockBg,
+                border: `1px solid ${BOARD_CHROME.blockBorder}`,
+                boxShadow: BOARD_CHROME.liftedShadow,
+              }}
+            >
+              {spyStealth && (
+                <button
+                  type="button"
+                  onClick={() => setSpyStealth(false)}
+                  title="Mode Stealth aktif — ketuk untuk mematikan"
+                  className="min-h-[36px] sm:min-h-[38px] px-2.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <EyeOff className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Stealth</span>
                 </button>
               )}
 
               <button
                 type="button"
-                onClick={() => setViewMode('cards')}
-                className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 text-[#efe6d2] hover:bg-white/10 cursor-pointer"
-                title="Buka tampilan daftar kartu"
-              >
-                <LayoutGrid className="w-3.5 h-3.5 text-[#c9963a]" />
-                <span className="hidden md:inline">Daftar</span>
-              </button>
-
-              {(onUndo || onRedo) && (
-                <div className="relative border-l border-[#c9963a]/25 pl-1">
-                  <button
-                    type="button"
-                    onClick={() => setMoreMenuOpen((prev) => !prev)}
-                    aria-label="Menu Titik Tiga (Undo & Redo)"
-                    title="Menu Riwayat (Undo / Redo)"
-                    className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
-                      moreMenuOpen
-                        ? 'bg-[#c9963a]/25 text-[#f4e4bc]'
-                        : 'text-[#efe6d2] hover:bg-white/10'
-                    }`}
-                  >
-                    <MoreVertical className="w-3.5 h-3.5 text-[#c9963a]" />
-                  </button>
-                  {moreMenuOpen && (
-                    <div
-                      className="absolute left-0 top-full mt-2 w-52 rounded-2xl p-1.5 z-50 shadow-2xl border border-[#c9963a]/40 bg-[#141a1d]/95 backdrop-blur-md space-y-1"
-                      role="menu"
-                    >
-                      <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#a89f8c] border-b border-white/10">
-                        Riwayat Aksi
-                      </div>
-                      {onUndo && (
-                        <button
-                          type="button"
-                          role="menuitem"
-                          disabled={!canUndo}
-                          onClick={() => {
-                            onUndo();
-                            setMoreMenuOpen(false);
-                          }}
-                          className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-[#efe6d2] hover:bg-white/10 disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-between cursor-pointer"
-                        >
-                          <span className="flex items-center gap-2">
-                            <Undo2 className="w-3.5 h-3.5 text-[#c9963a]" />
-                            Urungkan (Undo)
-                          </span>
-                          <span className="text-[10px] font-mono text-[#a89f8c]">Ctrl+Z</span>
-                        </button>
-                      )}
-                      {onRedo && (
-                        <button
-                          type="button"
-                          role="menuitem"
-                          disabled={!canRedo}
-                          onClick={() => {
-                            onRedo();
-                            setMoreMenuOpen(false);
-                          }}
-                          className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-[#efe6d2] hover:bg-white/10 disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-between cursor-pointer"
-                        >
-                          <span className="flex items-center gap-2">
-                            <Redo2 className="w-3.5 h-3.5 text-[#c9963a]" />
-                            Ulangi (Redo)
-                          </span>
-                          <span className="text-[10px] font-mono text-[#a89f8c]">Ctrl+Y</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Top-Right Block: Show Cards, Script Reference, Velvet Swatches, Stealth Spy */}
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex flex-wrap items-center justify-end gap-1.5 p-1.5 rounded-2xl backdrop-blur-md"
-              style={{
-                backgroundColor: BOARD_CHROME.blockBg,
-                border: `1px solid ${BOARD_CHROME.blockBorder}`,
-                boxShadow: BOARD_CHROME.liftedShadow,
-              }}
-            >
-              <button
-                type="button"
                 onClick={() => {
+                  setMoreMenuOpen(false);
+                  setBluffMenuOpen(false);
                   setShowSheetInitialRoleId(undefined);
                   setIsShowSheetOpen(true);
                 }}
-                className="px-2.5 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#d8a74c] text-[#2a2018] text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                className="min-h-[36px] sm:min-h-[38px] px-3 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#d8a74c] text-[#2a2018] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow"
               >
                 <Eye className="w-3.5 h-3.5" />
                 <span>Tunjuk</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsRefDrawerOpen(true)}
-                className="px-2.5 py-1.5 rounded-xl text-[#efe6d2] hover:bg-white/10 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-              >
-                <ScrollText className="w-3.5 h-3.5 text-[#c9963a]" />
-                <span className="hidden sm:inline">Skrip</span>
-              </button>
-
-              {onVelvetColourChange && (
-                <div className="hidden sm:flex items-center pl-1 border-l border-[#c9963a]/25">
-                  <VelvetColourSelector
-                    value={velvetColour}
-                    onChange={onVelvetColourChange}
-                    compact
-                  />
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setSpyStealth((prev) => !prev)}
-                title={spyStealth ? 'Matikan mode stealth' : 'Sembunyikan reminder & rahasia Drunk'}
-                className={`p-1.5 rounded-xl cursor-pointer transition-colors ${
-                  spyStealth
-                    ? 'bg-emerald-600 text-white'
-                    : 'text-[#efe6d2] hover:bg-white/10'
-                }`}
-              >
-                {spyStealth ? <EyeOff className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
               </button>
             </div>
 
             {/* Mode Swap Hint Bar */}
             {swapSourceSeatIdx !== null && (
-              <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 px-4 py-1.5 rounded-full bg-[#c9963a] text-[#2a2018] text-xs font-bold flex items-center gap-2 shadow-xl">
+              <div className="absolute top-14 sm:top-16 left-1/2 -translate-x-1/2 z-30 max-w-[calc(100%-24px)] px-3.5 py-1.5 rounded-full bg-[#c9963a] text-[#2a2018] text-xs font-bold flex items-center gap-2 shadow-xl text-center">
                 <ArrowLeftRight className="w-3.5 h-3.5" />
                 <span>Klik kursi tujuan untuk tukar posisi dengan Kursi #{swapSourceSeatIdx + 1}</span>
                 <button
@@ -1190,62 +1112,173 @@ export default function GrimoireBoard({
               })}
             </div>
 
-            {/* Bottom-Left Block: 3 Demon Bluff Wells */}
+            {/* Bottom-Left Block: Compact Click-to-Open Bluffs on Mobile/Tablet, Full 3 Wells on Laptop+ */}
             <div
               onClick={(e) => e.stopPropagation()}
-              className="absolute bottom-2.5 left-2.5 sm:bottom-4 sm:left-4 z-30 flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-2xl backdrop-blur-md"
+              className="absolute bottom-2.5 left-2.5 sm:bottom-4 sm:left-4 z-30 flex items-center gap-1.5 sm:gap-2 p-1 sm:p-1.5 lg:p-2 rounded-2xl backdrop-blur-md"
               style={{
                 backgroundColor: BOARD_CHROME.blockBg,
                 border: `1px solid ${BOARD_CHROME.blockBorder}`,
                 boxShadow: BOARD_CHROME.liftedShadow,
               }}
             >
-              <div className="hidden sm:flex flex-col pr-1.5 border-r border-[#c9963a]/25">
-                <span className="text-[9px] font-mono uppercase tracking-widest text-[#c9963a]">
-                  Demon Bluffs
-                </span>
+              {/* Mobile & Tablet (< lg): single compact Bluff trigger with upward popover */}
+              <div className="relative lg:hidden">
                 <button
                   type="button"
                   onClick={() => {
-                    setShowSheetInitialRoleId(undefined);
-                    setIsShowSheetOpen(true);
+                    setMoreMenuOpen(false);
+                    setBluffMenuOpen((prev) => !prev);
                   }}
-                  className="text-[11px] font-bold text-[#efe6d2] hover:underline text-left cursor-pointer"
+                  aria-expanded={bluffMenuOpen}
+                  aria-label="Lihat atau ubah 3 Demon Bluffs"
+                  className={`min-h-[36px] sm:min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                    bluffMenuOpen
+                      ? 'bg-[#c9963a] text-[#2a2018]'
+                      : 'text-[#efe6d2] hover:bg-white/10'
+                  }`}
                 >
-                  Tunjuk Bluff
+                  <Sparkles
+                    className={`w-3.5 h-3.5 shrink-0 ${
+                      bluffMenuOpen ? 'text-[#2a2018]' : 'text-[#c9963a]'
+                    }`}
+                  />
+                  <span>
+                    Bluff ({spyStealth ? '?' : demonBluffIds.filter(Boolean).length})
+                  </span>
                 </button>
+
+                {bluffMenuOpen && (
+                  <div className="absolute left-0 bottom-full mb-2 w-[260px] max-w-[calc(100vw-24px)] rounded-2xl p-2.5 z-50 shadow-2xl border border-[#c9963a]/40 bg-[#141a1d]/95 backdrop-blur-md space-y-2">
+                    <div className="flex items-center justify-between px-1 pb-1 border-b border-white/10">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#c9963a]">
+                        Demon Bluffs
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setBluffMenuOpen(false)}
+                        aria-label="Tutup panel bluff"
+                        className="p-1 rounded-lg text-[#a89f8c] hover:text-[#efe6d2] hover:bg-white/10 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {spyStealth ? (
+                      <div className="px-2.5 py-2 rounded-xl bg-white/5 text-[11px] text-[#a89f8c]">
+                        Mode Stealth aktif — Bluff disembunyikan agar aman dari intipan.
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {[0, 1, 2].map((slot) => {
+                          const bid = demonBluffIds[slot];
+                          const role = bid ? ROLE_MAP[bid] : null;
+                          return (
+                            <div
+                              key={slot}
+                              className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl bg-white/5"
+                            >
+                              {role ? (
+                                <CharacterTokenFront role={role} size={28} showSetupLeaf={false} />
+                              ) : (
+                                <div className="w-7 h-7 rounded-full border border-white/15 flex items-center justify-center text-[10px] text-[#a89f8c]">
+                                  ?
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs font-bold text-[#efe6d2] truncate">
+                                  {role ? role.name : `Slot Bluff #${slot + 1}`}
+                                </div>
+                                {role && (
+                                  <div className="text-[10px] text-[#a89f8c] truncate">
+                                    {role.indonesianName}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBluffMenuOpen(false);
+                          setShowSheetInitialRoleId(undefined);
+                          setIsShowSheetOpen(true);
+                        }}
+                        className="min-h-[36px] px-2.5 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#e0b254] text-[#2a2018] text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Tunjuk</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={spyStealth}
+                        onClick={() => {
+                          setBluffMenuOpen(false);
+                          setBluffEditorOpen(true);
+                        }}
+                        className="min-h-[36px] px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed text-[#efe6d2] text-xs font-bold flex items-center justify-center cursor-pointer"
+                      >
+                        Ganti Bluff
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-1 sm:gap-1.5">
-                {[0, 1, 2].map((slot) => {
-                  const bid = demonBluffIds[slot];
-                  const role = bid ? ROLE_MAP[bid] : null;
-                  return (
-                    <button
-                      key={slot}
-                      type="button"
-                      onClick={() => !spyStealth && setBluffEditorOpen(true)}
-                      title={role && !spyStealth ? `Bluff: ${role.name}` : 'Atur Bluff'}
-                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-105"
-                      style={{
-                        backgroundColor: BOARD_CHROME.wellBg,
-                        border: `1px solid ${BOARD_CHROME.wellBorder}`,
-                      }}
-                    >
-                      {role && !spyStealth ? (
-                        <CharacterTokenFront role={role} size={32} showSetupLeaf={false} />
-                      ) : (
-                        <span className="text-[10px] font-mono text-[#a89f8c]">?</span>
-                      )}
-                    </button>
-                  );
-                })}
+
+              {/* Desktop (lg+): direct 3 circular bluff wells */}
+              <div className="hidden lg:flex items-center gap-2">
+                <div className="flex flex-col pr-1.5 border-r border-[#c9963a]/25">
+                  <span className="text-[9px] font-mono uppercase tracking-widest text-[#c9963a]">
+                    Demon Bluffs
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSheetInitialRoleId(undefined);
+                      setIsShowSheetOpen(true);
+                    }}
+                    className="text-[11px] font-bold text-[#efe6d2] hover:underline text-left cursor-pointer"
+                  >
+                    Tunjuk Bluff
+                  </button>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {[0, 1, 2].map((slot) => {
+                    const bid = demonBluffIds[slot];
+                    const role = bid ? ROLE_MAP[bid] : null;
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        onClick={() => !spyStealth && setBluffEditorOpen(true)}
+                        title={role && !spyStealth ? `Bluff: ${role.name}` : 'Atur Bluff'}
+                        className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-105"
+                        style={{
+                          backgroundColor: BOARD_CHROME.wellBg,
+                          border: `1px solid ${BOARD_CHROME.wellBorder}`,
+                        }}
+                      >
+                        {role && !spyStealth ? (
+                          <CharacterTokenFront role={role} size={32} showSetupLeaf={false} />
+                        ) : (
+                          <span className="text-[10px] font-mono text-[#a89f8c]">?</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* Bottom-Right Block: Dawn / Dusk Phase Clock Plaque, Timer & Prominent Next Day CTA */}
+            {/* Bottom-Right Block: Phase Plaque & Prominent Next Phase CTA */}
             <div
               onClick={(e) => e.stopPropagation()}
-              className="absolute bottom-2.5 right-2.5 sm:bottom-4 sm:right-4 z-30 flex items-center gap-1.5 sm:gap-2.5 p-1.5 sm:p-2 rounded-2xl backdrop-blur-md"
+              className="absolute bottom-2.5 right-2.5 sm:bottom-4 sm:right-4 z-30 flex items-center gap-2 p-1 sm:p-1.5 lg:p-2 rounded-2xl backdrop-blur-md"
               style={{
                 backgroundColor: BOARD_CHROME.blockBg,
                 border: `1px solid ${BOARD_CHROME.blockBorder}`,
@@ -1257,7 +1290,7 @@ export default function GrimoireBoard({
                 alt=""
                 className="w-8 h-8 object-contain shrink-0 hidden md:block"
               />
-              <div className="hidden md:block min-w-[96px]">
+              <div className="hidden md:block min-w-[88px]">
                 <div className="font-display text-sm font-bold text-[#efe6d2] leading-tight">
                   {phaseLabel}
                 </div>
@@ -1266,20 +1299,11 @@ export default function GrimoireBoard({
                 </div>
               </div>
 
-              {onTimerAction && (
-                <GameTimerWidget
-                  timer={dayTimer}
-                  phaseStartedAt={phaseStartedAt}
-                  onAction={onTimerAction}
-                  variant="compact"
-                />
-              )}
-
               {onAdvancePhase && (
                 <button
                   type="button"
                   onClick={onAdvancePhase}
-                  className="min-h-[38px] sm:min-h-[42px] px-3 sm:px-4 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#e0b254] active:scale-[0.98] text-[#2a2018] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-lg transition-all whitespace-nowrap"
+                  className="min-h-[36px] sm:min-h-[40px] px-3 sm:px-4 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#e0b254] active:scale-[0.98] text-[#2a2018] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-lg transition-all whitespace-nowrap"
                 >
                   {phase === 'day' ? (
                     <Moon className="w-3.5 h-3.5 shrink-0" />
@@ -1289,27 +1313,6 @@ export default function GrimoireBoard({
                   <span>{nextPhaseShortLabel}</span>
                   <ChevronRight className="w-3.5 h-3.5 shrink-0" />
                 </button>
-              )}
-
-              {onSetWinnerManual && !winner && (
-                <div className="hidden lg:flex items-center border-l border-[#c9963a]/25 pl-2 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => onSetWinnerManual('good')}
-                    title="Tandai Tim Good Menang"
-                    className="px-2 py-1 rounded-lg bg-[#0064ac]/35 hover:bg-[#0064ac]/60 text-[#efe6d2] text-[10px] font-bold cursor-pointer"
-                  >
-                    Good
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSetWinnerManual('evil')}
-                    title="Tandai Tim Evil Menang"
-                    className="px-2 py-1 rounded-lg bg-[#760a0d]/45 hover:bg-[#760a0d]/70 text-[#efe6d2] text-[10px] font-bold cursor-pointer"
-                  >
-                    Evil
-                  </button>
-                </div>
               )}
             </div>
 

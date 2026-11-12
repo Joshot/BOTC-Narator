@@ -166,7 +166,7 @@ export default function DashboardView({
                   {phaseLabel}
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-600 dark:text-[#8E8A9E] mt-1">
-                  Status permainan tersimpan otomatis di perangkat. Meja lingkaran grimoire siap dikelola.
+                  Meja lingkaran grimoire dan susunan peran siap dikelola.
                 </p>
               </div>
 
