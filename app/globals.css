@@ -421,3 +421,85 @@ html.light .fixed.bg-black\/80 {
 [data-grimoire-velvet] {
   isolation: isolate;
 }
+
+/* ========================================================
+   3. BOTC DESKTOP — FULL LIGHT MODE & ZERO-SCROLL GAME SHELL
+   Warm Ivory Alabaster, Antique Brass & Trouble Brewing Crimson
+   ======================================================== */
+html.desktop-app,
+html.desktop-app body {
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+  background-color: #F6F2EA !important;
+  background-image:
+    radial-gradient(at 8% 0%, rgba(251, 243, 219, 0.92) 0px, transparent 48%),
+    radial-gradient(at 92% 100%, rgba(254, 226, 226, 0.55) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(255, 253, 249, 0.7) 0px, transparent 60%) !important;
+  color: #1F1916 !important;
+}
+
+html.desktop-app header {
+  background-color: rgba(255, 252, 247, 0.96) !important;
+  border-bottom: 1px solid rgba(180, 130, 58, 0.24) !important;
+  box-shadow: 0 2px 14px rgba(92, 66, 32, 0.06) !important;
+}
+
+html.desktop-app .bg-white,
+html.desktop-app [class*="bg-[#14141B]"],
+html.desktop-app [class*="bg-[#181822]"],
+html.desktop-app [class*="bg-[#181520]"] {
+  background-color: #FFFCF7 !important;
+  border-color: rgba(180, 138, 72, 0.24) !important;
+  box-shadow: 0 4px 18px rgba(72, 50, 22, 0.06), 0 1px 3px rgba(72, 50, 22, 0.04) !important;
+  color: #1F1916 !important;
+}
+
+html.desktop-app .bg-purple-50,
+html.desktop-app .bg-purple-100 {
+  background-color: #F4EFE4 !important;
+  border-color: rgba(180, 138, 72, 0.24) !important;
+  color: #2A2018 !important;
+}
+
+html.desktop-app .bg-purple-50:hover,
+html.desktop-app .bg-purple-100:hover {
+  background-color: #EBE2D0 !important;
+}
+
+html.desktop-app .text-slate-900,
+html.desktop-app .text-slate-800,
+html.desktop-app .text-purple-900,
+html.desktop-app .text-purple-950 {
+  color: #1F1916 !important;
+}
+
+html.desktop-app .text-slate-600,
+html.desktop-app .text-slate-500 {
+  color: #6B5D52 !important;
+}
+
+html.desktop-app .border-purple-200,
+html.desktop-app .border-purple-300,
+html.desktop-app .border-purple-100 {
+  border-color: rgba(180, 138, 72, 0.24) !important;
+}
+
+/* Custom sleek thin scrollbar for internal desktop panels only */
+html.desktop-app *::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+html.desktop-app *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html.desktop-app *::-webkit-scrollbar-thumb {
+  background: rgba(180, 138, 72, 0.35);
+  border-radius: 9999px;
+}
+
+html.desktop-app *::-webkit-scrollbar-thumb:hover {
+  background: rgba(153, 27, 27, 0.45);
+}

@@ -20,6 +20,7 @@ import StoryRecapModal from './StoryRecapModal';
 import ThemeConfirmModal from './ThemeConfirmModal';
 
 export default function NavigationShell({ children }: { children: React.ReactNode }) {
+  const isDesktop = process.env.NEXT_PUBLIC_APP_MODE === 'desktop';
   const {
     mounted,
     rooms,
@@ -29,7 +30,6 @@ export default function NavigationShell({ children }: { children: React.ReactNod
     createNewRoom,
     deleteRoom,
     hasActiveGame,
-    gameAlertBanner,
     silentCard,
     isRefModalOpen,
     isStoryModalOpen,
@@ -48,10 +48,16 @@ export default function NavigationShell({ children }: { children: React.ReactNod
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-[#F1F8F4] dark:bg-[#0C0C10] flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-10 h-10 rounded-full border-2 border-[#D4AF37] border-t-transparent animate-spin mb-3" />
-        <span className="font-serif text-sm tracking-wider text-slate-900 dark:text-[#EDEAF0]">
-          Memuat Grimoire Trouble Brewing...
+      <div
+        className={
+          isDesktop
+            ? 'h-screen overflow-hidden bg-[#F6F2EA] flex flex-col items-center justify-center p-6 text-center'
+            : 'min-h-screen bg-[#F1F8F4] dark:bg-[#0C0C10] flex flex-col items-center justify-center p-6 text-center'
+        }
+      >
+        <div className="w-10 h-10 rounded-full border-2 border-[#B45309] dark:border-[#D4AF37] border-t-transparent animate-spin mb-3" />
+        <span className="font-serif text-sm tracking-wider text-[#1F1916] dark:text-[#EDEAF0]">
+          {isDesktop ? 'Memuat BOTC Desktop...' : 'Memuat Grimoire Trouble Brewing...'}
         </span>
       </div>
     );
@@ -63,54 +69,87 @@ export default function NavigationShell({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#F1F8F4] dark:bg-[#0C0C10] text-slate-900 dark:text-[#EDEAF0] font-sans antialiased selection:bg-[#3D3552] selection:text-[#FFFFFF] flex flex-col">
+    <div
+      className={
+        isDesktop
+          ? 'h-screen overflow-hidden bg-[#F6F2EA] text-[#1F1916] font-sans antialiased flex flex-col select-none'
+          : 'min-h-screen overflow-x-hidden bg-[#F1F8F4] dark:bg-[#0C0C10] text-slate-900 dark:text-[#EDEAF0] font-sans antialiased selection:bg-[#3D3552] selection:text-[#FFFFFF] flex flex-col'
+      }
+    >
       {/*
-        Clean Minimal Navbar (Home + Theme + Discreet Room Switcher Max 3 Rooms)
+        Clean Minimal Navbar (Home + Discreet Room Switcher Max 3 Rooms)
       */}
-      <header className="sticky top-0 z-40 bg-white/90 dark:bg-[#0C0C10]/95 backdrop-blur-md border-b border-purple-200 dark:border-white/[0.08] px-3 sm:px-6 py-2.5 transition-colors shadow-xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
+      <header
+        className={
+          isDesktop
+            ? 'shrink-0 z-40 bg-[#FFFCF7]/95 backdrop-blur-md border-b border-amber-900/15 px-4 py-1.5 shadow-xs'
+            : 'sticky top-0 z-40 bg-white/90 dark:bg-[#0C0C10]/95 backdrop-blur-md border-b border-purple-200 dark:border-white/[0.08] px-3 sm:px-6 py-2.5 transition-colors shadow-xs'
+        }
+      >
+        <div
+          className={
+            isDesktop
+              ? 'max-w-[1440px] mx-auto flex items-center justify-between gap-3'
+              : 'max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4'
+          }
+        >
           {/* Minimal Brand Link */}
           <div className="flex items-center gap-3">
             <Link
               href="/"
               className="flex items-center gap-2.5 focus:outline-none group cursor-pointer"
             >
-              <div className="w-8 h-8 rounded-lg bg-[#230911] border border-purple-200 dark:border-[#D4AF37]/40 flex items-center justify-center overflow-hidden group-hover:border-[#D4AF37] transition-colors shadow-inner">
+              <div
+                className={
+                  isDesktop
+                    ? 'w-8 h-8 rounded-lg bg-[#FAF3E3] border border-amber-700/30 flex items-center justify-center overflow-hidden group-hover:border-[#991B1B] transition-colors shadow-xs'
+                    : 'w-8 h-8 rounded-lg bg-[#FAF3E3] border border-purple-200 dark:border-[#D4AF37]/40 flex items-center justify-center overflow-hidden group-hover:border-[#D4AF37] transition-colors shadow-inner'
+                }
+              >
                 <img
                   src="/icons/icon-192.png"
                   alt="Logo BOTC"
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               </div>
-              <span className="font-display text-base font-bold tracking-tight text-slate-900 dark:text-[#EDEAF0] group-hover:text-amber-700 dark:group-hover:text-[#D4AF37] transition-colors">
-                {process.env.NEXT_PUBLIC_APP_MODE === 'desktop' ? 'BOTC Desktop' : 'Grimoire BOTC'}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-display text-base font-bold tracking-tight text-slate-900 dark:text-[#EDEAF0] group-hover:text-[#991B1B] dark:group-hover:text-[#D4AF37] transition-colors">
+                  {isDesktop ? 'BOTC Desktop' : 'Grimoire BOTC'}
+                </span>
+                {isDesktop && (
+                  <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-red-50 text-[#991B1B] border border-red-200">
+                    Trouble Brewing
+                  </span>
+                )}
+              </div>
             </Link>
           </div>
 
-          {/* Right Header: Theme Switcher & Clean Room Switcher Pill (Max 3 Rooms) */}
+          {/* Right Header: Theme Switcher (Web Only) & Clean Room Switcher Pill (Max 3 Rooms) */}
           <div className="flex items-center gap-2">
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => requestThemeChange()}
-              className="px-3 py-1.5 rounded-full bg-purple-50 hover:bg-purple-100 dark:bg-[#14141B] dark:hover:bg-[#1E1E28] border border-purple-200 dark:border-white/[0.1] text-xs font-semibold text-purple-950 dark:text-[#EDEAF0] flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
-              title={theme === 'dark' ? 'Beralih ke Light Mode (Pastel Hijau & Ungu)' : 'Beralih ke Dark Mode'}
-              aria-label="Ganti Tema Warna"
-            >
-              {theme === 'dark' ? (
-                <>
-                  <Sun className="w-3.5 h-3.5 text-[#FBBF24]" />
-                  <span className="hidden sm:inline text-[11px]">Light Mode</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-3.5 h-3.5 text-[#7C3AED]" />
-                  <span className="hidden sm:inline text-[11px]">Dark Mode</span>
-                </>
-              )}
-            </motion.button>
+            {!isDesktop && (
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => requestThemeChange()}
+                className="px-3 py-1.5 rounded-full bg-purple-50 hover:bg-purple-100 dark:bg-[#14141B] dark:hover:bg-[#1E1E28] border border-purple-200 dark:border-white/[0.1] text-xs font-semibold text-purple-950 dark:text-[#EDEAF0] flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+                title={theme === 'dark' ? 'Beralih ke Light Mode (Pastel Hijau & Ungu)' : 'Beralih ke Dark Mode'}
+                aria-label="Ganti Tema Warna"
+              >
+                {theme === 'dark' ? (
+                  <>
+                    <Sun className="w-3.5 h-3.5 text-[#FBBF24]" />
+                    <span className="hidden sm:inline text-[11px]">Light Mode</span>
+                  </>
+                ) : (
+                  <>
+                    <Moon className="w-3.5 h-3.5 text-[#7C3AED]" />
+                    <span className="hidden sm:inline text-[11px]">Dark Mode</span>
+                  </>
+                )}
+              </motion.button>
+            )}
 
             <div className="relative">
               <motion.button
@@ -222,7 +261,13 @@ export default function NavigationShell({ children }: { children: React.ReactNod
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 pb-8 sm:pb-12">
+      <main
+        className={
+          isDesktop
+            ? 'flex-1 min-h-0 overflow-hidden max-w-[1440px] w-full mx-auto px-3 sm:px-5 py-2.5 flex flex-col'
+            : 'flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 pb-8 sm:pb-12'
+        }
+      >
         {children}
       </main>
 
@@ -247,7 +292,7 @@ export default function NavigationShell({ children }: { children: React.ReactNod
         winner={winner}
         activeRoomName={activeRoom.name}
       />
-      <ThemeConfirmModal />
+      {!isDesktop && <ThemeConfirmModal />}
     </div>
   );
 }

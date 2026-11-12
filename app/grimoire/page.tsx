@@ -67,11 +67,15 @@ export default function GrimoirePage() {
 
   if (!hasActiveGame || players.length === 0) {
     return (
-      <div className="py-4">
+      <div className={process.env.NEXT_PUBLIC_APP_MODE === 'desktop' ? 'flex-1 min-h-0 flex flex-col' : 'py-4'}>
         <VelvetBackdrop
           colour={velvetColour}
           center
-          className="rounded-3xl min-h-[72dvh] p-6 sm:p-8 shadow-2xl border border-[#c9963a]/30"
+          className={
+            process.env.NEXT_PUBLIC_APP_MODE === 'desktop'
+              ? 'flex-1 min-h-0 rounded-2xl p-6 shadow-2xl border border-[#c9963a]/30'
+              : 'rounded-3xl min-h-[72dvh] p-6 sm:p-8 shadow-2xl border border-[#c9963a]/30'
+          }
         >
           <div className="max-w-md mx-auto space-y-6">
             <img
@@ -119,7 +123,7 @@ export default function GrimoirePage() {
   }
 
   return (
-    <div className="space-y-3 py-1">
+    <div className={process.env.NEXT_PUBLIC_APP_MODE === 'desktop' ? 'flex-1 min-h-0 flex flex-col gap-2' : 'space-y-3 py-1'}>
       <InGameHeader currentTab="grimoire" />
       <GrimoireBoard
         players={players}

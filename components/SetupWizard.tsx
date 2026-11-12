@@ -204,6 +204,8 @@ export default function SetupWizard({
     };
   };
 
+  const isDesktop = process.env.NEXT_PUBLIC_APP_MODE === 'desktop';
+
   // Optional pass-and-play Discovery Handoff screen (matching botcgrimoire-main's Discovery flow!)
   if (discoverySeats) {
     const activeSeat = discoverySeats[discoveryIdx];
@@ -211,11 +213,21 @@ export default function SetupWizard({
     const isLast = discoveryIdx + 1 >= discoverySeats.length;
 
     return (
-      <div className="max-w-3xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
+      <div
+        className={
+          isDesktop
+            ? 'max-w-3xl w-full mx-auto flex-1 min-h-0 flex flex-col'
+            : 'max-w-3xl mx-auto px-3 sm:px-6 py-4 sm:py-6'
+        }
+      >
         <VelvetBackdrop
           colour="midnight"
           center
-          className="rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#c9963a]/40 min-h-[64dvh]"
+          className={
+            isDesktop
+              ? 'flex-1 min-h-0 overflow-y-auto rounded-2xl p-5 sm:p-8 shadow-xl border border-[#c9963a]/40'
+              : 'rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#c9963a]/40 min-h-[64dvh]'
+          }
         >
           {!discoveryRevealed ? (
             <div className="max-w-md mx-auto space-y-5">
@@ -315,8 +327,20 @@ export default function SetupWizard({
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
-      <ParchmentSurface className="rounded-3xl p-4 sm:p-7 space-y-6">
+    <div
+      className={
+        isDesktop
+          ? 'max-w-5xl w-full mx-auto flex-1 min-h-0 flex flex-col'
+          : 'max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6'
+      }
+    >
+      <ParchmentSurface
+        className={
+          isDesktop
+            ? 'rounded-2xl p-4 sm:p-6 space-y-5 flex-1 min-h-0 overflow-y-auto'
+            : 'rounded-3xl p-4 sm:p-7 space-y-6'
+        }
+      >
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#655342]/25 pb-4">
           <div className="flex items-center gap-3">

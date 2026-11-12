@@ -22,15 +22,23 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
 const STORAGE_KEY = 'botc_color_theme_v2';
+const IS_DESKTOP_LIGHT_ONLY = process.env.NEXT_PUBLIC_APP_MODE === 'desktop';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<AppTheme>('dark');
+  const [theme, setTheme] = useState<AppTheme>(IS_DESKTOP_LIGHT_ONLY ? 'light' : 'dark');
   const [targetTheme, setTargetTheme] = useState<AppTheme | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Initialize theme from localStorage or default to 'dark'
+  // Initialize theme from localStorage or force Light Mode in Desktop build
   useEffect(() => {
+    if (IS_DESKTOP_LIGHT_ONLY) {
+      setTheme('light');
+      applyThemeClass('light');
+      setMounted(true);
+      return;
+    }
+
     try {
       const saved = localStorage.getItem(STORAGE_KEY) as AppTheme | null;
       if (saved === 'light' || saved === 'dark') {
@@ -49,9 +57,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const applyThemeClass = (currentTheme: AppTheme) => {
     if (typeof document === 'undefined') return;
     const root = document.documentElement;
-    if (currentTheme === 'light') {
+    if (IS_DESKTOP_LIGHT_ONLY || currentTheme === 'light') {
       root.classList.remove('dark');
       root.classList.add('light');
+      if (IS_DESKTOP_LIGHT_ONLY) {
+        root.classList.add('desktop-app');
+      }
     } else {
       root.classList.remove('light');
       root.classList.add('dark');
@@ -60,6 +71,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const requestThemeChange = useCallback(
     (newTheme?: AppTheme) => {
+      if (IS_DESKTOP_LIGHT_ONLY) return;
       const next = newTheme || (theme === 'dark' ? 'light' : 'dark');
       setTargetTheme(next);
       setIsConfirmModalOpen(true);
@@ -68,7 +80,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 
   const confirmThemeChange = useCallback(() => {
-    if (!targetTheme) return;
+    if (IS_DESKTOP_LIGHT_ONLY || !targetTheme) return;
     setTheme(targetTheme);
     applyThemeClass(targetTheme);
     try {

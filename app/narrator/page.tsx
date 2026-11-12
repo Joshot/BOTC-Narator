@@ -31,9 +31,17 @@ export default function NarratorPage() {
     setSilentCard,
   } = useGameSession();
 
+  const isDesktop = process.env.NEXT_PUBLIC_APP_MODE === 'desktop';
+
   if (!hasActiveGame || players.length === 0) {
     return (
-      <div className="max-w-xl mx-auto min-h-[70dvh] flex flex-col items-center justify-center py-8 text-center space-y-6">
+      <div
+        className={
+          isDesktop
+            ? 'max-w-xl mx-auto flex-1 min-h-0 flex flex-col items-center justify-center py-6 text-center space-y-5'
+            : 'max-w-xl mx-auto min-h-[70dvh] flex flex-col items-center justify-center py-8 text-center space-y-6'
+        }
+      >
         <div className="w-16 h-16 rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] flex items-center justify-center mx-auto text-blue-600 dark:text-[#60A5FA] shadow-md dark:shadow-xl">
           <Moon className="w-8 h-8" />
         </div>
@@ -59,29 +67,31 @@ export default function NarratorPage() {
   }
 
   return (
-    <div className="py-2 space-y-6">
+    <div className={isDesktop ? 'flex-1 min-h-0 flex flex-col gap-2' : 'py-2 space-y-6'}>
       <InGameHeader currentTab="narrator" />
-      <NarratorView
-        phase={phase}
-        dayNumber={dayNumber}
-        players={players}
-        executedTodayPlayerId={executedTodayPlayerId}
-        demonBluffIds={demonBluffIds}
-        lastNightDeaths={lastNightDeaths}
-        gameAlertBanner={gameAlertBanner}
-        dayTimer={dayTimer}
-        phaseStartedAt={phaseStartedAt}
-        onTimerAction={handleUpdateTimer}
-        onChangePhase={setPhase}
-        onSetSingleReminderTarget={handleSetSingleReminderTarget}
-        onResolveImpAttack={handleResolveImpAttack}
-        onTransitionNightToDay={handleTransitionNightToDay}
-        onTransitionDayToNextNight={handleTransitionDayToNextNight}
-        onExecutePlayerInDay={handleExecutePlayerInDay}
-        onTriggerSlayerShot={handleTriggerSlayerShot}
-        onTriggerVirginNomination={handleTriggerVirginNomination}
-        onShowSilentCard={(card) => setSilentCard(card)}
-      />
+      <div className={isDesktop ? 'flex-1 min-h-0 overflow-y-auto pr-1' : ''}>
+        <NarratorView
+          phase={phase}
+          dayNumber={dayNumber}
+          players={players}
+          executedTodayPlayerId={executedTodayPlayerId}
+          demonBluffIds={demonBluffIds}
+          lastNightDeaths={lastNightDeaths}
+          gameAlertBanner={gameAlertBanner}
+          dayTimer={dayTimer}
+          phaseStartedAt={phaseStartedAt}
+          onTimerAction={handleUpdateTimer}
+          onChangePhase={setPhase}
+          onSetSingleReminderTarget={handleSetSingleReminderTarget}
+          onResolveImpAttack={handleResolveImpAttack}
+          onTransitionNightToDay={handleTransitionNightToDay}
+          onTransitionDayToNextNight={handleTransitionDayToNextNight}
+          onExecutePlayerInDay={handleExecutePlayerInDay}
+          onTriggerSlayerShot={handleTriggerSlayerShot}
+          onTriggerVirginNomination={handleTriggerVirginNomination}
+          onShowSilentCard={(card) => setSilentCard(card)}
+        />
+      </div>
     </div>
   );
 }

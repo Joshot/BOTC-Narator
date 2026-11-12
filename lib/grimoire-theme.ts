@@ -53,12 +53,44 @@ export const GRIMOIRE_PALETTE = {
 } as const;
 
 export const TOKEN_MATERIAL = {
-  edge: '#655342',
-  edgeShade: '#302820',
-  rim: 'inset 0 1px 1px rgba(255, 250, 223, 0.45), inset 0 -1px 2px rgba(36, 21, 8, 0.48)',
-  reminderRim: 'inset 0 0 0 1.5px rgba(239, 230, 210, 0.5), inset 0 0 0 3px rgba(0, 0, 0, 0.32)',
-  deadFilter: 'saturate(0.32) brightness(0.76)',
+  edge: '#b88a44',
+  edgeMid: '#6f5129',
+  edgeShade: '#2c1f12',
+  rim: 'inset 0 1.5px 2px rgba(255, 250, 226, 0.65), inset 0 -1.5px 3px rgba(36, 21, 8, 0.55)',
+  reminderRim: 'inset 0 0 0 1.5px rgba(239, 214, 152, 0.65), inset 0 0 0 3px rgba(0, 0, 0, 0.36)',
+  deadFilter: 'saturate(0.38) brightness(0.84) contrast(1.04)',
 } as const;
+
+export const TEAM_TOKEN_ACCENT: Record<
+  TeamKey,
+  { ring: string; glow: string; badge: string }
+> = {
+  townsfolk: {
+    ring: 'rgba(12, 95, 168, 0.42)',
+    glow: 'rgba(59, 130, 246, 0.14)',
+    badge: '#1d4ed8',
+  },
+  outsider: {
+    ring: 'rgba(14, 116, 144, 0.45)',
+    glow: 'rgba(6, 182, 212, 0.14)',
+    badge: '#0e7490',
+  },
+  minion: {
+    ring: 'rgba(153, 27, 27, 0.48)',
+    glow: 'rgba(220, 38, 38, 0.15)',
+    badge: '#b91c1c',
+  },
+  demon: {
+    ring: 'rgba(127, 29, 29, 0.62)',
+    glow: 'rgba(185, 28, 28, 0.2)',
+    badge: '#991b1b',
+  },
+  traveller: {
+    ring: 'rgba(109, 40, 217, 0.48)',
+    glow: 'rgba(139, 92, 246, 0.15)',
+    badge: '#6d28d9',
+  },
+};
 
 export const BOARD_CHROME = {
   blockBg: 'rgba(42, 32, 24, 0.72)',

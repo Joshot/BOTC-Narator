@@ -66,18 +66,22 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#121614',
+  themeColor: isDesktopMode ? '#F6F2EA' : '#121614',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="id"
-      className={`dark ${grenze.variable} ${atkinson.variable} ${jetbrainsMono.variable}`}
+      className={`${isDesktopMode ? 'light desktop-app' : 'dark'} ${grenze.variable} ${atkinson.variable} ${jetbrainsMono.variable}`}
     >
       <body
         suppressHydrationWarning
-        className="bg-[#F1F8F4] dark:bg-[#0C0C10] text-slate-900 dark:text-[#EDEAF0] font-sans antialiased selection:bg-[#3D3552] selection:text-[#FFFFFF] min-h-screen transition-colors duration-300"
+        className={
+          isDesktopMode
+            ? 'bg-[#F6F2EA] text-[#1F1916] font-sans antialiased selection:bg-[#991B1B]/15 selection:text-[#760A0D] h-screen overflow-hidden'
+            : 'bg-[#F1F8F4] dark:bg-[#0C0C10] text-slate-900 dark:text-[#EDEAF0] font-sans antialiased selection:bg-[#3D3552] selection:text-[#FFFFFF] min-h-screen transition-colors duration-300'
+        }
       >
         <ThemeProvider>
           <GameProvider>

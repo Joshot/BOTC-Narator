@@ -35,8 +35,10 @@ export default function SetupPage() {
     router.push('/');
   };
 
+  const isDesktop = process.env.NEXT_PUBLIC_APP_MODE === 'desktop';
+
   return (
-    <div className="py-2">
+    <div className={isDesktop ? 'flex-1 min-h-0 flex flex-col' : 'py-2'}>
       <SetupWizard
         initialPlayerCount={playerCount || 8}
         onCompleteSetup={handleCompleteSetup}

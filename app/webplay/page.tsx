@@ -15,8 +15,10 @@ export default function WebPlayPage() {
     router.push('/grimoire');
   };
 
+  const isDesktop = process.env.NEXT_PUBLIC_APP_MODE === 'desktop';
+
   return (
-    <div className="space-y-4 py-2">
+    <div className={isDesktop ? 'flex-1 min-h-0 flex flex-col gap-2' : 'space-y-4 py-2'}>
       {hasActiveGame && <InGameHeader />}
       <WebPlayMode
         onCancelToDashboard={() => router.push('/')}

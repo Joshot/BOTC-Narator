@@ -367,11 +367,18 @@ export default function WebPlayMode({
     [remainingBodies.length]
   );
 
+  const isDesktop = process.env.NEXT_PUBLIC_APP_MODE === 'desktop';
   const pickedSlot = bagSlots.find((s) => s.slotId === pickedSlotId) ?? null;
   const pickedRole = pickedSlot ? ROLE_MAP[pickedSlot.roleId] : null;
 
   return (
-    <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
+    <div
+      className={
+        isDesktop
+          ? 'max-w-5xl w-full mx-auto flex-1 min-h-0 flex flex-col overflow-y-auto pr-1'
+          : 'max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6'
+      }
+    >
       {subStep === 'setup' && (
         <ParchmentSurface className="rounded-3xl p-4 sm:p-7 space-y-6">
           {/* Header */}
@@ -879,7 +886,11 @@ export default function WebPlayMode({
         <VelvetBackdrop
           colour="midnight"
           center
-          className="rounded-3xl min-h-[64dvh] p-6 sm:p-10 shadow-2xl border border-[#c9963a]/40"
+          className={
+            isDesktop
+              ? 'rounded-2xl flex-1 min-h-[360px] p-5 sm:p-8 shadow-xl border border-[#c9963a]/40'
+              : 'rounded-3xl min-h-[64dvh] p-6 sm:p-10 shadow-2xl border border-[#c9963a]/40'
+          }
         >
           <div className="max-w-lg mx-auto space-y-5">
             <ShieldCheck className="w-12 h-12 text-[#c9963a] mx-auto" />

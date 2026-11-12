@@ -19,6 +19,7 @@ interface InGameHeaderProps {
 }
 
 export default function InGameHeader({ currentTab }: InGameHeaderProps) {
+  const isDesktop = process.env.NEXT_PUBLIC_APP_MODE === 'desktop';
   const pathname = usePathname();
   const {
     setIsStoryModalOpen,
@@ -35,7 +36,7 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
   ];
 
   return (
-    <div className="mb-3 sm:mb-4">
+    <div className={isDesktop ? 'shrink-0' : 'mb-3 sm:mb-4'}>
       {/* Compact Single-Row Sub-Navigation Bar (Mobile / Tablet / Desktop) */}
       <div className="relative flex items-center justify-between gap-1.5 sm:gap-2 p-1.5 sm:p-2 bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] rounded-2xl shadow-sm">
         <nav

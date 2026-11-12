@@ -156,6 +156,7 @@ export default function GrimoireBoard({
   onCancelNomination,
   onShowSilentCard,
 }: GrimoireBoardProps) {
+  const isDesktop = process.env.NEXT_PUBLIC_APP_MODE === 'desktop';
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [stageSize, setStageSize] = useState({ width: 880, height: 580 });
 
@@ -383,7 +384,7 @@ export default function GrimoireBoard({
   const reminderPickerSeat = players.find((p) => p.id === reminderPickerSeatId) ?? null;
 
   return (
-    <div className="space-y-3">
+    <div className={isDesktop ? 'flex-1 min-h-0 flex flex-col gap-2' : 'space-y-3'}>
       {/* Unassigned Drunk Warning Strip (only if Drunk active and not yet picked) */}
       {isDrunkActive && !currentDrunkPlayer && !spyStealth && (
         <div className="px-4 py-2.5 rounded-2xl bg-[#2a2018] border border-[#c9963a] flex flex-wrap items-center justify-between gap-2 text-xs text-[#efe6d2] shadow-md">
@@ -406,15 +407,23 @@ export default function GrimoireBoard({
       {/* Main Velvet Grimoire Felt Surface */}
       <VelvetBackdrop
         colour={velvetColour}
-        className="rounded-3xl shadow-2xl border border-[#c9963a]/30"
-        style={{
-          minHeight: viewMode === 'circle' ? '480px' : undefined,
-          height: viewMode === 'circle' ? 'calc(100dvh - 116px)' : undefined,
-        }}
+        className={
+          isDesktop
+            ? 'flex-1 min-h-0 rounded-2xl shadow-2xl border border-[#c9963a]/30'
+            : 'rounded-3xl shadow-2xl border border-[#c9963a]/30'
+        }
+        style={
+          isDesktop
+            ? undefined
+            : {
+                minHeight: viewMode === 'circle' ? '480px' : undefined,
+                height: viewMode === 'circle' ? 'calc(100dvh - 116px)' : undefined,
+              }
+        }
       >
         {viewMode === 'cards' ? (
           /* Mobile / Accessibility Warm Card List Mode */
-          <div className="p-3 sm:p-6 space-y-4">
+          <div className={isDesktop ? 'flex-1 min-h-0 overflow-y-auto p-3 sm:p-5 space-y-4' : 'p-3 sm:p-6 space-y-4'}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="px-3 py-1.5 rounded-xl bg-black/50 border border-[#c9963a]/40 font-display text-xs sm:text-sm font-bold text-[#efe6d2]">
@@ -645,7 +654,11 @@ export default function GrimoireBoard({
               setMoreMenuOpen(false);
               setBluffMenuOpen(false);
             }}
-            className="relative w-full flex-1 min-h-[480px] select-none overflow-hidden"
+            className={
+              isDesktop
+                ? 'relative w-full flex-1 min-h-0 select-none overflow-hidden'
+                : 'relative w-full flex-1 min-h-[480px] select-none overflow-hidden'
+            }
           >
             {/* Top-Left Block: Compact Menu on Mobile/Tablet; Direct Rotate, Kursi, Daftar & Menu on Desktop (lg+) */}
             <div

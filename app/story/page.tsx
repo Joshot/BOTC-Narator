@@ -43,10 +43,17 @@ export default function StoryPage() {
 
   const [copied, setCopied] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const isDesktop = process.env.NEXT_PUBLIC_APP_MODE === 'desktop';
 
   if (!hasActiveGame) {
     return (
-      <div className="max-w-xl mx-auto min-h-[70dvh] flex flex-col items-center justify-center py-8 text-center space-y-6">
+      <div
+        className={
+          isDesktop
+            ? 'max-w-xl mx-auto flex-1 min-h-0 flex flex-col items-center justify-center py-6 text-center space-y-5'
+            : 'max-w-xl mx-auto min-h-[70dvh] flex flex-col items-center justify-center py-8 text-center space-y-6'
+        }
+      >
         <div className="w-16 h-16 rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] flex items-center justify-center mx-auto text-amber-700 dark:text-[#D4AF37] shadow-md dark:shadow-xl">
           <History className="w-8 h-8" />
         </div>
@@ -174,10 +181,17 @@ export default function StoryPage() {
   };
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-150">
+    <div
+      className={
+        isDesktop
+          ? 'flex-1 min-h-0 flex flex-col gap-2 animate-in fade-in duration-150'
+          : 'space-y-6 pb-12 animate-in fade-in duration-150'
+      }
+    >
       {/* Top Phase Header & Sub-Nav */}
       <InGameHeader />
 
+      <div className={isDesktop ? 'flex-1 min-h-0 overflow-y-auto pr-1 space-y-4 pb-2' : 'space-y-6'}>
       {/* Main Page Title & Top Actions Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] shadow-xl">
         <div className="flex items-center gap-3.5">
@@ -455,6 +469,7 @@ export default function StoryPage() {
           </div>
         )}
       </section>
+      </div>
     </div>
   );
 }

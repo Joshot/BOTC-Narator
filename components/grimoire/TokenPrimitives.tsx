@@ -5,6 +5,7 @@ import {
   ART_ASSETS,
   AlignmentSide,
   GRIMOIRE_PALETTE,
+  TEAM_TOKEN_ACCENT,
   TOKEN_MATERIAL,
   TeamKey,
   getCharacterArtUri,
@@ -30,7 +31,7 @@ interface TokenDiscProps {
 }
 
 /**
- * Physical cut cardboard disc shell with 3D underside rim and soft contact shadow.
+ * Physical cut cardboard disc shell with 3D brass-bevel underside rim and soft contact shadow.
  */
 export function TokenDisc({
   size,
@@ -41,12 +42,12 @@ export function TokenDisc({
   className = '',
   style,
 }: TokenDiscProps) {
-  const edgeThickness = Math.max(2, Math.round(size * 0.036));
+  const edgeThickness = Math.max(2, Math.round(size * 0.042));
   const rimShadow = selected
-    ? `0 0 0 2.5px ${ringColor || GRIMOIRE_PALETTE.accent}, ${tokenShadow(size)}`
+    ? `0 0 0 2.5px ${ringColor || GRIMOIRE_PALETTE.accent}, 0 0 14px rgba(212, 175, 55, 0.45), ${tokenShadow(size)}`
     : ringColor
     ? `0 0 0 2px ${ringColor}, ${tokenShadow(size)}`
-    : tokenShadow(size);
+    : `0 0 0 1px rgba(180, 138, 68, 0.55), ${tokenShadow(size)}`;
 
   return (
     <div
@@ -54,9 +55,10 @@ export function TokenDisc({
       style={{
         width: size,
         height: size,
+        padding: 1,
         paddingBottom: edgeThickness,
         backgroundColor: TOKEN_MATERIAL.edgeShade,
-        backgroundImage: `linear-gradient(180deg, ${TOKEN_MATERIAL.edge} 0%, ${TOKEN_MATERIAL.edgeShade} 100%)`,
+        backgroundImage: `linear-gradient(160deg, ${TOKEN_MATERIAL.edge} 0%, ${TOKEN_MATERIAL.edgeMid} 48%, ${TOKEN_MATERIAL.edgeShade} 100%)`,
         boxShadow: rimShadow,
         filter: dead ? TOKEN_MATERIAL.deadFilter : undefined,
         ...style,
@@ -75,12 +77,12 @@ export function TokenDisc({
 }
 
 /**
- * Curved character name rendered along the lower semi-circular rim in Grenze serif.
+ * Curved character name rendered along the lower semi-circular rim in Grenze serif with crisp halo.
  */
 function CurvedTokenName({
   name,
   diameter,
-  color = '#1e150e',
+  color = '#1b1109',
 }: {
   name: string;
   diameter: number;
@@ -103,6 +105,10 @@ function CurvedTokenName({
       </defs>
       <text
         fill={color}
+        stroke="#f4ead2"
+        strokeWidth="2.4"
+        strokeLinejoin="round"
+        paintOrder="stroke fill"
         fontSize={svgFont}
         fontWeight="700"
         fontFamily="var(--font-display), Georgia, serif"
@@ -141,10 +147,13 @@ function CurvedReminderLabel({
       </defs>
       <text
         fill={GRIMOIRE_PALETTE.text}
+        stroke="rgba(14, 9, 18, 0.88)"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+        paintOrder="stroke fill"
         fontSize={fontSize}
         fontWeight="700"
         fontFamily="var(--font-display), Georgia, serif"
-        style={{ textShadow: '0 1px 2px rgba(0, 0, 0, 0.92)' }}
       >
         <textPath href={`#rem_${uid}`} startOffset="50%" textAnchor="middle">
           {trimmed}
@@ -201,6 +210,7 @@ export function CharacterTokenFront({
 }: CharacterTokenFrontProps) {
   const team = role.team as TeamKey;
   const artUri = getCharacterArtUri(role.artId || role.id, team, alignment);
+  const teamAccent = TEAM_TOKEN_ACCENT[team] ?? TEAM_TOKEN_ACCENT.townsfolk;
   const ringColor = isPoisoned
     ? '#dc2626'
     : selected
@@ -221,6 +231,16 @@ export function CharacterTokenFront({
         alt=""
         draggable={false}
         className="pointer-events-none absolute inset-0 w-full h-full object-cover"
+      />
+
+      {/* Subtle engraved team ring + parchment vignette + top specular gloss */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 rounded-full"
+        style={{
+          background: `radial-gradient(circle at 35% 24%, rgba(255,255,255,0.28) 0%, transparent 48%), radial-gradient(circle at 50% 55%, ${teamAccent.glow} 0%, rgba(42,32,24,0.12) 100%)`,
+          boxShadow: `inset 0 0 0 2.5px rgba(201, 150, 58, 0.34), inset 0 0 0 4.5px ${teamAccent.ring}`,
+        }}
       />
 
       {/* Full-disc botanical markers positioned around perimeter */}
@@ -315,11 +335,14 @@ export function CharacterTokenFront({
         </div>
       )}
 
-      {/* Ghost Vote shroud crystal indicator on top-right edge when dead with vote */}
+      {/* Ghost Vote wax-seal indicator on right edge when dead with vote */}
       {dead && hasGhostVote && (
         <div
           title="Ghost Vote Tersedia"
-          className="pointer-events-none absolute bottom-[22%] right-[10%] w-[20%] h-[20%] min-w-[12px] min-h-[12px] rounded-full border border-[#efe6d2]/80 bg-[#c9963a] shadow"
+          className="pointer-events-none absolute bottom-[22%] right-[9%] w-[21%] h-[21%] min-w-[12px] min-h-[12px] rounded-full border border-[#fff8e1] shadow-md"
+          style={{
+            background: 'radial-gradient(circle at 32% 30%, #fde68a 0%, #d4af37 52%, #8b5e18 100%)',
+          }}
         />
       )}
     </TokenDisc>
