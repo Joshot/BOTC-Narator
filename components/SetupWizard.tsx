@@ -211,13 +211,14 @@ export default function SetupWizard({
     const isLast = discoveryIdx + 1 >= discoverySeats.length;
 
     return (
-      <div className="max-w-3xl mx-auto px-3 sm:px-6 py-6">
+      <div className="max-w-3xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
         <VelvetBackdrop
           colour="midnight"
-          className="rounded-3xl p-6 sm:p-10 text-center shadow-2xl border border-[#c9963a]/40 min-h-[480px] flex flex-col items-center justify-center"
+          center
+          className="rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#c9963a]/40 min-h-[64dvh]"
         >
           {!discoveryRevealed ? (
-            <div className="max-w-md space-y-5">
+            <div className="max-w-md mx-auto space-y-5">
               <TokenBackDisc size={112} highlighted className="mx-auto" />
               <div className="space-y-1">
                 <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#c9963a]">
@@ -240,7 +241,7 @@ export default function SetupWizard({
               </button>
             </div>
           ) : (
-            <div className="max-w-md w-full space-y-5">
+            <div className="max-w-md mx-auto w-full space-y-5">
               <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#c9963a]">
                 {activeSeat?.name} · Peran Rahasia Kamu
               </p>

@@ -30,7 +30,7 @@ export default function NarratorPage() {
 
   if (!hasActiveGame || players.length === 0) {
     return (
-      <div className="max-w-xl mx-auto py-16 text-center space-y-6">
+      <div className="max-w-xl mx-auto min-h-[70dvh] flex flex-col items-center justify-center py-8 text-center space-y-6">
         <div className="w-16 h-16 rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] flex items-center justify-center mx-auto text-blue-600 dark:text-[#60A5FA] shadow-md dark:shadow-xl">
           <Moon className="w-8 h-8" />
         </div>

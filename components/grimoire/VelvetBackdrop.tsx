@@ -7,6 +7,8 @@ interface VelvetBackdropProps {
   colour?: VelvetColour;
   children: React.ReactNode;
   className?: string;
+  contentClassName?: string;
+  center?: boolean;
   showFrame?: boolean;
   showCorners?: boolean;
   style?: React.CSSProperties;
@@ -61,6 +63,8 @@ export default function VelvetBackdrop({
   colour = 'midnight',
   children,
   className = '',
+  contentClassName = '',
+  center = false,
   showFrame = true,
   showCorners = true,
   style,
@@ -69,7 +73,7 @@ export default function VelvetBackdrop({
 
   return (
     <div
-      className={`relative overflow-hidden ${className}`}
+      className={`relative overflow-hidden flex flex-col ${className}`}
       style={{
         backgroundColor: BASE_COLORS[colour],
         backgroundImage: `url('${velvetMeta.art}')`,
@@ -106,7 +110,13 @@ export default function VelvetBackdrop({
         </>
       )}
 
-      <div className="relative z-10 h-full w-full">{children}</div>
+      <div
+        className={`relative z-10 flex-1 min-h-0 w-full flex flex-col ${
+          center ? 'items-center justify-center text-center' : ''
+        } ${contentClassName}`}
+      >
+        {children}
+      </div>
     </div>
   );
 }

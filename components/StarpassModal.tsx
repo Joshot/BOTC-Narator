@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { Crown, RefreshCw, Swords, X } from 'lucide-react';
 import { ROLE_MAP } from '@/lib/botc-data';
 import { StarpassPendingData } from '@/context/GameContext';
+import { useLockBodyScroll } from './grimoire/useLockBodyScroll';
 
 interface StarpassModalProps {
   pendingData: StarpassPendingData | null;
@@ -17,12 +18,14 @@ export default function StarpassModal({
   onChooseMinion,
   onDismiss,
 }: StarpassModalProps) {
+  useLockBodyScroll(Boolean(pendingData));
+
   if (!pendingData) return null;
 
   const { dyingDemon, aliveMinions } = pendingData;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md overflow-hidden">
       <motion.div
         initial={{ opacity: 0, scale: 0.94, y: 14 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -62,7 +65,7 @@ export default function StarpassModal({
           <div className="text-[11px] font-mono uppercase tracking-wider text-slate-500 dark:text-[#8E8A9E] px-1">
             Daftar Minion Hidup ({aliveMinions.length})
           </div>
-          <div className="grid grid-cols-1 gap-2.5 max-h-64 overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 gap-2">
             {aliveMinions.map((minion) => {
               const role = ROLE_MAP[minion.trueRoleId];
               return (

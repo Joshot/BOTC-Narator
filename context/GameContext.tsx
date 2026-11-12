@@ -24,6 +24,13 @@ import {
   swapPlayerSeats,
 } from '@/lib/botc-engine';
 import type { VelvetColour } from '@/lib/grimoire-theme';
+import {
+  type HistoryStack,
+  createEmptyHistory,
+  pushHistorySnapshot,
+  stepHistoryRedo,
+  stepHistoryUndo,
+} from '@/lib/history-stack';
 import { SilentCardPayload } from '@/components/FullscreenCardModal';
 
 export const ROOMS_STORAGE_KEY = 'botc_tb_rooms_v3';
@@ -135,6 +142,7 @@ export interface GameContextType {
   startedAt?: number;
   nominationsToday: DayNomination[];
   canUndo: boolean;
+  canRedo: boolean;
   silentCard: SilentCardPayload | null;
   isRefModalOpen: boolean;
   isStoryModalOpen: boolean;
@@ -144,6 +152,7 @@ export interface GameContextType {
   startDemoGame: () => void;
   resetSession: () => void;
   undoLastAction: () => void;
+  redoLastAction: () => void;
   setVelvetColour: (colour: VelvetColour) => void;
   completeSetup: (payload: {
     playerCount: number;
@@ -293,7 +302,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [isRefModalOpen, setIsRefModalOpen] = useState<boolean>(false);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState<boolean>(false);
   const [starpassPending, setStarpassPending] = useState<StarpassPendingData | null>(null);
-  const [undoStacks, setUndoStacks] = useState<Record<string, PersistedGameSession[]>>({});
+  const [historyStacks, setHistoryStacks] = useState<
+    Record<string, HistoryStack<PersistedGameSession>>
+  >({});
   const sessionRef = React.useRef(session);
   sessionRef.current = session;
 
@@ -319,13 +330,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const current = sessionRef.current;
       if (shouldRecord && current.hasActiveGame) {
         const snapshot = JSON.parse(JSON.stringify(current)) as PersistedGameSession;
-        setUndoStacks((stacks) => {
-          const roomStack = stacks[activeRoomId] || [];
-          return {
-            ...stacks,
-            [activeRoomId]: [...roomStack.slice(-29), snapshot],
-          };
-        });
+        setHistoryStacks((stacks) => ({
+          ...stacks,
+          [activeRoomId]: pushHistorySnapshot(stacks[activeRoomId], snapshot),
+        }));
       }
       setRooms((prevRooms) =>
         prevRooms.map((r) => {
@@ -342,22 +350,32 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     [activeRoomId]
   );
 
-  const canUndo = (undoStacks[activeRoomId]?.length ?? 0) > 0;
+  const canUndo = (historyStacks[activeRoomId]?.undo.length ?? 0) > 0;
+  const canRedo = (historyStacks[activeRoomId]?.redo.length ?? 0) > 0;
 
-  const undoLastAction = useCallback(() => {
-    const stack = undoStacks[activeRoomId] || [];
-    if (stack.length === 0) return;
-    const previousSnapshot = stack[stack.length - 1];
-    setUndoStacks((stacks) => ({
-      ...stacks,
-      [activeRoomId]: (stacks[activeRoomId] || []).slice(0, -1),
-    }));
-    setRooms((prevRooms) =>
-      prevRooms.map((r) =>
-        r.id === activeRoomId ? { ...r, lastActiveAt: Date.now(), session: previousSnapshot } : r
-      )
-    );
-  }, [activeRoomId, undoStacks]);
+  const applyHistoryStep = useCallback(
+    (direction: 'undo' | 'redo') => {
+      const currentSnapshot = JSON.parse(
+        JSON.stringify(sessionRef.current)
+      ) as PersistedGameSession;
+      const roomStack = historyStacks[activeRoomId];
+      const { nextStack, restored } =
+        direction === 'undo'
+          ? stepHistoryUndo(roomStack, currentSnapshot)
+          : stepHistoryRedo(roomStack, currentSnapshot);
+      if (!restored) return;
+      setHistoryStacks((stacks) => ({ ...stacks, [activeRoomId]: nextStack }));
+      setRooms((prevRooms) =>
+        prevRooms.map((r) =>
+          r.id === activeRoomId ? { ...r, lastActiveAt: Date.now(), session: restored } : r
+        )
+      );
+    },
+    [activeRoomId, historyStacks]
+  );
+
+  const undoLastAction = useCallback(() => applyHistoryStep('undo'), [applyHistoryStep]);
+  const redoLastAction = useCallback(() => applyHistoryStep('redo'), [applyHistoryStep]);
 
   const setVelvetColour = useCallback(
     (colour: VelvetColour) => {
@@ -504,7 +522,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       perceivedRoleId: p.perceivedRoleId,
       team: ROLE_MAP[p.trueRoleId]?.team || 'townsfolk',
     }));
-    setUndoStacks((stacks) => ({ ...stacks, [activeRoomId]: [] }));
+    setHistoryStacks((stacks) => ({ ...stacks, [activeRoomId]: createEmptyHistory() }));
     updateSession((s) => ({
       ...s,
       hasActiveGame: true,
@@ -529,7 +547,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [activeRoomId, updateSession]);
 
   const resetSession = useCallback(() => {
-    setUndoStacks((stacks) => ({ ...stacks, [activeRoomId]: [] }));
+    setHistoryStacks((stacks) => ({ ...stacks, [activeRoomId]: createEmptyHistory() }));
     updateSession((s) => ({ ...createEmptySession(activeRoom.name), velvetColour: s.velvetColour || 'midnight' }), { recordUndo: false });
     setStarpassPending(null);
   }, [activeRoom.name, activeRoomId, updateSession]);
@@ -560,7 +578,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         category: 'start',
       };
 
-      setUndoStacks((stacks) => ({ ...stacks, [activeRoomId]: [] }));
+      setHistoryStacks((stacks) => ({ ...stacks, [activeRoomId]: createEmptyHistory() }));
       updateSession((s) => ({
         ...s,
         hasActiveGame: true,
@@ -1843,6 +1861,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       startedAt: session.startedAt,
       nominationsToday: session.nominationsToday || [],
       canUndo,
+      canRedo,
       silentCard,
       isRefModalOpen,
       isStoryModalOpen,
@@ -1851,6 +1870,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       startDemoGame,
       resetSession,
       undoLastAction,
+      redoLastAction,
       setVelvetColour,
       completeSetup,
       setPhase,
@@ -1906,6 +1926,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       renameRoom,
       session,
       canUndo,
+      canRedo,
       silentCard,
       isRefModalOpen,
       isStoryModalOpen,
@@ -1913,6 +1934,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       startDemoGame,
       resetSession,
       undoLastAction,
+      redoLastAction,
       setVelvetColour,
       completeSetup,
       setPhase,

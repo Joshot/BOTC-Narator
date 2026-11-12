@@ -23,8 +23,10 @@ export default function GrimoirePage() {
     velvetColour,
     nominationsToday,
     canUndo,
+    canRedo,
     startDemoGame,
     undoLastAction,
+    redoLastAction,
     setVelvetColour,
     setDemonBluffIds,
     handleSetDrunkPlayer,
@@ -65,9 +67,10 @@ export default function GrimoirePage() {
       <div className="py-4">
         <VelvetBackdrop
           colour={velvetColour}
-          className="rounded-3xl min-h-[520px] flex flex-col items-center justify-center p-8 text-center shadow-2xl border border-[#c9963a]/30"
+          center
+          className="rounded-3xl min-h-[72dvh] p-6 sm:p-8 shadow-2xl border border-[#c9963a]/30"
         >
-          <div className="max-w-md space-y-6">
+          <div className="max-w-md mx-auto space-y-6">
             <img
               src="/art/editions/tb.webp"
               alt="Trouble Brewing"
@@ -126,7 +129,9 @@ export default function GrimoirePage() {
         velvetColour={velvetColour}
         nominationsToday={nominationsToday}
         canUndo={canUndo}
+        canRedo={canRedo}
         onUndo={undoLastAction}
+        onRedo={redoLastAction}
         onVelvetColourChange={setVelvetColour}
         onUpdateBluffs={setDemonBluffIds}
         onSetDrunkPlayer={handleSetDrunkPlayer}

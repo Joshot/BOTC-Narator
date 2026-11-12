@@ -46,7 +46,7 @@ export default function StoryPage() {
 
   if (!hasActiveGame) {
     return (
-      <div className="max-w-xl mx-auto py-16 text-center space-y-6">
+      <div className="max-w-xl mx-auto min-h-[70dvh] flex flex-col items-center justify-center py-8 text-center space-y-6">
         <div className="w-16 h-16 rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] flex items-center justify-center mx-auto text-amber-700 dark:text-[#D4AF37] shadow-md dark:shadow-xl">
           <History className="w-8 h-8" />
         </div>

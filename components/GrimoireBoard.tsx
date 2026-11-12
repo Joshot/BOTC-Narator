@@ -10,7 +10,9 @@ import {
   Gavel,
   LayoutGrid,
   Moon,
+  MoreVertical,
   Plus,
+  Redo2,
   RotateCcw,
   RotateCw,
   ScrollText,
@@ -49,6 +51,7 @@ import ReminderPicker from './grimoire/ReminderPicker';
 import ShowSheetModal from './grimoire/ShowSheetModal';
 import ReferenceDrawer from './grimoire/ReferenceDrawer';
 import { DayNominationControls, VotingArcSvg } from './grimoire/VotingOverlay';
+import { useLockBodyScroll } from './grimoire/useLockBodyScroll';
 
 export interface GrimoireBoardProps {
   players: PlayerSeat[];
@@ -61,7 +64,9 @@ export interface GrimoireBoardProps {
   velvetColour?: VelvetColour;
   nominationsToday?: DayNomination[];
   canUndo?: boolean;
+  canRedo?: boolean;
   onUndo?: () => void;
+  onRedo?: () => void;
   onVelvetColourChange?: (colour: VelvetColour) => void;
   onUpdateBluffs?: (bluffs: string[]) => void;
   onSetDrunkPlayer?: (playerId: string) => void;
@@ -105,7 +110,9 @@ export default function GrimoireBoard({
   velvetColour = 'midnight',
   nominationsToday = [],
   canUndo = false,
+  canRedo = false,
   onUndo,
+  onRedo,
   onVelvetColourChange,
   onUpdateBluffs,
   onSetDrunkPlayer,
@@ -153,12 +160,15 @@ export default function GrimoireBoard({
   const [peekIndex, setPeekIndex] = useState(0);
 
   const [pendingNomineeId, setPendingNomineeId] = useState<string | null>(null);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [bluffEditorOpen, setBluffEditorOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<{
     playerId: string;
     instanceId: string;
     text: string;
   } | null>(null);
+
+  useLockBodyScroll(Boolean(bluffEditorOpen || editingNote));
 
   const [dragReminder, setDragReminder] = useState<{
     fromPlayerId: string;
@@ -187,18 +197,29 @@ export default function GrimoireBoard({
     return () => ro.disconnect();
   }, [viewMode]);
 
-  // Keyboard Ctrl+Z Undo & Escape close
+  // Keyboard Ctrl+Z Undo, Ctrl+Y / Ctrl+Shift+Z Redo & Escape close
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      const isTyping = tag === 'INPUT' || tag === 'TEXTAREA';
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
-        const tag = (e.target as HTMLElement | null)?.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        if (isTyping) return;
         if (onUndo && canUndo) {
           e.preventDefault();
           onUndo();
         }
+      } else if (
+        (e.ctrlKey || e.metaKey) &&
+        ((e.key.toLowerCase() === 'z' && e.shiftKey) || (e.key.toLowerCase() === 'y' && !e.shiftKey))
+      ) {
+        if (isTyping) return;
+        if (onRedo && canRedo) {
+          e.preventDefault();
+          onRedo();
+        }
       } else if (e.key === 'Escape') {
         setMenuSeatId(null);
+        setMoreMenuOpen(false);
         setSwapSourceSeatIdx(null);
         setArrangeGapsVisible(false);
         setReminderPickerSeatId(null);
@@ -209,7 +230,7 @@ export default function GrimoireBoard({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [canUndo, onUndo]);
+  }, [canRedo, canUndo, onRedo, onUndo]);
 
   const voteStats = calculateVoteThreshold(players);
   const thresholds = calculateNominationThresholds(players, nominationsToday);
@@ -352,6 +373,62 @@ export default function GrimoireBoard({
                   <BookOpen className="w-3.5 h-3.5 text-[#c9963a]" />
                   <span>Skrip</span>
                 </button>
+                {(onUndo || onRedo) && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setMoreMenuOpen((prev) => !prev)}
+                      aria-label="Menu Titik Tiga (Undo & Redo)"
+                      title="Menu Lainnya (Undo / Redo)"
+                      className="p-1.5 rounded-xl bg-black/50 border border-[#c9963a]/35 text-[#efe6d2] hover:bg-black/70 cursor-pointer"
+                    >
+                      <MoreVertical className="w-4 h-4 text-[#c9963a]" />
+                    </button>
+                    {moreMenuOpen && (
+                      <div
+                        className="absolute right-0 top-full mt-1.5 w-48 rounded-2xl p-1.5 z-50 shadow-2xl border border-[#c9963a]/40 bg-[#141a1d]/95 backdrop-blur-md space-y-1"
+                        role="menu"
+                      >
+                        {onUndo && (
+                          <button
+                            type="button"
+                            role="menuitem"
+                            disabled={!canUndo}
+                            onClick={() => {
+                              onUndo();
+                              setMoreMenuOpen(false);
+                            }}
+                            className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-[#efe6d2] hover:bg-white/10 disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-between cursor-pointer"
+                          >
+                            <span className="flex items-center gap-2">
+                              <Undo2 className="w-3.5 h-3.5 text-[#c9963a]" />
+                              Urungkan (Undo)
+                            </span>
+                            <span className="text-[10px] font-mono text-[#a89f8c]">Ctrl+Z</span>
+                          </button>
+                        )}
+                        {onRedo && (
+                          <button
+                            type="button"
+                            role="menuitem"
+                            disabled={!canRedo}
+                            onClick={() => {
+                              onRedo();
+                              setMoreMenuOpen(false);
+                            }}
+                            className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-[#efe6d2] hover:bg-white/10 disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-between cursor-pointer"
+                          >
+                            <span className="flex items-center gap-2">
+                              <Redo2 className="w-3.5 h-3.5 text-[#c9963a]" />
+                              Ulangi (Redo)
+                            </span>
+                            <span className="text-[10px] font-mono text-[#a89f8c]">Ctrl+Y</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -443,10 +520,11 @@ export default function GrimoireBoard({
             ref={stageRef}
             onClick={() => {
               setMenuSeatId(null);
+              setMoreMenuOpen(false);
             }}
-            className="relative w-full h-full min-h-[540px] select-none overflow-hidden"
+            className="relative w-full flex-1 min-h-[540px] select-none overflow-hidden"
           >
-            {/* Top-Left Block: Undo, Rotate, Add Seats, Layout toggle */}
+            {/* Top-Left Block: Rotate, Add Seats, Layout toggle & Titik-3 Menu (Undo/Redo) */}
             <div
               onClick={(e) => e.stopPropagation()}
               className="absolute top-3 left-3 sm:top-4 sm:left-4 z-30 flex flex-wrap items-center gap-1.5 p-1.5 rounded-2xl backdrop-blur-md"
@@ -456,21 +534,8 @@ export default function GrimoireBoard({
                 boxShadow: BOARD_CHROME.liftedShadow,
               }}
             >
-              {onUndo && (
-                <button
-                  type="button"
-                  disabled={!canUndo}
-                  onClick={onUndo}
-                  title="Undo perubahan terakhir (Ctrl+Z)"
-                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 text-[#efe6d2] hover:bg-white/10 disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-colors"
-                >
-                  <Undo2 className="w-3.5 h-3.5 text-[#c9963a]" />
-                  <span className="hidden sm:inline">Undo</span>
-                </button>
-              )}
-
               {onRotateRing && (
-                <div className="flex items-center border-l border-[#c9963a]/25 pl-1.5 gap-0.5">
+                <div className="flex items-center gap-0.5">
                   <button
                     type="button"
                     onClick={() => onRotateRing('ccw')}
@@ -515,6 +580,70 @@ export default function GrimoireBoard({
                 <LayoutGrid className="w-3.5 h-3.5 text-[#c9963a]" />
                 <span className="hidden md:inline">Daftar</span>
               </button>
+
+              {(onUndo || onRedo) && (
+                <div className="relative border-l border-[#c9963a]/25 pl-1">
+                  <button
+                    type="button"
+                    onClick={() => setMoreMenuOpen((prev) => !prev)}
+                    aria-label="Menu Titik Tiga (Undo & Redo)"
+                    title="Menu Riwayat (Undo / Redo)"
+                    className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
+                      moreMenuOpen
+                        ? 'bg-[#c9963a]/25 text-[#f4e4bc]'
+                        : 'text-[#efe6d2] hover:bg-white/10'
+                    }`}
+                  >
+                    <MoreVertical className="w-3.5 h-3.5 text-[#c9963a]" />
+                  </button>
+                  {moreMenuOpen && (
+                    <div
+                      className="absolute left-0 top-full mt-2 w-52 rounded-2xl p-1.5 z-50 shadow-2xl border border-[#c9963a]/40 bg-[#141a1d]/95 backdrop-blur-md space-y-1"
+                      role="menu"
+                    >
+                      <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#a89f8c] border-b border-white/10">
+                        Riwayat Aksi
+                      </div>
+                      {onUndo && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          disabled={!canUndo}
+                          onClick={() => {
+                            onUndo();
+                            setMoreMenuOpen(false);
+                          }}
+                          className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-[#efe6d2] hover:bg-white/10 disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-between cursor-pointer"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Undo2 className="w-3.5 h-3.5 text-[#c9963a]" />
+                            Urungkan (Undo)
+                          </span>
+                          <span className="text-[10px] font-mono text-[#a89f8c]">Ctrl+Z</span>
+                        </button>
+                      )}
+                      {onRedo && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          disabled={!canRedo}
+                          onClick={() => {
+                            onRedo();
+                            setMoreMenuOpen(false);
+                          }}
+                          className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-[#efe6d2] hover:bg-white/10 disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-between cursor-pointer"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Redo2 className="w-3.5 h-3.5 text-[#c9963a]" />
+                            Ulangi (Redo)
+                          </span>
+                          <span className="text-[10px] font-mono text-[#a89f8c]">Ctrl+Y</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Top-Right Block: Show Cards, Script Reference, Velvet Swatches, Stealth Spy */}
@@ -1118,7 +1247,7 @@ export default function GrimoireBoard({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 overflow-hidden"
           onClick={() => setEditingNote(null)}
         >
           <div className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
@@ -1181,29 +1310,29 @@ export default function GrimoireBoard({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65"
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 overflow-hidden"
           onClick={() => setBluffEditorOpen(false)}
         >
-          <div className="w-full max-w-xl" onClick={(e) => e.stopPropagation()}>
-            <ParchmentSurface className="rounded-2xl p-4 sm:p-5 space-y-4">
-              <div className="flex items-center justify-between">
+          <div className="w-full max-w-2xl max-h-[94dvh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <ParchmentSurface className="rounded-2xl p-3 sm:p-4 space-y-2.5 overflow-hidden">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <h4 className="font-display text-lg font-bold text-[#2a2018]">
+                  <h4 className="font-display text-base sm:text-lg font-bold text-[#2a2018]">
                     Pilih 3 Peran Bluff Demon
                   </h4>
-                  <p className="text-xs text-[#5c4a37]">
-                    Karakter Townsfolk/Outsider yang tidak dimainkan di ring.
+                  <p className="text-[11px] text-[#5c4a37]">
+                    Karakter Townsfolk/Outsider yang tidak dimainkan ({demonBluffIds.length}/3 dipilih).
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setBluffEditorOpen(false)}
-                  className="px-3 py-1 rounded-xl bg-[#2a2018] text-[#efe6d2] text-xs font-bold cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-[#2a2018] text-[#efe6d2] text-xs font-bold cursor-pointer shrink-0"
                 >
                   Selesai
                 </button>
               </div>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[52vh] overflow-y-auto">
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
                 {ALL_TB_ROLES.filter((r) => r.team === 'townsfolk' || r.team === 'outsider').map(
                   (role) => {
                     const isSelected = demonBluffIds.includes(role.id);
@@ -1220,7 +1349,7 @@ export default function GrimoireBoard({
                             onUpdateBluffs(next);
                           }
                         }}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-center cursor-pointer ${
+                        className={`flex flex-col items-center justify-center gap-1 p-1.5 rounded-xl border text-center cursor-pointer transition-colors ${
                           isSelected
                             ? 'border-[#c9963a] bg-[#c9963a]/25 ring-1 ring-[#c9963a]'
                             : isUsed
@@ -1228,8 +1357,8 @@ export default function GrimoireBoard({
                             : 'border-[#655342]/25 bg-[#66533f]/[0.06] hover:bg-[#66533f]/[0.15]'
                         }`}
                       >
-                        <CharacterTokenFront role={role} size={42} showSetupLeaf={false} />
-                        <span className="text-[11px] font-bold text-[#2a2018] truncate w-full">
+                        <CharacterTokenFront role={role} size={36} showSetupLeaf={false} />
+                        <span className="text-[10px] font-bold text-[#2a2018] truncate w-full leading-tight">
                           {role.name}
                         </span>
                       </button>

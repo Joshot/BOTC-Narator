@@ -4,6 +4,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, Moon, Palette, Sun, X } from 'lucide-react';
 import { useAppTheme } from '@/context/ThemeContext';
+import { useLockBodyScroll } from './grimoire/useLockBodyScroll';
 
 export default function ThemeConfirmModal() {
   const {
@@ -12,6 +13,8 @@ export default function ThemeConfirmModal() {
     confirmThemeChange,
     cancelThemeChange,
   } = useAppTheme();
+
+  useLockBodyScroll(Boolean(isConfirmModalOpen && targetTheme));
 
   return (
     <AnimatePresence>
@@ -24,7 +27,7 @@ export default function ThemeConfirmModal() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md overflow-hidden"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.93, y: 12 }}

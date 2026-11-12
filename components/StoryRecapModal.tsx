@@ -18,6 +18,9 @@ import {
   X,
 } from 'lucide-react';
 import { GameStoryEntry } from '@/context/GameContext';
+import { useLockBodyScroll } from './grimoire/useLockBodyScroll';
+
+const ITEMS_PER_PAGE = 4;
 
 interface StoryRecapModalProps {
   isOpen: boolean;
@@ -35,8 +38,18 @@ export default function StoryRecapModal({
   activeRoomName,
 }: StoryRecapModalProps) {
   const [copied, setCopied] = useState(false);
+  const [page, setPage] = useState(0);
+
+  useLockBodyScroll(isOpen);
 
   if (!isOpen) return null;
+
+  const totalPages = Math.max(1, Math.ceil(storyHistory.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(page, totalPages - 1);
+  const visibleEntries = storyHistory.slice(
+    safePage * ITEMS_PER_PAGE,
+    safePage * ITEMS_PER_PAGE + ITEMS_PER_PAGE
+  );
 
   const handleCopyStory = async () => {
     try {
@@ -96,12 +109,16 @@ export default function StoryRecapModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md overflow-hidden"
+      onClick={onClose}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-        className="relative w-full max-w-2xl max-h-[85vh] rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.12] shadow-2xl flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-2xl max-h-[94dvh] rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.12] shadow-2xl flex flex-col overflow-hidden"
       >
         {/* Header */}
         <div className="p-5 sm:p-6 border-b border-purple-100 dark:border-white/[0.08] flex items-center justify-between gap-4 bg-purple-50/70 dark:bg-[#181822]">
@@ -193,29 +210,29 @@ export default function StoryRecapModal({
           </div>
         )}
 
-        {/* Content: Story Timeline */}
-        <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-4">
+        {/* Content: Story Timeline (Paginated, Zero Scroll) */}
+        <div className="p-4 sm:p-5 overflow-hidden flex-1 flex flex-col justify-between gap-3">
           {storyHistory.length === 0 ? (
-            <div className="py-12 text-center space-y-3">
+            <div className="py-10 text-center space-y-2">
               <Scroll className="w-8 h-8 mx-auto text-slate-400 dark:text-[#4A4756]" />
               <p className="text-xs text-slate-500 dark:text-[#8E8A9E]">
                 Belum ada peristiwa cerita tercatat dalam sesi ini.
               </p>
             </div>
           ) : (
-            <div className="relative border-l-2 border-purple-200 dark:border-white/[0.08] ml-3 pl-4 space-y-4">
-              {storyHistory.map((item, idx) => (
+            <div className="relative border-l-2 border-purple-200 dark:border-white/[0.08] ml-3 pl-4 space-y-2.5">
+              {visibleEntries.map((item, idx) => (
                 <motion.div
-                  key={item.id || idx}
+                  key={item.id || `${safePage}-${idx}`}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: Math.min(idx * 0.03, 0.25) }}
+                  transition={{ delay: Math.min(idx * 0.03, 0.15) }}
                   className="relative group"
                 >
                   {/* Timeline Node Dot */}
-                  <div className="absolute -left-[23px] top-1 w-3 h-3 rounded-full bg-white dark:bg-[#252533] border-2 border-amber-500 dark:border-[#D4AF37] group-hover:scale-125 transition-transform" />
+                  <div className="absolute -left-[23px] top-1 w-3 h-3 rounded-full bg-white dark:bg-[#252533] border-2 border-amber-500 dark:border-[#D4AF37]" />
 
-                  <div className="p-3.5 rounded-2xl bg-purple-50/50 dark:bg-[#181822] border border-purple-200 dark:border-white/[0.06] hover:border-purple-300 dark:hover:border-white/[0.12] transition-colors space-y-1.5 shadow-xs">
+                  <div className="p-2.5 sm:p-3 rounded-2xl bg-purple-50/50 dark:bg-[#181822] border border-purple-200 dark:border-white/[0.06] space-y-1 shadow-xs">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span
@@ -238,7 +255,7 @@ export default function StoryRecapModal({
                       </span>
                     </div>
 
-                    <p className="text-xs sm:text-sm text-slate-800 dark:text-[#EDEAF0] leading-relaxed">
+                    <p className="text-xs text-slate-800 dark:text-[#EDEAF0] leading-snug">
                       {item.text}
                     </p>
                   </div>
@@ -249,14 +266,38 @@ export default function StoryRecapModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-purple-100 dark:border-white/[0.08] bg-purple-50/70 dark:bg-[#181822] flex items-center justify-between">
-          <span className="text-[11px] text-slate-600 dark:text-[#8E8A9E]">
-            Catatan cerita tersimpan otomatis di penyimpanan lokal browser.
-          </span>
+        <div className="px-4 py-3 border-t border-purple-100 dark:border-white/[0.08] bg-purple-50/70 dark:bg-[#181822] flex items-center justify-between gap-2">
+          {totalPages > 1 ? (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                disabled={safePage === 0}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#222230] border border-purple-200 dark:border-white/[0.08] text-[11px] font-bold disabled:opacity-40 cursor-pointer"
+              >
+                Prev
+              </button>
+              <span className="text-[11px] font-mono text-slate-600 dark:text-[#8E8A9E]">
+                {safePage + 1}/{totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={safePage >= totalPages - 1}
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#222230] border border-purple-200 dark:border-white/[0.08] text-[11px] font-bold disabled:opacity-40 cursor-pointer"
+              >
+                Next
+              </button>
+            </div>
+          ) : (
+            <span className="text-[11px] text-slate-600 dark:text-[#8E8A9E]">
+              Tersimpan lokal di browser.
+            </span>
+          )}
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-[#222230] dark:hover:bg-[#2C2C3E] text-xs font-bold text-purple-950 dark:text-[#EDEAF0] transition-colors cursor-pointer"
+            className="px-5 py-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-[#222230] dark:hover:bg-[#2C2C3E] text-xs font-bold text-purple-950 dark:text-[#EDEAF0] transition-colors cursor-pointer"
           >
             Tutup
           </button>

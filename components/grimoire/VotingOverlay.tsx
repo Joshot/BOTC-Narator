@@ -254,8 +254,8 @@ export function DayNominationControls({
         </span>
       </div>
 
-      {/* Tap voter pills */}
-      <div className="flex flex-wrap gap-1 max-h-[84px] overflow-y-auto">
+      {/* Tap voter pills (Zero Scroll Compact Grid) */}
+      <div className="grid grid-cols-4 gap-1">
         {players.map((p) => {
           const voted = activeNomination.voterIds.includes(p.id);
           const canVote = p.isAlive || p.hasGhostVote || voted;

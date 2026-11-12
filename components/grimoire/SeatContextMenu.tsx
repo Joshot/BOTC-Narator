@@ -75,6 +75,20 @@ export default function SeatContextMenu({
   const trueRole = ROLE_MAP[seat.trueRoleId];
   const perceivedRole = ROLE_MAP[seat.perceivedRoleId];
   const effectiveAlignment = getPlayerAlignment(seat);
+  const initialRoleTab: 'townsfolk' | 'outsider' | 'evil' | 'traveller' =
+    trueRole?.team === 'outsider'
+      ? 'outsider'
+      : trueRole?.team === 'minion' || trueRole?.team === 'demon'
+      ? 'evil'
+      : trueRole?.team === 'traveller'
+      ? 'traveller'
+      : 'townsfolk';
+  const [roleTab, setRoleTab] = useState<'townsfolk' | 'outsider' | 'evil' | 'traveller'>(
+    initialRoleTab
+  );
+  const filteredRoles = ALL_TB_ROLES.filter((r) =>
+    roleTab === 'evil' ? r.team === 'minion' || r.team === 'demon' : r.team === roleTab
+  );
 
   const handleRenameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +102,9 @@ export default function SeatContextMenu({
     <div
       style={style}
       onClick={(e) => e.stopPropagation()}
-      className="z-40 w-[264px] max-w-[calc(100vw-24px)]"
+      className={`z-40 max-w-[calc(100vw-24px)] ${
+        subPanel === 'role' ? 'w-[292px]' : 'w-[264px]'
+      }`}
     >
       <ParchmentSurface className="rounded-2xl overflow-hidden shadow-2xl">
         {/* Compact Header */}
@@ -117,7 +133,7 @@ export default function SeatContextMenu({
 
         {/* Menu Views */}
         {subPanel === 'main' && (
-          <div className="p-1.5 space-y-1 text-xs font-medium text-[#2a2018] max-h-[60vh] overflow-y-auto">
+          <div className="p-1.5 space-y-0.5 text-xs font-medium text-[#2a2018] overflow-hidden">
             {/* 1. Remind (always first!) */}
             <button
               type="button"
@@ -125,7 +141,7 @@ export default function SeatContextMenu({
                 onClose();
                 onOpenReminderPicker();
               }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-[#c9963a]/20 hover:bg-[#c9963a]/35 font-bold text-[#2a2018] cursor-pointer transition-colors text-left"
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#c9963a]/20 hover:bg-[#c9963a]/35 font-bold text-[#2a2018] cursor-pointer transition-colors text-left"
             >
               <PlusCircle className="w-4 h-4 text-[#7a5210] shrink-0" />
               <span>Tambah Pengingat / Catatan</span>
@@ -139,7 +155,7 @@ export default function SeatContextMenu({
                   onClose();
                   onStartNomination();
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
               >
                 <Gavel className="w-4 h-4 text-[#760a0d] shrink-0" />
                 <span>Nominasikan untuk Eksekusi</span>
@@ -151,7 +167,7 @@ export default function SeatContextMenu({
               <button
                 type="button"
                 onClick={() => setSubPanel('kill')}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#760a0d]/10 text-[#760a0d] font-semibold cursor-pointer transition-colors text-left"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#760a0d]/10 text-[#760a0d] font-semibold cursor-pointer transition-colors text-left"
               >
                 <Skull className="w-4 h-4 shrink-0" />
                 <span>Tandai Pemain Mati...</span>
@@ -164,7 +180,7 @@ export default function SeatContextMenu({
                     onResurrect();
                     onClose();
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-emerald-800/10 text-emerald-900 font-semibold cursor-pointer transition-colors text-left"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-emerald-800/10 text-emerald-900 font-semibold cursor-pointer transition-colors text-left"
                 >
                   <HeartPulse className="w-4 h-4 shrink-0" />
                   <span>Hidupkan Kembali</span>
@@ -175,17 +191,17 @@ export default function SeatContextMenu({
                     onToggleGhostVote();
                     onClose();
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
                 >
                   <Ghost className="w-4 h-4 text-[#5c4a37] shrink-0" />
                   <span>
-                    Ghost Vote: {seat.hasGhostVote ? 'Tersedia (Klik Pakai)' : 'Habis (Klik Kembalikan)'}
+                    Ghost Vote: {seat.hasGhostVote ? 'Tersedia (Pakai)' : 'Habis (Pulihkan)'}
                   </span>
                 </button>
               </>
             )}
 
-            <div className="my-1 border-t border-[#655342]/18" />
+            <div className="my-0.5 border-t border-[#655342]/18" />
 
             {/* 4. Peek & Silent Show */}
             <button
@@ -194,7 +210,7 @@ export default function SeatContextMenu({
                 onClose();
                 onPeekSeat();
               }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
             >
               <Eye className="w-4 h-4 text-[#0064ac] shrink-0" />
               <span>Intip Detail Rahasia</span>
@@ -206,19 +222,19 @@ export default function SeatContextMenu({
                 onClose();
                 onShowSeatToken();
               }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
             >
               <ShieldAlert className="w-4 h-4 text-[#5c4a37] shrink-0" />
               <span>Tunjuk Token ke Pemain</span>
             </button>
 
-            <div className="my-1 border-t border-[#655342]/18" />
+            <div className="my-0.5 border-t border-[#655342]/18" />
 
             {/* 5. Role, Alignment & Name */}
             <button
               type="button"
               onClick={() => setSubPanel('role')}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
             >
               <ArrowLeftRight className="w-4 h-4 text-[#5c4a37] shrink-0" />
               <span>Ganti Karakter ({trueRole?.name})</span>
@@ -230,18 +246,18 @@ export default function SeatContextMenu({
                 onToggleAlignment();
                 onClose();
               }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
             >
               <Scale className="w-4 h-4 text-[#5c4a37] shrink-0" />
               <span>
-                Aliansi: {effectiveAlignment === 'good' ? 'Good -> Ubah ke Evil' : 'Evil -> Ubah ke Good'}
+                Aliansi: {effectiveAlignment === 'good' ? 'Good -> Ubah Evil' : 'Evil -> Ubah Good'}
               </span>
             </button>
 
             <button
               type="button"
               onClick={() => setSubPanel('rename')}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
             >
               <Pencil className="w-4 h-4 text-[#5c4a37] shrink-0" />
               <span>Ubah Nama Pemain</span>
@@ -388,10 +404,10 @@ export default function SeatContextMenu({
           </form>
         )}
 
-        {/* Change Role Subpanel */}
+        {/* Change Role Subpanel (Tabbed, Zero Scroll) */}
         {subPanel === 'role' && (
           <div className="p-2.5 space-y-2">
-            <div className="flex items-center justify-between px-1">
+            <div className="flex items-center justify-between px-0.5">
               <span className="text-[11px] font-mono uppercase tracking-wider text-[#5c4a37]">
                 Pilih Peran Baru
               </span>
@@ -403,8 +419,31 @@ export default function SeatContextMenu({
                 Kembali
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-1.5 max-h-[260px] overflow-y-auto pr-1">
-              {ALL_TB_ROLES.map((role) => {
+            <div className="grid grid-cols-4 gap-1">
+              {(
+                [
+                  { id: 'townsfolk', label: 'Town' },
+                  { id: 'outsider', label: 'Out' },
+                  { id: 'evil', label: 'Evil' },
+                  { id: 'traveller', label: 'Trav' },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setRoleTab(tab.id)}
+                  className={`py-1 rounded-lg text-[10px] font-mono font-bold uppercase cursor-pointer ${
+                    roleTab === tab.id
+                      ? 'bg-[#2a2018] text-[#efe6d2]'
+                      : 'bg-[#66533f]/10 text-[#5c4a37] hover:bg-[#66533f]/20'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              {filteredRoles.map((role) => {
                 const active = role.id === seat.trueRoleId;
                 return (
                   <button
@@ -414,13 +453,13 @@ export default function SeatContextMenu({
                       onChangeRole(role.id);
                       onClose();
                     }}
-                    className={`flex items-center gap-1.5 p-1.5 rounded-lg border text-left text-[11px] cursor-pointer transition-colors ${
+                    className={`flex items-center gap-1.5 p-1 rounded-lg border text-left text-[11px] cursor-pointer transition-colors ${
                       active
                         ? 'border-[#c9963a] bg-[#c9963a]/25 font-bold'
                         : 'border-[#655342]/20 bg-[#66533f]/[0.04] hover:bg-[#66533f]/[0.15]'
                     }`}
                   >
-                    <CharacterTokenFront role={role} size={24} showSetupLeaf={false} />
+                    <CharacterTokenFront role={role} size={22} showSetupLeaf={false} />
                     <span className="truncate text-[#2a2018]">{role.name}</span>
                   </button>
                 );

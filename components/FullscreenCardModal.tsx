@@ -6,6 +6,7 @@ import { Eye, EyeOff, X } from 'lucide-react';
 import { ROLE_MAP } from '@/lib/botc-data';
 import { CharacterToken } from './TokenArtwork';
 import VelvetBackdrop from './grimoire/VelvetBackdrop';
+import { useLockBodyScroll } from './grimoire/useLockBodyScroll';
 
 export interface SilentCardPayload {
   heading: string;
@@ -27,22 +28,26 @@ export default function FullscreenCardModal({
   const [revealed, setRevealed] = useState(false);
   const [showSecretName, setShowSecretName] = useState(false);
 
+  useLockBodyScroll(Boolean(card));
+
   if (!card) return null;
 
   const isLocked = Boolean(card.requireTapToReveal && !revealed);
+  const tokenCount = card.roleIds?.length ?? 0;
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label={card.heading}
-      className="fixed inset-0 z-50"
+      className="fixed inset-0 z-50 overflow-hidden"
     >
       <VelvetBackdrop
         colour="midnight"
-        className="w-full h-full flex flex-col items-center justify-between p-6 sm:p-10 text-center"
+        className="w-full h-dvh overflow-hidden"
+        contentClassName="items-center justify-between p-4 sm:p-8 text-center h-full overflow-hidden"
       >
-      <div className="w-full max-w-2xl flex items-center justify-between">
+      <div className="w-full max-w-3xl flex items-center justify-between shrink-0">
         <span className="text-xs font-mono font-semibold uppercase tracking-wider text-[#c9963a]">
           Layar Tunjuk Bisu Storyteller
         </span>
@@ -69,7 +74,7 @@ export default function FullscreenCardModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: -10 }}
             transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-            className="flex flex-col items-center justify-center max-w-md my-auto gap-6"
+            className="flex-1 min-h-0 w-full flex flex-col items-center justify-center max-w-md mx-auto gap-4 sm:gap-6"
           >
             <p className="text-sm font-medium text-[#a89f8c]">
               Tampilan Kartu Rahasia Pemain
@@ -117,14 +122,14 @@ export default function FullscreenCardModal({
             initial={{ opacity: 0, scale: 0.92, y: 14 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-            className="flex flex-col items-center justify-center max-w-2xl my-auto gap-6 w-full"
+            className="flex-1 min-h-0 flex flex-col items-center justify-center max-w-3xl mx-auto gap-4 sm:gap-5 w-full"
           >
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <h2 className="font-display text-2xl sm:text-4xl font-bold text-[#efe6d2] text-balance">
                 {card.heading}
               </h2>
               {card.subheading && (
-                <p className="text-base sm:text-lg font-medium text-[#c9963a]">
+                <p className="text-sm sm:text-lg font-medium text-[#c9963a]">
                   {card.subheading}
                 </p>
               )}
@@ -135,16 +140,16 @@ export default function FullscreenCardModal({
                 initial={{ scale: 0.75 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 360, damping: 20 }}
-                className="my-2 px-10 py-6 rounded-3xl border-2 border-[#c9963a]/60 bg-black/55 shadow-2xl"
+                className="my-1 px-8 py-5 rounded-3xl border-2 border-[#c9963a]/60 bg-black/55 shadow-2xl"
               >
-                <span className="font-mono text-6xl sm:text-8xl font-bold text-[#f2c56b] tabular-nums">
+                <span className="font-mono text-5xl sm:text-8xl font-bold text-[#f2c56b] tabular-nums">
                   {card.bigText}
                 </span>
               </motion.div>
             )}
 
             {card.roleIds && card.roleIds.length > 0 && (
-              <div className="flex flex-wrap items-start justify-center gap-6 my-2">
+              <div className="flex flex-wrap items-stretch justify-center gap-3 sm:gap-5 my-1">
                 {card.roleIds.map((id, i) => {
                   const role = ROLE_MAP[id];
                   if (!role) return null;
@@ -154,16 +159,16 @@ export default function FullscreenCardModal({
                       initial={{ opacity: 0, y: 16, scale: 0.9 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       transition={{ delay: i * 0.08, type: 'spring', stiffness: 280, damping: 22 }}
-                      className="flex flex-col items-center gap-2 max-w-[185px] p-4 rounded-3xl bg-black/45 border border-[#c9963a]/35 shadow-xl"
+                      className="flex flex-col items-center gap-1.5 w-[135px] sm:w-[178px] p-3 sm:p-4 rounded-3xl bg-black/45 border border-[#c9963a]/35 shadow-xl"
                     >
-                      <CharacterToken roleId={id} size="lg" showAbility />
-                      <span className="font-display text-lg font-bold text-[#efe6d2] mt-1">
+                      <CharacterToken roleId={id} size={tokenCount >= 3 ? 'md' : 'lg'} showAbility />
+                      <span className="font-display text-base sm:text-lg font-bold text-[#efe6d2] mt-0.5 leading-tight">
                         {role.name}
                       </span>
                       <span className="text-[11px] text-[#c9963a] font-semibold">
                         {role.indonesianName}
                       </span>
-                      <p className="text-[11px] text-[#a89f8c] leading-relaxed line-clamp-3">
+                      <p className="text-[11px] text-[#a89f8c] leading-snug line-clamp-2 sm:line-clamp-3">
                         {role.ability}
                       </p>
                     </motion.div>
@@ -173,7 +178,7 @@ export default function FullscreenCardModal({
             )}
 
             {card.footerNote && (
-              <p className="text-xs text-[#a89f8c] max-w-md leading-relaxed border-t border-[#c9963a]/25 pt-3">
+              <p className="text-xs text-[#a89f8c] max-w-md leading-relaxed border-t border-[#c9963a]/25 pt-2.5">
                 {card.footerNote}
               </p>
             )}
@@ -181,7 +186,7 @@ export default function FullscreenCardModal({
         )}
       </AnimatePresence>
 
-      <div className="text-[11px] text-[#a89f8c] font-mono">
+      <div className="text-[11px] text-[#a89f8c] font-mono shrink-0">
         Tekan tombol Tutup di atas setelah pemain selesai melihat.
       </div>
       </VelvetBackdrop>

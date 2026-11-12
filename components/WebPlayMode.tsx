@@ -597,7 +597,8 @@ export default function WebPlayMode({
       {subStep === 'bag' && (
         <VelvetBackdrop
           colour="midnight"
-          className="rounded-3xl p-4 sm:p-6 shadow-2xl border border-[#c9963a]/35 space-y-4"
+          className="rounded-3xl p-4 sm:p-6 shadow-2xl border border-[#c9963a]/35"
+          contentClassName="space-y-4"
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -709,9 +710,10 @@ export default function WebPlayMode({
       {subStep === 'reveal' && pickedRole && (
         <VelvetBackdrop
           colour="midnight"
-          className="rounded-3xl p-5 sm:p-8 shadow-2xl border border-[#c9963a]/40"
+          center
+          className="rounded-3xl min-h-[64dvh] p-5 sm:p-8 shadow-2xl border border-[#c9963a]/40"
         >
-          <div className="max-w-lg mx-auto flex flex-col items-center text-center gap-5">
+          <div className="max-w-lg mx-auto w-full flex flex-col items-center text-center gap-4">
             <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#c9963a]">
               Kursi #{assignedSeats.length + 1} · Token Terambil
             </span>
@@ -784,9 +786,10 @@ export default function WebPlayMode({
       {subStep === 'handoff' && (
         <VelvetBackdrop
           colour="midnight"
-          className="rounded-3xl min-h-[420px] flex flex-col items-center justify-center p-8 text-center shadow-2xl border border-[#c9963a]/35"
+          center
+          className="rounded-3xl min-h-[64dvh] p-6 sm:p-10 shadow-2xl border border-[#c9963a]/35"
         >
-          <div className="max-w-md space-y-5">
+          <div className="max-w-md mx-auto space-y-5">
             <img
               src={ART_ASSETS.tokenBack}
               alt=""
@@ -875,7 +878,8 @@ export default function WebPlayMode({
       {subStep === 'ready' && (
         <VelvetBackdrop
           colour="midnight"
-          className="rounded-3xl p-6 sm:p-10 text-center shadow-2xl border border-[#c9963a]/40"
+          center
+          className="rounded-3xl min-h-[64dvh] p-6 sm:p-10 shadow-2xl border border-[#c9963a]/40"
         >
           <div className="max-w-lg mx-auto space-y-5">
             <ShieldCheck className="w-12 h-12 text-[#c9963a] mx-auto" />

@@ -29,6 +29,12 @@ import {
   createSpreadLayout,
   stirBagPile,
 } from './bag-physics.ts';
+import {
+  createEmptyHistory,
+  pushHistorySnapshot,
+  stepHistoryRedo,
+  stepHistoryUndo,
+} from './history-stack.ts';
 
 function sampleSeats(count = 7): PlayerSeat[] {
   const rolePool = ['washerwoman', 'librarian', 'chef', 'empath', 'saint', 'poisoner', 'imp'];
@@ -167,4 +173,30 @@ test('bag-physics initializes pile within bounds, stirs smoothly, and creates sp
   const spread = createSpreadLayout(10, 560, 380);
   assert.equal(spread.length, 10);
   assert.ok(spread[0].size >= 52);
+});
+
+test('history-stack supports multi-step undo, redo, depth limit, and redo invalidation', () => {
+  let stack = createEmptyHistory<string>();
+  stack = pushHistorySnapshot(stack, 'step-0');
+  stack = pushHistorySnapshot(stack, 'step-1');
+
+  const u1 = stepHistoryUndo(stack, 'step-2');
+  assert.equal(u1.restored, 'step-1');
+  assert.deepEqual(u1.nextStack.undo, ['step-0']);
+  assert.deepEqual(u1.nextStack.redo, ['step-2']);
+
+  const u2 = stepHistoryUndo(u1.nextStack, 'step-1');
+  assert.equal(u2.restored, 'step-0');
+  assert.deepEqual(u2.nextStack.undo, []);
+  assert.deepEqual(u2.nextStack.redo, ['step-2', 'step-1']);
+
+  const r1 = stepHistoryRedo(u2.nextStack, 'step-0');
+  assert.equal(r1.restored, 'step-1');
+  assert.deepEqual(r1.nextStack.undo, ['step-0']);
+  assert.deepEqual(r1.nextStack.redo, ['step-2']);
+
+  // New mutation invalidates remaining redo branch
+  const branched = pushHistorySnapshot(r1.nextStack, 'step-1-branch');
+  assert.deepEqual(branched.redo, []);
+  assert.deepEqual(branched.undo, ['step-0', 'step-1-branch']);
 });
