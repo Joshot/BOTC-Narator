@@ -53,7 +53,7 @@ export default function DashboardView({
       ? 'Malam Pertama'
       : phase === 'day'
       ? `Siang Hari ke-${dayNumber}`
-      : `Malam ke-${dayNumber + 1}`;
+      : `Malam ke-${Math.max(2, dayNumber)}`;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 py-2">

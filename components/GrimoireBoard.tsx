@@ -5,6 +5,7 @@ import {
   ArrowLeftRight,
   Beer,
   BookOpen,
+  ChevronRight,
   Eye,
   EyeOff,
   Gavel,
@@ -25,6 +26,7 @@ import {
 import { ALL_TB_ROLES, ROLE_MAP } from '@/lib/botc-data';
 import {
   DayNomination,
+  DayTimerState,
   GamePhase,
   PlayerSeat,
   calculateNominationThresholds,
@@ -32,6 +34,7 @@ import {
   getPlayerAlignment,
   isPlayerPoisoned,
 } from '@/lib/botc-engine';
+import type { TimerAction } from '@/context/GameContext';
 import {
   ART_ASSETS,
   BOARD_CHROME,
@@ -50,7 +53,12 @@ import SeatContextMenu from './grimoire/SeatContextMenu';
 import ReminderPicker from './grimoire/ReminderPicker';
 import ShowSheetModal from './grimoire/ShowSheetModal';
 import ReferenceDrawer from './grimoire/ReferenceDrawer';
-import { DayNominationControls, VotingArcSvg } from './grimoire/VotingOverlay';
+import GameTimerWidget from './grimoire/GameTimerWidget';
+import {
+  DayNominationControls,
+  DayNominationsSummary,
+  VotingArcSvg,
+} from './grimoire/VotingOverlay';
 import { useLockBodyScroll } from './grimoire/useLockBodyScroll';
 
 export interface GrimoireBoardProps {
@@ -63,6 +71,9 @@ export interface GrimoireBoardProps {
   winner?: 'good' | 'evil' | null;
   velvetColour?: VelvetColour;
   nominationsToday?: DayNomination[];
+  dayTimer?: DayTimerState | null;
+  phaseStartedAt?: number;
+  onTimerAction?: (action: TimerAction) => void;
   canUndo?: boolean;
   canRedo?: boolean;
   onUndo?: () => void;
@@ -91,7 +102,7 @@ export interface GrimoireBoardProps {
   onChangePlayerTrueRole: (playerId: string, newTrueRoleId: string) => void;
   onAdvancePhase?: () => void;
   onSetWinnerManual?: (winner: 'good' | 'evil' | null) => void;
-  onStartNomination?: (nominatorId: string, nomineeId: string) => void;
+  onStartNomination?: (nominatorId: string, nomineeId: string) => void | string;
   onToggleNominationVote?: (nominationId: string, seatId: string) => void;
   onResetNominationVotes?: (nominationId: string) => void;
   onMarkNominationExecution?: (nominationId: string, mark: boolean) => void;
@@ -109,6 +120,9 @@ export default function GrimoireBoard({
   winner = null,
   velvetColour = 'midnight',
   nominationsToday = [],
+  dayTimer = null,
+  phaseStartedAt,
+  onTimerAction,
   canUndo = false,
   canRedo = false,
   onUndo,
@@ -160,6 +174,8 @@ export default function GrimoireBoard({
   const [peekIndex, setPeekIndex] = useState(0);
 
   const [pendingNomineeId, setPendingNomineeId] = useState<string | null>(null);
+  const [focusedNomId, setFocusedNomId] = useState<string | null>(null);
+  const [dismissedNomIds, setDismissedNomIds] = useState<string[]>([]);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [bluffEditorOpen, setBluffEditorOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<{
@@ -234,10 +250,44 @@ export default function GrimoireBoard({
 
   const voteStats = calculateVoteThreshold(players);
   const thresholds = calculateNominationThresholds(players, nominationsToday);
-  const activeNomination = useMemo(
-    () => nominationsToday.find((n) => !n.cancelled && !n.markedForExecution) ?? null,
+  const validNominationsToday = useMemo(
+    () => nominationsToday.filter((n) => !n.cancelled),
     [nominationsToday]
   );
+  const activeNomination = useMemo(() => {
+    if (phase !== 'day') return null;
+    if (focusedNomId) {
+      const explicit = validNominationsToday.find((n) => n.id === focusedNomId);
+      if (explicit) return explicit;
+    }
+    return (
+      validNominationsToday.find(
+        (n) => !n.markedForExecution && !dismissedNomIds.includes(n.id)
+      ) ?? null
+    );
+  }, [phase, focusedNomId, validNominationsToday, dismissedNomIds]);
+
+  const handleDismissNomination = (nominationId: string) => {
+    setDismissedNomIds((prev) => (prev.includes(nominationId) ? prev : [...prev, nominationId]));
+    setFocusedNomId((prev) => (prev === nominationId ? null : prev));
+  };
+
+  const handleReopenNomination = (nominationId: string) => {
+    setDismissedNomIds((prev) => prev.filter((id) => id !== nominationId));
+    setPendingNomineeId(null);
+    setFocusedNomId(nominationId);
+  };
+
+  const handleCreateNomination = (nominatorId: string, nomineeId: string) => {
+    if (!onStartNomination) return;
+    const createdId = onStartNomination(nominatorId, nomineeId);
+    if (typeof createdId === 'string' && createdId.length > 0) {
+      setDismissedNomIds((prev) => prev.filter((id) => id !== createdId));
+      setFocusedNomId(createdId);
+    } else {
+      setFocusedNomId(null);
+    }
+  };
 
   const inPlayRoleIds = useMemo(() => {
     const set = new Set<string>();
@@ -291,7 +341,14 @@ export default function GrimoireBoard({
       ? 'Malam Pertama'
       : phase === 'day'
       ? `Siang Hari ke-${dayNumber}`
-      : `Malam ke-${dayNumber + 1}`;
+      : `Malam ke-${Math.max(2, dayNumber)}`;
+
+  const nextPhaseShortLabel =
+    phase === 'first_night'
+      ? 'Lanjut Siang 1'
+      : phase === 'other_night'
+      ? `Lanjut Siang ${Math.max(2, dayNumber)}`
+      : `Lanjut Malam ${dayNumber + 1}`;
 
   const handleSeatInteraction = (player: PlayerSeat) => {
     if (swapSourceSeatIdx !== null) {
@@ -349,26 +406,60 @@ export default function GrimoireBoard({
       >
         {viewMode === 'cards' ? (
           /* Mobile / Accessibility Warm Card List Mode */
-          <div className="p-4 sm:p-6 space-y-4">
+          <div className="p-3 sm:p-6 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-xl bg-black/50 border border-[#c9963a]/40 font-display text-sm font-bold text-[#efe6d2]">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-3 py-1.5 rounded-xl bg-black/50 border border-[#c9963a]/40 font-display text-xs sm:text-sm font-bold text-[#efe6d2]">
                   {phaseLabel} · {voteStats.aliveCount}H / {voteStats.votesNeeded} Suara
                 </span>
+                {onTimerAction && (
+                  <GameTimerWidget
+                    timer={dayTimer}
+                    phaseStartedAt={phaseStartedAt}
+                    onAction={onTimerAction}
+                    variant="compact"
+                  />
+                )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                {onAdvancePhase && (
+                  <button
+                    type="button"
+                    onClick={onAdvancePhase}
+                    className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#e0b254] text-[#2a2018] font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow"
+                  >
+                    {phase === 'day' ? (
+                      <Moon className="w-3.5 h-3.5" />
+                    ) : (
+                      <Sun className="w-3.5 h-3.5" />
+                    )}
+                    <span>{nextPhaseShortLabel}</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSheetInitialRoleId(undefined);
+                    setIsShowSheetOpen(true);
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-black/50 border border-[#c9963a]/45 text-[#c9963a] hover:bg-black/70 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Tunjuk</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setViewMode('circle')}
-                  className="px-3 py-1.5 rounded-xl bg-[#c9963a] text-[#2a2018] font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-[#efe6d2] font-bold text-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Meja Lingkaran</span>
+                  <Sparkles className="w-3.5 h-3.5 text-[#c9963a]" />
+                  <span>Lingkaran</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsRefDrawerOpen(true)}
-                  className="px-3 py-1.5 rounded-xl bg-black/50 border border-[#c9963a]/35 text-[#efe6d2] font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl bg-black/50 border border-[#c9963a]/35 text-[#efe6d2] font-bold text-xs flex items-center gap-1.5 cursor-pointer"
                 >
                   <BookOpen className="w-3.5 h-3.5 text-[#c9963a]" />
                   <span>Skrip</span>
@@ -431,6 +522,33 @@ export default function GrimoireBoard({
                 )}
               </div>
             </div>
+
+            {phase === 'day' && (activeNomination || pendingNomineeId || validNominationsToday.length > 0) && onStartNomination && onToggleNominationVote && onResetNominationVotes && onMarkNominationExecution && onCancelNomination && (
+              <div className="flex flex-col items-center gap-2">
+                {activeNomination || pendingNomineeId ? (
+                  <DayNominationControls
+                    players={players}
+                    nominationsToday={nominationsToday}
+                    activeNomination={activeNomination}
+                    pendingNomineeId={pendingNomineeId}
+                    onSelectNomineeForSetup={setPendingNomineeId}
+                    onStartNomination={handleCreateNomination}
+                    onToggleVoter={onToggleNominationVote}
+                    onResetVotes={onResetNominationVotes}
+                    onMarkExecution={onMarkNominationExecution}
+                    onDone={handleDismissNomination}
+                    onCancelNomination={onCancelNomination}
+                  />
+                ) : (
+                  <DayNominationsSummary
+                    players={players}
+                    nominationsToday={validNominationsToday}
+                    onReopenNomination={handleReopenNomination}
+                    onCancelNomination={onCancelNomination}
+                  />
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {players.map((player) => {
@@ -751,6 +869,7 @@ export default function GrimoireBoard({
                   ring={ring}
                   players={players}
                   nomination={activeNomination}
+                  nominationsToday={validNominationsToday}
                 />
               )}
 
@@ -836,28 +955,37 @@ export default function GrimoireBoard({
                       activeNomination={activeNomination}
                       pendingNomineeId={pendingNomineeId}
                       onSelectNomineeForSetup={setPendingNomineeId}
-                      onStartNomination={onStartNomination}
+                      onStartNomination={handleCreateNomination}
                       onToggleVoter={onToggleNominationVote}
                       onResetVotes={onResetNominationVotes}
                       onMarkExecution={onMarkNominationExecution}
+                      onDone={handleDismissNomination}
                       onCancelNomination={onCancelNomination}
                     />
                   ) : (
-                    <div className="flex flex-col items-center gap-1.5 opacity-90">
+                    <div className="flex flex-col items-center gap-1.5 opacity-95">
                       <img
                         src={ART_ASSETS.editionTb}
                         alt="Trouble Brewing"
                         draggable={false}
-                        className="w-12 h-12 sm:w-14 sm:h-14 object-contain drop-shadow"
+                        className="w-11 h-11 sm:w-14 sm:h-14 object-contain drop-shadow"
                       />
-                      <div className="text-[11px] font-mono uppercase tracking-[0.16em] text-[#efe6d2]">
+                      <div className="text-[11px] font-mono uppercase tracking-[0.14em] text-[#efe6d2]">
                         {players.length} Pemain · {voteStats.aliveCount} Hidup
                       </div>
+                      {phase === 'day' && onCancelNomination && (
+                        <DayNominationsSummary
+                          players={players}
+                          nominationsToday={validNominationsToday}
+                          onReopenNomination={handleReopenNomination}
+                          onCancelNomination={onCancelNomination}
+                        />
+                      )}
                       {phase === 'day' && onStartNomination && (
                         <button
                           type="button"
                           onClick={() => setPendingNomineeId(players[0]?.id ?? null)}
-                          className="mt-1 px-3 py-1 rounded-full bg-black/55 hover:bg-black/75 border border-[#c9963a]/45 text-[11px] font-bold text-[#c9963a] flex items-center gap-1.5 cursor-pointer"
+                          className="mt-0.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 border border-[#c9963a]/50 text-[11px] font-bold text-[#c9963a] flex items-center gap-1.5 cursor-pointer shadow"
                         >
                           <Gavel className="w-3.5 h-3.5" />
                           <span>Mulai Nominasi (Butuh {thresholds.execute})</span>
@@ -1065,14 +1193,14 @@ export default function GrimoireBoard({
             {/* Bottom-Left Block: 3 Demon Bluff Wells */}
             <div
               onClick={(e) => e.stopPropagation()}
-              className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 z-30 flex items-center gap-2 p-2 rounded-2xl backdrop-blur-md"
+              className="absolute bottom-2.5 left-2.5 sm:bottom-4 sm:left-4 z-30 flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-2xl backdrop-blur-md"
               style={{
                 backgroundColor: BOARD_CHROME.blockBg,
                 border: `1px solid ${BOARD_CHROME.blockBorder}`,
                 boxShadow: BOARD_CHROME.liftedShadow,
               }}
             >
-              <div className="flex flex-col pr-1 border-r border-[#c9963a]/25">
+              <div className="hidden sm:flex flex-col pr-1.5 border-r border-[#c9963a]/25">
                 <span className="text-[9px] font-mono uppercase tracking-widest text-[#c9963a]">
                   Demon Bluffs
                 </span>
@@ -1087,7 +1215,7 @@ export default function GrimoireBoard({
                   Tunjuk Bluff
                 </button>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 sm:gap-1.5">
                 {[0, 1, 2].map((slot) => {
                   const bid = demonBluffIds[slot];
                   const role = bid ? ROLE_MAP[bid] : null;
@@ -1097,14 +1225,14 @@ export default function GrimoireBoard({
                       type="button"
                       onClick={() => !spyStealth && setBluffEditorOpen(true)}
                       title={role && !spyStealth ? `Bluff: ${role.name}` : 'Atur Bluff'}
-                      className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-105"
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-105"
                       style={{
                         backgroundColor: BOARD_CHROME.wellBg,
                         border: `1px solid ${BOARD_CHROME.wellBorder}`,
                       }}
                     >
                       {role && !spyStealth ? (
-                        <CharacterTokenFront role={role} size={36} showSetupLeaf={false} />
+                        <CharacterTokenFront role={role} size={32} showSetupLeaf={false} />
                       ) : (
                         <span className="text-[10px] font-mono text-[#a89f8c]">?</span>
                       )}
@@ -1114,10 +1242,10 @@ export default function GrimoireBoard({
               </div>
             </div>
 
-            {/* Bottom-Right Block: Dawn / Dusk Phase Clock Plaque */}
+            {/* Bottom-Right Block: Dawn / Dusk Phase Clock Plaque, Timer & Prominent Next Day CTA */}
             <div
               onClick={(e) => e.stopPropagation()}
-              className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-30 flex items-center gap-2.5 p-2 rounded-2xl backdrop-blur-md"
+              className="absolute bottom-2.5 right-2.5 sm:bottom-4 sm:right-4 z-30 flex items-center gap-1.5 sm:gap-2.5 p-1.5 sm:p-2 rounded-2xl backdrop-blur-md"
               style={{
                 backgroundColor: BOARD_CHROME.blockBg,
                 border: `1px solid ${BOARD_CHROME.blockBorder}`,
@@ -1127,9 +1255,9 @@ export default function GrimoireBoard({
               <img
                 src={phase === 'day' ? ART_ASSETS.generic.dawn : ART_ASSETS.generic.dusk}
                 alt=""
-                className="w-8 h-8 object-contain shrink-0 hidden sm:block"
+                className="w-8 h-8 object-contain shrink-0 hidden md:block"
               />
-              <div className="min-w-[96px]">
+              <div className="hidden md:block min-w-[96px]">
                 <div className="font-display text-sm font-bold text-[#efe6d2] leading-tight">
                   {phaseLabel}
                 </div>
@@ -1138,19 +1266,33 @@ export default function GrimoireBoard({
                 </div>
               </div>
 
+              {onTimerAction && (
+                <GameTimerWidget
+                  timer={dayTimer}
+                  phaseStartedAt={phaseStartedAt}
+                  onAction={onTimerAction}
+                  variant="compact"
+                />
+              )}
+
               {onAdvancePhase && (
                 <button
                   type="button"
                   onClick={onAdvancePhase}
-                  className="px-3 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#d8a74c] text-[#2a2018] text-xs font-bold flex items-center gap-1 cursor-pointer shadow"
+                  className="min-h-[38px] sm:min-h-[42px] px-3 sm:px-4 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#e0b254] active:scale-[0.98] text-[#2a2018] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-lg transition-all whitespace-nowrap"
                 >
-                  {phase === 'day' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
-                  <span>{phase === 'day' ? 'Senja' : 'Fajar'}</span>
+                  {phase === 'day' ? (
+                    <Moon className="w-3.5 h-3.5 shrink-0" />
+                  ) : (
+                    <Sun className="w-3.5 h-3.5 shrink-0" />
+                  )}
+                  <span>{nextPhaseShortLabel}</span>
+                  <ChevronRight className="w-3.5 h-3.5 shrink-0" />
                 </button>
               )}
 
               {onSetWinnerManual && !winner && (
-                <div className="hidden md:flex items-center border-l border-[#c9963a]/25 pl-2 gap-1">
+                <div className="hidden lg:flex items-center border-l border-[#c9963a]/25 pl-2 gap-1">
                   <button
                     type="button"
                     onClick={() => onSetWinnerManual('good')}
@@ -1208,12 +1350,10 @@ export default function GrimoireBoard({
                 onShowSeatToken={() =>
                   onShowSilentCard({
                     heading: 'PERAN ANDA ADALAH',
-                    subheading: `Pemain di Kursi #${menuSeat.seatIndex + 1}`,
-                    playerName: menuSeat.name,
                     roleIds: [menuSeat.perceivedRoleId],
                     requireTapToReveal: true,
                     footerNote:
-                      'Rahasia Trouble Brewing: Ketuk di atas bila pemain sudah siap melihat perannya.',
+                      'Ketuk di atas jika siap melihat peran, lalu tekan Tutup sebelum mengembalikan perangkat.',
                   })
                 }
                 onRemoveSeat={() => onRemoveSeat?.(menuSeat.id)}

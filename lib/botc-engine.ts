@@ -1111,3 +1111,120 @@ export function createDemoSession(playerCount = 8): {
     players,
   };
 }
+
+/**
+ * Counts alive non-Traveller seats (Travellers do not count toward 2-alive Evil win or Scarlet Woman 5+).
+ */
+export function countAliveNonTravellers(players: PlayerSeat[]): number {
+  return players.filter(
+    (p) => p.isAlive && ROLE_MAP[p.trueRoleId]?.team !== 'traveller'
+  ).length;
+}
+
+/**
+ * Evaluates canonical Trouble Brewing win conditions from current board seats.
+ */
+export function evaluateBoardWinner(players: PlayerSeat[]): 'good' | 'evil' | null {
+  if (players.length === 0) return null;
+  const aliveDemons = players.filter(
+    (p) => p.isAlive && ROLE_MAP[p.trueRoleId]?.team === 'demon'
+  );
+  if (aliveDemons.length === 0) return 'good';
+  if (countAliveNonTravellers(players) <= 2) return 'evil';
+  return null;
+}
+
+/**
+ * Returns effective vote weight for a seat accounting for Bureaucrat (3x) and Thief (-1x).
+ */
+export function getSeatVoteWeight(seat: PlayerSeat | undefined): number {
+  if (!seat) return 1;
+  if (seat.reminders.some((r) => r.reminderId === 'thief_neg')) return -1;
+  if (seat.reminders.some((r) => r.reminderId === 'bureaucrat_3x')) return 3;
+  return 1;
+}
+
+/**
+ * Checks if two or more active nominations tie for the highest vote count at or above majority threshold.
+ * Per BotC Trouble Brewing rules, a tie clears the execution block (nobody dies today).
+ */
+export function resolveVoteTieStatus(
+  nominationsToday: DayNomination[],
+  players: PlayerSeat[]
+): {
+  isTie: boolean;
+  highestVotes: number;
+  votesNeeded: number;
+  tiedNominationIds: string[];
+  onBlockNomination: DayNomination | null;
+} {
+  const { votesNeeded } = calculateVoteThreshold(players);
+  const active = nominationsToday.filter((n) => !n.cancelled);
+  const highestVotes = Math.max(0, ...active.map((n) => n.voteTotal));
+  const atTop =
+    highestVotes >= votesNeeded
+      ? active.filter((n) => n.voteTotal === highestVotes)
+      : [];
+  const isTie = atTop.length > 1;
+  const marked = active.find((n) => n.markedForExecution) ?? null;
+
+  return {
+    isTie,
+    highestVotes,
+    votesNeeded,
+    tiedNominationIds: atTop.map((n) => n.id),
+    onBlockNomination: isTie ? null : marked,
+  };
+}
+
+/**
+ * Applies or clears execution-block marking across today's nominations.
+ * Enforces unique mark and automatically clears block if a tie exists at top vote count.
+ */
+export function applyDayNominationMark(
+  nominationsToday: DayNomination[],
+  targetNominationId: string,
+  mark: boolean,
+  players: PlayerSeat[]
+): { nominations: DayNomination[]; isTieCleared: boolean } {
+  const next = nominationsToday.map((n) => ({
+    ...n,
+    markedForExecution:
+      n.id === targetNominationId ? mark : mark ? false : n.markedForExecution,
+  }));
+  const tieCheck = resolveVoteTieStatus(next, players);
+  if (tieCheck.isTie) {
+    return {
+      nominations: next.map((n) => ({ ...n, markedForExecution: false })),
+      isTieCleared: true,
+    };
+  }
+  return { nominations: next, isTieCleared: false };
+}
+
+export interface DayTimerState {
+  durationMs: number;
+  remainingMs: number;
+  deadline: number | null; // epoch ms when running, null when paused
+}
+
+export const DAY_TIMER_PRESETS_SEC = [120, 180, 300, 420, 600] as const;
+
+export function computeTimerRemainingMs(
+  timer: DayTimerState | null | undefined,
+  nowMs: number = Date.now()
+): number {
+  if (!timer) return 0;
+  if (timer.deadline === null) return Math.max(0, timer.remainingMs);
+  return Math.max(0, timer.deadline - nowMs);
+}
+
+export function formatTimerClock(ms: number): string {
+  const totalSec = Math.max(0, Math.ceil(ms / 1000));
+  const hours = Math.floor(totalSec / 3600);
+  const mins = Math.floor((totalSec % 3600) / 60);
+  const secs = totalSec % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  if (hours > 0) return `${hours}:${pad(mins)}:${pad(secs)}`;
+  return `${pad(mins)}:${pad(secs)}`;
+}

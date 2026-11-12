@@ -243,7 +243,7 @@ export default function SetupWizard({
           ) : (
             <div className="max-w-md mx-auto w-full space-y-5">
               <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#c9963a]">
-                {activeSeat?.name} · Peran Rahasia Kamu
+                Peran Rahasia Anda
               </p>
 
               {perceivedRole && (

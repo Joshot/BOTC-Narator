@@ -12,13 +12,21 @@ import React, {
 import { ROLE_MAP } from '@/lib/botc-data';
 import {
   DayNomination,
+  DayTimerState,
   GamePhase,
   PlayerSeat,
   addPlayerSeat,
+  applyDayNominationMark,
+  canSeatNominate,
+  computeTimerRemainingMs,
+  countAliveNonTravellers,
   createDemoSession,
+  evaluateBoardWinner,
+  getSeatVoteWeight,
   isPlayerPoisoned,
   movePlayerSeat,
   removePlayerSeat,
+  resolveVoteTieStatus,
   rotatePlayerSeats,
   sanitizePlayerSeats,
   swapPlayerSeats,
@@ -54,6 +62,14 @@ export interface InitialPlayerRoster {
   team: string;
 }
 
+export type TimerAction =
+  | { type: 'start' }
+  | { type: 'pause' }
+  | { type: 'reset' }
+  | { type: 'setDuration'; seconds: number }
+  | { type: 'adjustSeconds'; deltaSeconds: number }
+  | { type: 'clear' };
+
 export interface PersistedGameSession {
   hasActiveGame: boolean;
   playerCount: number;
@@ -72,6 +88,8 @@ export interface PersistedGameSession {
   storyHistory: GameStoryEntry[];
   velvetColour?: VelvetColour;
   startedAt?: number;
+  phaseStartedAt?: number;
+  dayTimer?: DayTimerState | null;
   nominationsToday?: DayNomination[];
 }
 
@@ -107,7 +125,58 @@ function createEmptySession(name = 'Game Baru'): PersistedGameSession {
     storyHistory: [],
     velvetColour: 'midnight',
     startedAt: undefined,
+    phaseStartedAt: undefined,
+    dayTimer: { durationMs: 300_000, remainingMs: 300_000, deadline: null },
     nominationsToday: [],
+  };
+}
+
+function formatSessionRoundLabel(phase: GamePhase, dayNumber: number): string {
+  if (phase === 'first_night') return 'Malam Pertama';
+  if (phase === 'day') return `Siang #${dayNumber}`;
+  return `Malam #${Math.max(2, dayNumber)}`;
+}
+
+function makeStoryRecord(
+  round: string,
+  text: string,
+  category: GameStoryEntry['category']
+): GameStoryEntry {
+  return {
+    id: `story-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    round,
+    timestamp: Date.now(),
+    text,
+    category,
+  };
+}
+
+function applyEvaluatedWinner(
+  s: PersistedGameSession,
+  nextPlayers: PlayerSeat[],
+  roundLabel: string,
+  baseStory: GameStoryEntry[] = s.storyHistory || []
+): {
+  winner: 'good' | 'evil' | null;
+  storyHistory: GameStoryEntry[];
+  gameAlertBanner: string | null;
+} {
+  const nextWinner = evaluateBoardWinner(nextPlayers);
+  if (nextWinner && nextWinner !== s.winner) {
+    const winText =
+      nextWinner === 'good'
+        ? 'Tim Good Menang — Seluruh Demon telah mati.'
+        : 'Tim Evil Menang — Hanya tersisa 2 pemain non-Traveller hidup dan Demon bertahan.';
+    return {
+      winner: nextWinner,
+      storyHistory: [...baseStory, makeStoryRecord(roundLabel, winText, 'win')],
+      gameAlertBanner: null,
+    };
+  }
+  return {
+    winner: nextWinner,
+    storyHistory: baseStory,
+    gameAlertBanner: s.gameAlertBanner,
   };
 }
 
@@ -140,6 +209,8 @@ export interface GameContextType {
   storyHistory: GameStoryEntry[];
   velvetColour: VelvetColour;
   startedAt?: number;
+  phaseStartedAt?: number;
+  dayTimer: DayTimerState | null;
   nominationsToday: DayNomination[];
   canUndo: boolean;
   canRedo: boolean;
@@ -154,6 +225,7 @@ export interface GameContextType {
   undoLastAction: () => void;
   redoLastAction: () => void;
   setVelvetColour: (colour: VelvetColour) => void;
+  handleUpdateTimer: (action: TimerAction) => void;
   completeSetup: (payload: {
     playerCount: number;
     isDrunkActive: boolean;
@@ -384,6 +456,90 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     [updateSession]
   );
 
+  const handleUpdateTimer = useCallback(
+    (action: TimerAction) => {
+      const now = Date.now();
+      updateSession(
+        (s) => {
+          const current: DayTimerState = s.dayTimer ?? {
+            durationMs: 300_000,
+            remainingMs: 300_000,
+            deadline: null,
+          };
+          const remaining = computeTimerRemainingMs(current, now);
+          if (action.type === 'clear') {
+            return { ...s, dayTimer: null };
+          }
+          if (action.type === 'start') {
+            const baseRemaining = remaining > 0 ? remaining : current.durationMs;
+            return {
+              ...s,
+              dayTimer: {
+                durationMs: current.durationMs,
+                remainingMs: baseRemaining,
+                deadline: now + baseRemaining,
+              },
+            };
+          }
+          if (action.type === 'pause') {
+            return {
+              ...s,
+              dayTimer: {
+                durationMs: current.durationMs,
+                remainingMs: remaining,
+                deadline: null,
+              },
+            };
+          }
+          if (action.type === 'reset') {
+            return {
+              ...s,
+              dayTimer: {
+                durationMs: current.durationMs,
+                remainingMs: current.durationMs,
+                deadline: null,
+              },
+            };
+          }
+          if (action.type === 'setDuration') {
+            const nextMs = Math.max(30_000, Math.min(3_600_000, action.seconds * 1000));
+            return {
+              ...s,
+              dayTimer: {
+                durationMs: nextMs,
+                remainingMs: nextMs,
+                deadline: null,
+              },
+            };
+          }
+          if (action.type === 'adjustSeconds') {
+            const deltaMs = action.deltaSeconds * 1000;
+            const isRunning = current.deadline !== null;
+            const nextDuration = Math.max(
+              30_000,
+              Math.min(3_600_000, current.durationMs + deltaMs)
+            );
+            const nextRemaining = Math.max(
+              0,
+              Math.min(3_600_000, remaining + deltaMs)
+            );
+            return {
+              ...s,
+              dayTimer: {
+                durationMs: nextDuration,
+                remainingMs: nextRemaining,
+                deadline: isRunning && nextRemaining > 0 ? now + nextRemaining : null,
+              },
+            };
+          }
+          return s;
+        },
+        { recordUndo: false }
+      );
+    },
+    [updateSession]
+  );
+
   const appendStory = useCallback(
     (
       round: string,
@@ -471,36 +627,45 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const currentPhaseName =
-        session.phase === 'first_night'
-          ? 'Malam Pertama'
-          : session.phase === 'day'
-          ? `Siang Hari #${session.dayNumber}`
-          : `Malam #${session.dayNumber + 1}`;
+      const currentPhaseName = formatSessionRoundLabel(session.phase, session.dayNumber);
 
       if (aliveDemons.length === 0) {
+        const msg = 'Tim Good Menang — Seluruh Demon telah mati.';
+        updateSession(
+          (s) => ({
+            ...s,
+            winner: 'good',
+            gameAlertBanner: null,
+            storyHistory: [
+              ...(s.storyHistory || []),
+              makeStoryRecord(currentPhaseName, msg, 'win'),
+            ],
+          }),
+          { recordUndo: false }
+        );
+      } else if (countAliveNonTravellers(updatedPlayers) <= 2) {
         const msg =
-          'Tim Good Menang — Seluruh Demon telah mati.';
-        updateSession((s) => ({
-          ...s,
-          winner: 'good',
-          gameAlertBanner: null,
-        }), { recordUndo: false });
-        appendStory(currentPhaseName, msg, 'win');
-      } else if (alive.length <= 2) {
-        const msg =
-          'Tim Evil Menang — Hanya tersisa 2 pemain hidup dan Demon bertahan.';
-        updateSession((s) => ({
-          ...s,
-          winner: 'evil',
-          gameAlertBanner: null,
-        }), { recordUndo: false });
-        appendStory(currentPhaseName, msg, 'win');
+          'Tim Evil Menang — Hanya tersisa 2 pemain non-Traveller hidup dan Demon bertahan.';
+        updateSession(
+          (s) => ({
+            ...s,
+            winner: 'evil',
+            gameAlertBanner: null,
+            storyHistory: [
+              ...(s.storyHistory || []),
+              makeStoryRecord(currentPhaseName, msg, 'win'),
+            ],
+          }),
+          { recordUndo: false }
+        );
       } else {
-        updateSession((s) => ({ ...s, winner: null, gameAlertBanner: null }), { recordUndo: false });
+        updateSession(
+          (s) => ({ ...s, winner: null, gameAlertBanner: null }),
+          { recordUndo: false }
+        );
       }
     },
-    [appendStory, session.dayNumber, session.phase, updateSession]
+    [session.dayNumber, session.phase, updateSession]
   );
 
   const startDemoGame = useCallback(() => {
@@ -542,6 +707,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       isDrunkActive: demo.players.some((p) => p.trueRoleId === 'drunk'),
       velvetColour: s.velvetColour || 'midnight',
       startedAt: Date.now(),
+      phaseStartedAt: Date.now(),
+      dayTimer: { durationMs: 300_000, remainingMs: 300_000, deadline: null },
       nominationsToday: [],
     }), { recordUndo: false });
   }, [activeRoomId, updateSession]);
@@ -598,6 +765,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         storyHistory: [initialStory],
         velvetColour: s.velvetColour || 'midnight',
         startedAt: Date.now(),
+        phaseStartedAt: Date.now(),
+        dayTimer: { durationMs: 300_000, remainingMs: 300_000, deadline: null },
         nominationsToday: [],
       }), { recordUndo: false });
     },
@@ -673,52 +842,46 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // Starpass manual selection from modal
   const handleChooseStarpassMinion = useCallback(
     (chosenMinionId: string) => {
-      const chosen = session.players.find((p) => p.id === chosenMinionId);
-      if (!chosen) return;
-
-      const currentRoundLabel =
-        session.phase === 'first_night'
-          ? 'Malam Pertama'
-          : session.phase === 'day'
-          ? `Siang #${session.dayNumber}`
-          : `Malam #${session.dayNumber + 1}`;
-
       updateSession((s) => {
-        const next = s.players.map((p) => {
-          if (p.id === chosenMinionId) {
-            return {
-              ...p,
-              trueRoleId: 'imp',
-              perceivedRoleId: 'imp',
-              reminders: [
-                ...p.reminders.filter((r) => r.reminderId !== 'die_imp'),
-                { instanceId: `rem-sw-imp-${Date.now()}`, reminderId: 'is_demon_sw' },
-              ],
-            };
-          }
-          return p;
-        });
-
+        const chosen = s.players.find((p) => p.id === chosenMinionId);
+        if (!chosen) return s;
+        const roundLabel = formatSessionRoundLabel(s.phase, s.dayNumber);
+        const next = sanitizePlayerSeats(
+          s.players.map((p) => {
+            if (p.id === chosenMinionId) {
+              return {
+                ...p,
+                trueRoleId: 'imp',
+                perceivedRoleId: 'imp',
+                reminders: [
+                  ...p.reminders.filter((r) => r.reminderId !== 'die_imp'),
+                  { instanceId: `rem-sw-imp-${Date.now()}`, reminderId: 'is_demon_sw' },
+                ],
+              };
+            }
+            return p;
+          })
+        );
+        const story = [
+          ...(s.storyHistory || []),
+          makeStoryRecord(
+            roundLabel,
+            `Demon bunuh diri (Starpass). Minion ${chosen.name} (Kursi ${chosen.seatIndex + 1}) dipilih menjadi IMP baru.`,
+            'starpass'
+          ),
+        ];
+        const evaluated = applyEvaluatedWinner(s, next, roundLabel, story);
         return {
           ...s,
-          players: sanitizePlayerSeats(next),
-          gameAlertBanner: `STARPASS SELESAI! ${chosen.name} (Kursi ${
-            chosen.seatIndex + 1
-          }) sekarang adalah IMP baru!`,
+          players: next,
+          winner: evaluated.winner,
+          storyHistory: evaluated.storyHistory,
+          gameAlertBanner: `STARPASS SELESAI! ${chosen.name} (Kursi ${chosen.seatIndex + 1}) sekarang adalah IMP baru!`,
         };
       });
-
-      appendStory(
-        currentRoundLabel,
-        `Demon bunuh diri (Starpass). Minion ${chosen.name} (Kursi ${
-          chosen.seatIndex + 1
-        }) dipilih menjadi IMP baru.`,
-        'starpass'
-      );
-
       setStarpassPending(null);
     },
-    [appendStory, session.dayNumber, session.phase, session.players, updateSession]
+    [updateSession]
   );
 
   const handleDismissStarpassModal = useCallback(() => {
@@ -730,117 +893,86 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const target = session.players.find((p) => p.id === playerId);
       if (!target) return;
 
-      const currentRoundLabel =
-        session.phase === 'first_night'
-          ? 'Malam Pertama'
-          : session.phase === 'day'
-          ? `Siang #${session.dayNumber}`
-          : `Malam #${session.dayNumber + 1}`;
-
+      const currentRoundLabel = formatSessionRoundLabel(session.phase, session.dayNumber);
       const roleName = ROLE_MAP[target.perceivedRoleId]?.name || 'Unknown';
-      const trueRoleName = ROLE_MAP[target.trueRoleId]?.name || 'Unknown';
       const isTargetDemon = ROLE_MAP[target.trueRoleId]?.team === 'demon';
 
-      // Record in story history
-      if (cause === 'execution') {
-        appendStory(
-          currentRoundLabel,
-          `${target.name} (${roleName}) dieksekusi mati oleh warga kota.`,
-          'execution'
-        );
-      } else if (cause === 'slayer') {
-        appendStory(
-          currentRoundLabel,
-          `${target.name} (${roleName}) tewas seketika akibat tembakan Slayer!`,
-          'slayer'
-        );
-      } else if (isTargetDemon && cause === 'demon') {
-        appendStory(
-          currentRoundLabel,
-          `STARPASS: Demon ${target.name} (${roleName}) sengaja melakukan bunuh diri malam ini untuk mengalihkan kekuatan Imp ke Minion!`,
-          'starpass'
-        );
-      } else {
-        appendStory(
-          currentRoundLabel,
-          `${target.name} (${roleName}) tewas diserang oleh Demon malam ini.`,
-          'death'
-        );
-      }
-
-      // Check for Demon Suicide / Starpass
+      // Check for Demon Suicide / Starpass if multiple alive Minions need picker modal
       if (isTargetDemon && cause === 'demon') {
         const aliveMinions = session.players.filter(
           (p) => p.isAlive && p.id !== playerId && ROLE_MAP[p.trueRoleId]?.team === 'minion'
         );
 
         if (aliveMinions.length === 1) {
-          // Exactly 1 alive minion -> auto becomes Imp!
           const singleMinion = aliveMinions[0];
           updateSession((s) => {
-            const next = s.players.map((p) => {
-              if (p.id === playerId) {
-                return {
-                  ...p,
-                  isAlive: false,
-                  deathCause: 'demon' as const,
-                  hasGhostVote: true,
-                };
-              }
-              if (p.id === singleMinion.id) {
-                return {
-                  ...p,
-                  trueRoleId: 'imp',
-                  perceivedRoleId: 'imp',
-                  reminders: [
-                    ...p.reminders.filter((r) => r.reminderId !== 'die_imp'),
-                    { instanceId: `rem-sw-imp-${Date.now()}`, reminderId: 'is_demon_sw' },
-                  ],
-                };
-              }
-              return p;
-            });
+            const next = sanitizePlayerSeats(
+              s.players.map((p) => {
+                if (p.id === playerId) {
+                  return {
+                    ...p,
+                    isAlive: false,
+                    deathCause: 'demon' as const,
+                    hasGhostVote: true,
+                  };
+                }
+                if (p.id === singleMinion.id) {
+                  return {
+                    ...p,
+                    trueRoleId: 'imp',
+                    perceivedRoleId: 'imp',
+                    reminders: [
+                      ...p.reminders.filter((r) => r.reminderId !== 'die_imp'),
+                      { instanceId: `rem-sw-imp-${Date.now()}`, reminderId: 'is_demon_sw' },
+                    ],
+                  };
+                }
+                return p;
+              })
+            );
+            const story = [
+              ...(s.storyHistory || []),
+              makeStoryRecord(
+                currentRoundLabel,
+                `STARPASS: Demon ${target.name} (${roleName}) bunuh diri. Minion ${singleMinion.name} (Kursi ${singleMinion.seatIndex + 1}) otomatis berubah menjadi IMP baru!`,
+                'starpass'
+              ),
+            ];
+            const evaluated = applyEvaluatedWinner(s, next, currentRoundLabel, story);
             return {
               ...s,
-              players: sanitizePlayerSeats(next),
+              players: next,
+              winner: evaluated.winner,
+              storyHistory: evaluated.storyHistory,
               gameAlertBanner: `STARPASS! Demon (${target.name}) bunuh diri. Minion ${singleMinion.name} (Kursi ${singleMinion.seatIndex + 1}) otomatis berubah menjadi IMP baru!`,
             };
           });
-
-          appendStory(
-            currentRoundLabel,
-            `Pewarisan Imp Berhasil: Karena hanya ada 1 Minion hidup (${singleMinion.name} - Kursi ${singleMinion.seatIndex + 1}), ia otomatis mewarisi tahta dan resmi menjadi IMP baru!`,
-            'starpass'
-          );
           return;
         }
 
         if (aliveMinions.length > 1) {
-          // Multiple alive minions -> trigger in-app selection modal!
           updateSession((s) => {
-            const next = s.players.map((p) => {
-              if (p.id === playerId) {
-                return {
-                  ...p,
-                  isAlive: false,
-                  deathCause: 'demon' as const,
-                  hasGhostVote: true,
-                };
-              }
-              return p;
-            });
+            const next = sanitizePlayerSeats(
+              s.players.map((p) =>
+                p.id === playerId
+                  ? { ...p, isAlive: false, deathCause: 'demon' as const, hasGhostVote: true }
+                  : p
+              )
+            );
+            const story = [
+              ...(s.storyHistory || []),
+              makeStoryRecord(
+                currentRoundLabel,
+                `Pewarisan Imp: Terdapat ${aliveMinions.length} Minion hidup (${aliveMinions.map((m) => m.name).join(', ')}). Storyteller membuka pemilihan Minion pewaris Imp.`,
+                'starpass'
+              ),
+            ];
             return {
               ...s,
-              players: sanitizePlayerSeats(next),
+              players: next,
+              storyHistory: story,
             };
           });
-
-          appendStory(
-            currentRoundLabel,
-            `Pewarisan Imp: Terdapat ${aliveMinions.length} Minion hidup (${aliveMinions.map(m => m.name).join(', ')}). Storyteller membuka pemilihan Minion pewaris Imp.`,
-            'starpass'
-          );
-
           setStarpassPending({
             dyingDemon: target,
             aliveMinions,
@@ -850,12 +982,38 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
 
       updateSession((s) => {
-        const aliveBefore = s.players.filter((p) => p.isAlive).length;
+        const currentTarget = s.players.find((p) => p.id === playerId);
+        if (!currentTarget) return s;
+        const roundLabel = formatSessionRoundLabel(s.phase, s.dayNumber);
+        const aliveBeforeNonTravellers = countAliveNonTravellers(s.players);
+        const currRoleName = ROLE_MAP[currentTarget.perceivedRoleId]?.name || 'Unknown';
+        const currIsDemon = ROLE_MAP[currentTarget.trueRoleId]?.team === 'demon';
 
-        if (cause === 'execution') {
-          // Saint check
-          if (target.trueRoleId === 'saint' && !isPlayerPoisoned(target)) {
-            const next = s.players.map((p) => {
+        const actionStoryText =
+          cause === 'execution'
+            ? `${currentTarget.name} (${currRoleName}) dieksekusi mati oleh warga kota.`
+            : cause === 'slayer'
+            ? `${currentTarget.name} (${currRoleName}) tewas seketika akibat tembakan Slayer!`
+            : currIsDemon
+            ? `Demon ${currentTarget.name} (${currRoleName}) tewas di malam hari.`
+            : `${currentTarget.name} (${currRoleName}) tewas diserang oleh Demon malam ini.`;
+        const actionCategory: GameStoryEntry['category'] =
+          cause === 'execution'
+            ? 'execution'
+            : cause === 'slayer'
+            ? 'slayer'
+            : currIsDemon
+            ? 'starpass'
+            : 'death';
+        let nextStory: GameStoryEntry[] = [
+          ...(s.storyHistory || []),
+          makeStoryRecord(roundLabel, actionStoryText, actionCategory),
+        ];
+
+        // Saint check on execution
+        if (cause === 'execution' && currentTarget.trueRoleId === 'saint' && !isPlayerPoisoned(currentTarget)) {
+          const next = sanitizePlayerSeats(
+            s.players.map((p) => {
               const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
               if (p.id !== playerId) return { ...p, reminders: cleaned };
               return {
@@ -865,22 +1023,28 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                 hasGhostVote: true,
                 reminders: cleaned,
               };
-            });
-            const winMsg = `SAINT DIEKSEKUSI! ${target.name} adalah Saint asli yang sehat. Sesuai aturan, TIM EVIL LANGSUNG MENANG!`;
-            appendStory(currentRoundLabel, winMsg, 'win');
-            return {
-              ...s,
-              winner: 'evil',
-              executedTodayPlayerId: playerId,
-              players: sanitizePlayerSeats(next),
-              gameAlertBanner: null,
-            };
-          }
-
-          // Scarlet Woman check on Demon execution or Slayer shot (BOTC official: 5+ alive players before death)
+            })
+          );
+          nextStory = [
+            ...nextStory,
+            makeStoryRecord(
+              roundLabel,
+              `SAINT DIEKSEKUSI! ${currentTarget.name} adalah Saint asli yang sehat. Tim Evil langsung menang!`,
+              'win'
+            ),
+          ];
+          return {
+            ...s,
+            winner: 'evil',
+            executedTodayPlayerId: playerId,
+            players: next,
+            storyHistory: nextStory,
+            gameAlertBanner: null,
+          };
         }
 
-        if (cause === 'execution' || cause === 'slayer') {
+        // Scarlet Woman check on Demon execution or Slayer shot (5+ non-Traveller alive before death)
+        if ((cause === 'execution' || cause === 'slayer') && currIsDemon && aliveBeforeNonTravellers >= 5) {
           const healthySW = s.players.find(
             (p) =>
               p.isAlive &&
@@ -889,134 +1053,147 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               !isPlayerPoisoned(p)
           );
 
-          if (isTargetDemon && aliveBefore >= 5 && healthySW) {
-            const next = s.players.map((p) => {
-              const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
-              if (p.id === playerId) {
-                return {
-                  ...p,
-                  isAlive: false,
-                  deathCause: cause,
-                  hasGhostVote: true,
-                  reminders: cleaned,
-                };
-              }
-              if (p.id === healthySW.id) {
-                return {
-                  ...p,
-                  trueRoleId: 'imp',
-                  perceivedRoleId: 'imp',
-                  reminders: [
-                    ...cleaned,
-                    { instanceId: `rem-sw-demon-${Date.now()}`, reminderId: 'is_demon_sw' },
-                  ],
-                };
-              }
-              return { ...p, reminders: cleaned };
-            });
-
-            const causeText =
-              cause === 'slayer' ? 'ditembak mati oleh Slayer' : 'dieksekusi warga';
-
-            appendStory(
-              currentRoundLabel,
-              `Demon (${target.name}) ${causeText} saat ada ${aliveBefore} pemain hidup. Scarlet Woman (${healthySW.name}) otomatis berubah menjadi IMP baru!`,
-              'starpass'
+          if (healthySW) {
+            const next = sanitizePlayerSeats(
+              s.players.map((p) => {
+                const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
+                if (p.id === playerId) {
+                  return {
+                    ...p,
+                    isAlive: false,
+                    deathCause: cause,
+                    hasGhostVote: true,
+                    reminders: cleaned,
+                  };
+                }
+                if (p.id === healthySW.id) {
+                  return {
+                    ...p,
+                    trueRoleId: 'imp',
+                    perceivedRoleId: 'imp',
+                    reminders: [
+                      ...cleaned,
+                      { instanceId: `rem-sw-demon-${Date.now()}`, reminderId: 'is_demon_sw' },
+                    ],
+                  };
+                }
+                return { ...p, reminders: cleaned };
+              })
             );
-
+            const causeText = cause === 'slayer' ? 'ditembak mati oleh Slayer' : 'dieksekusi warga';
+            nextStory = [
+              ...nextStory,
+              makeStoryRecord(
+                roundLabel,
+                `Demon (${currentTarget.name}) ${causeText} saat ada ${aliveBeforeNonTravellers} pemain aktif. Scarlet Woman (${healthySW.name}) otomatis menjadi IMP baru!`,
+                'starpass'
+              ),
+            ];
             return {
               ...s,
               executedTodayPlayerId: cause === 'execution' ? playerId : s.executedTodayPlayerId,
-              players: sanitizePlayerSeats(next),
-              gameAlertBanner: `SCARLET WOMAN AKTIF! Demon (${target.name}) ${causeText} saat ada ${aliveBefore} pemain hidup. ${healthySW.name} otomatis berubah menjadi IMP baru!`,
+              players: next,
+              storyHistory: nextStory,
+              gameAlertBanner: `SCARLET WOMAN AKTIF! ${healthySW.name} diam-diam mewarisi peran IMP baru!`,
             };
           }
         }
 
-        const next = s.players.map((p) => {
-          const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
-          if (p.id !== playerId) return { ...p, reminders: cleaned };
-          return {
-            ...p,
-            isAlive: false,
-            deathCause: cause,
-            hasGhostVote: true,
-            reminders: cleaned,
-          };
-        });
+        const next = sanitizePlayerSeats(
+          s.players.map((p) => {
+            const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
+            if (p.id !== playerId) return { ...p, reminders: cleaned };
+            return {
+              ...p,
+              isAlive: false,
+              deathCause: cause,
+              hasGhostVote: true,
+              reminders: cleaned,
+            };
+          })
+        );
 
-        evaluateWinConditions(next);
+        const evaluated = applyEvaluatedWinner(s, next, roundLabel, nextStory);
         return {
           ...s,
           executedTodayPlayerId: cause === 'execution' ? playerId : s.executedTodayPlayerId,
-          players: sanitizePlayerSeats(next),
+          players: next,
+          winner: evaluated.winner,
+          storyHistory: evaluated.storyHistory,
+          gameAlertBanner: evaluated.gameAlertBanner,
         };
       });
     },
-    [appendStory, evaluateWinConditions, session.dayNumber, session.phase, session.players, updateSession]
+    [session.dayNumber, session.phase, session.players, updateSession]
   );
 
   const handleResurrectPlayer = useCallback(
     (playerId: string) => {
-      const target = session.players.find((p) => p.id === playerId);
-      if (!target) return;
-
-      const currentRoundLabel =
-        session.phase === 'first_night'
-          ? 'Malam Pertama'
-          : session.phase === 'day'
-          ? `Siang #${session.dayNumber}`
-          : `Malam #${session.dayNumber + 1}`;
-
-      appendStory(
-        currentRoundLabel,
-        `${target.name} (${ROLE_MAP[target.perceivedRoleId]?.name}) dihidupkan kembali oleh Storyteller.`,
-        'start'
-      );
-
       updateSession((s) => {
-        const next = s.players.map((p) => {
-          if (p.id !== playerId) return p;
-          return {
-            ...p,
-            isAlive: true,
-            deathCause: undefined,
-          };
-        });
-        evaluateWinConditions(next);
+        const target = s.players.find((p) => p.id === playerId);
+        if (!target) return s;
+        const roundLabel = formatSessionRoundLabel(s.phase, s.dayNumber);
+        const next = sanitizePlayerSeats(
+          s.players.map((p) =>
+            p.id !== playerId
+              ? p
+              : {
+                  ...p,
+                  isAlive: true,
+                  deathCause: undefined,
+                }
+          )
+        );
+        const story = [
+          ...(s.storyHistory || []),
+          makeStoryRecord(
+            roundLabel,
+            `${target.name} (${ROLE_MAP[target.perceivedRoleId]?.name}) dihidupkan kembali oleh Storyteller.`,
+            'start'
+          ),
+        ];
+        const evaluated = applyEvaluatedWinner(s, next, roundLabel, story);
         return {
           ...s,
           executedTodayPlayerId:
             s.executedTodayPlayerId === playerId ? null : s.executedTodayPlayerId,
-          players: sanitizePlayerSeats(next),
+          players: next,
+          winner: evaluated.winner,
+          storyHistory: evaluated.storyHistory,
+          gameAlertBanner: evaluated.gameAlertBanner,
         };
       });
     },
-    [appendStory, evaluateWinConditions, session.dayNumber, session.phase, session.players, updateSession]
+    [updateSession]
   );
 
   const handleChangeDeathCause = useCallback(
     (playerId: string, cause: 'demon' | 'execution' | 'slayer') => {
       updateSession((s) => {
-        const next = s.players.map((p) => {
-          const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
-          if (p.id !== playerId) return { ...p, reminders: cleaned };
-          return {
-            ...p,
-            isAlive: false,
-            deathCause: cause,
-            reminders: cleaned,
-          };
-        });
-        evaluateWinConditions(next);
+        const roundLabel = formatSessionRoundLabel(s.phase, s.dayNumber);
+        const next = sanitizePlayerSeats(
+          s.players.map((p) => {
+            const cleaned = p.reminders.filter((r) => r.reminderId !== 'executed');
+            if (p.id !== playerId) return { ...p, reminders: cleaned };
+            return {
+              ...p,
+              isAlive: false,
+              deathCause: cause,
+              reminders: cleaned,
+            };
+          })
+        );
+        const evaluated = applyEvaluatedWinner(s, next, roundLabel);
         return {
           ...s,
           executedTodayPlayerId: cause === 'execution' ? playerId : s.executedTodayPlayerId,
-          players: sanitizePlayerSeats(next),
+          players: next,
+          winner: evaluated.winner,
+          storyHistory: evaluated.storyHistory,
         };
       });
     },
-    [evaluateWinConditions, updateSession]
+    [updateSession]
   );
 
   const handleToggleAlive = useCallback(
@@ -1302,19 +1479,27 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        const next = s.players.map((p) => {
-          if (p.id !== playerId) return p;
-          return {
-            ...p,
-            trueRoleId: newTrueRoleId,
-            perceivedRoleId: newTrueRoleId === 'drunk' ? p.perceivedRoleId : newTrueRoleId,
-          };
-        });
-        evaluateWinConditions(next);
-        return { ...s, players: next };
+        const roundLabel = formatSessionRoundLabel(s.phase, s.dayNumber);
+        const next = sanitizePlayerSeats(
+          s.players.map((p) => {
+            if (p.id !== playerId) return p;
+            return {
+              ...p,
+              trueRoleId: newTrueRoleId,
+              perceivedRoleId: newTrueRoleId === 'drunk' ? p.perceivedRoleId : newTrueRoleId,
+            };
+          })
+        );
+        const evaluated = applyEvaluatedWinner(s, next, roundLabel);
+        return {
+          ...s,
+          players: next,
+          winner: evaluated.winner,
+          storyHistory: evaluated.storyHistory,
+        };
       });
     },
-    [evaluateWinConditions, updateSession]
+    [updateSession]
   );
 
   const handleResolveImpAttack = useCallback(
@@ -1344,46 +1529,45 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
         if (aliveMinions.length === 1) {
           const singleMinion = aliveMinions[0];
-          const currentRoundLabel =
-            session.phase === 'first_night'
-              ? 'Malam Pertama'
-              : session.phase === 'day'
-              ? `Siang #${session.dayNumber}`
-              : `Malam #${session.dayNumber + 1}`;
 
-          updateSession((s) => ({
-            ...s,
-            players: s.players.map((p) => {
-              const withoutDie = p.reminders.filter((r) => r.reminderId !== 'die_imp');
-              if (p.id === impPlayer.id) {
-                return {
-                  ...p,
-                  reminders: [
-                    ...withoutDie,
-                    { instanceId: `rem-die-${Date.now()}`, reminderId: 'die_imp' },
-                  ],
-                };
-              }
-              if (p.id === singleMinion.id) {
-                return {
-                  ...p,
-                  trueRoleId: 'imp',
-                  perceivedRoleId: 'imp',
-                  reminders: [
-                    ...withoutDie,
-                    { instanceId: `rem-sw-imp-${Date.now()}`, reminderId: 'is_demon_sw' },
-                  ],
-                };
-              }
-              return { ...p, reminders: withoutDie };
-            }),
-          }));
-
-          appendStory(
-            currentRoundLabel,
-            `STARPASS: Demon (${impPlayer.name}) bunuh diri. Karena hanya ada 1 Minion hidup (${singleMinion.name} - Kursi ${singleMinion.seatIndex + 1}), ia otomatis berubah menjadi IMP baru!`,
-            'starpass'
-          );
+          updateSession((s) => {
+            const roundLabel = formatSessionRoundLabel(s.phase, s.dayNumber);
+            return {
+              ...s,
+              players: s.players.map((p) => {
+                const withoutDie = p.reminders.filter((r) => r.reminderId !== 'die_imp');
+                if (p.id === impPlayer.id) {
+                  return {
+                    ...p,
+                    reminders: [
+                      ...withoutDie,
+                      { instanceId: `rem-die-${Date.now()}`, reminderId: 'die_imp' },
+                    ],
+                  };
+                }
+                if (p.id === singleMinion.id) {
+                  return {
+                    ...p,
+                    trueRoleId: 'imp',
+                    perceivedRoleId: 'imp',
+                    reminders: [
+                      ...withoutDie,
+                      { instanceId: `rem-sw-imp-${Date.now()}`, reminderId: 'is_demon_sw' },
+                    ],
+                  };
+                }
+                return { ...p, reminders: withoutDie };
+              }),
+              storyHistory: [
+                ...(s.storyHistory || []),
+                makeStoryRecord(
+                  roundLabel,
+                  `STARPASS: Demon (${impPlayer.name}) bunuh diri. Minion ${singleMinion.name} (Kursi ${singleMinion.seatIndex + 1}) otomatis berubah menjadi IMP baru!`,
+                  'starpass'
+                ),
+              ],
+            };
+          });
 
           return {
             outcomeMessage: `STARPASS! ${impPlayer.name} bunuh diri. ${singleMinion.name} otomatis menjadi IMP baru!`,
@@ -1452,79 +1636,87 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const handleTransitionNightToDay = useCallback(() => {
     updateSession((s) => {
+      const roundLabel = formatSessionRoundLabel(s.phase, s.dayNumber);
       const victims = s.players.filter((p) =>
         p.reminders.some((r) => r.reminderId === 'die_imp')
       );
       const victimNames = victims.map((v) => v.name);
 
-      const next = s.players.map((p) => {
-        const diedTonight = p.reminders.some((r) => r.reminderId === 'die_imp');
-        const cleaned = p.reminders.filter(
-          (r) =>
-            r.reminderId !== 'die_imp' &&
-            r.reminderId !== 'protected' &&
-            r.reminderId !== 'executed'
-        );
-        return {
-          ...p,
-          isAlive: diedTonight ? false : p.isAlive,
-          deathCause: diedTonight ? ('demon' as const) : p.deathCause,
-          reminders: cleaned,
-        };
-      });
+      const next = sanitizePlayerSeats(
+        s.players.map((p) => {
+          const diedTonight = p.reminders.some((r) => r.reminderId === 'die_imp');
+          const cleaned = p.reminders.filter(
+            (r) =>
+              r.reminderId !== 'die_imp' &&
+              r.reminderId !== 'protected' &&
+              r.reminderId !== 'executed'
+          );
+          return {
+            ...p,
+            isAlive: diedTonight ? false : p.isAlive,
+            deathCause: diedTonight ? ('demon' as const) : p.deathCause,
+            hasGhostVote: diedTonight && p.isAlive ? true : p.hasGhostVote,
+            reminders: cleaned,
+          };
+        })
+      );
 
-      evaluateWinConditions(next);
+      const dawnText =
+        victims.length > 0
+          ? `Fajar terbit: ${victims
+              .map((v) => `${v.name} (${ROLE_MAP[v.perceivedRoleId]?.name})`)
+              .join(', ')} ditemukan tewas.`
+          : 'Fajar terbit: Tidak ada korban tewas malam ini.';
+
+      const story = [
+        ...(s.storyHistory || []),
+        makeStoryRecord(
+          roundLabel,
+          dawnText,
+          victims.length > 0 ? 'death' : 'start'
+        ),
+      ];
+      const evaluated = applyEvaluatedWinner(s, next, roundLabel, story);
+      const nextDayNum = s.phase === 'first_night' ? 1 : Math.max(2, s.dayNumber);
+
       return {
         ...s,
         phase: 'day',
+        dayNumber: nextDayNum,
+        phaseStartedAt: Date.now(),
         executedTodayPlayerId: null,
         lastNightDeaths: victimNames,
-        players: sanitizePlayerSeats(next),
+        nominationsToday: [],
+        players: next,
+        winner: evaluated.winner,
+        storyHistory: evaluated.storyHistory,
+        gameAlertBanner: evaluated.gameAlertBanner,
       };
     });
-
-    const currentNightLabel =
-      session.phase === 'first_night'
-        ? 'Malam Pertama'
-        : `Malam #${session.dayNumber + 1}`;
-
-    const victims = session.players.filter((p) =>
-      p.reminders.some((r) => r.reminderId === 'die_imp')
-    );
-
-    if (victims.length > 0) {
-      appendStory(
-        currentNightLabel,
-        `Fajar terbit: ${victims
-          .map((v) => `${v.name} (${ROLE_MAP[v.perceivedRoleId]?.name})`)
-          .join(', ')} ditemukan tewas.`,
-        'death'
-      );
-    } else {
-      appendStory(
-        currentNightLabel,
-        `Fajar terbit: Tidak ada korban tewas malam ini.`,
-        'start'
-      );
-    }
-  }, [appendStory, evaluateWinConditions, session.dayNumber, session.phase, session.players, updateSession]);
+  }, [updateSession]);
 
   const handleExecutePlayerInDay = useCallback(
     (playerId: string | null) => {
       if (!playerId) {
         updateSession((s) => {
-          const alive = s.players.filter((p) => p.isAlive);
-          const healthyMayor = alive.find(
-            (p) => p.trueRoleId === 'mayor' && !isPlayerPoisoned(p)
+          const aliveNonTravellers = countAliveNonTravellers(s.players);
+          const healthyMayor = s.players.find(
+            (p) =>
+              p.isAlive &&
+              p.trueRoleId === 'mayor' &&
+              !isPlayerPoisoned(p)
           );
-          if (alive.length === 3 && healthyMayor) {
-            const winMsg = `Tim Good Menang (Mayor) — Tersisa 3 pemain hidup tanpa eksekusi.`;
-            appendStory(`Siang #${session.dayNumber}`, winMsg, 'win');
+          if (aliveNonTravellers === 3 && healthyMayor) {
+            const winMsg = `Tim Good Menang (Mayor) — Tersisa 3 pemain non-Traveller hidup tanpa eksekusi.`;
             return {
               ...s,
               winner: 'good',
               executedTodayPlayerId: null,
               gameAlertBanner: null,
+              storyHistory: [
+                ...(s.storyHistory || []),
+                makeStoryRecord(`Siang #${s.dayNumber}`, winMsg, 'win'),
+              ],
             };
           }
           return {
@@ -1537,43 +1729,61 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       handleKillPlayer(playerId, 'execution');
     },
-    [appendStory, handleKillPlayer, session.dayNumber, updateSession]
+    [handleKillPlayer, updateSession]
   );
 
   const handleTransitionDayToNextNight = useCallback(() => {
-    updateSession((s) => ({
-      ...s,
-      dayNumber: s.dayNumber + 1,
-      phase: 'other_night',
-      nominationsToday: [],
-    }));
+    updateSession((s) => {
+      const nextDay = s.dayNumber + 1;
+      return {
+        ...s,
+        dayNumber: nextDay,
+        phase: 'other_night',
+        phaseStartedAt: Date.now(),
+        nominationsToday: [],
+      };
+    });
   }, [updateSession]);
 
   const handleEndGameManual = useCallback(
     (winnerChoice: 'good' | 'evil' | null) => {
-      updateSession((s) => ({
-        ...s,
-        winner: winnerChoice,
-        gameAlertBanner: null,
-      }));
-      if (winnerChoice) {
-        appendStory(
-          session.phase === 'day' ? `Siang #${session.dayNumber}` : `Malam #${session.dayNumber}`,
-          `Permainan dinyatakan berakhir oleh Storyteller: Tim ${
-            winnerChoice === 'good' ? 'Good' : 'Evil'
-          } Menang!`,
-          'win'
-        );
-      }
+      updateSession((s) => {
+        const roundLabel = formatSessionRoundLabel(s.phase, s.dayNumber);
+        const story = winnerChoice
+          ? [
+              ...(s.storyHistory || []),
+              makeStoryRecord(
+                roundLabel,
+                `Permainan dinyatakan berakhir oleh Storyteller: Tim ${
+                  winnerChoice === 'good' ? 'Good' : 'Evil'
+                } Menang!`,
+                'win'
+              ),
+            ]
+          : s.storyHistory || [];
+        return {
+          ...s,
+          winner: winnerChoice,
+          gameAlertBanner: null,
+          storyHistory: story,
+        };
+      });
     },
-    [appendStory, session.dayNumber, session.phase, updateSession]
+    [updateSession]
   );
 
   const handleNominatePlayer = useCallback(
     (nominatorId: string, nomineeId: string): string => {
+      const currentNoms = session.nominationsToday || [];
+      if (!canSeatNominate(currentNoms, nominatorId, nomineeId, session.players)) {
+        return '';
+      }
       const id = `nom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       updateSession((s) => {
         const current = s.nominationsToday || [];
+        if (!canSeatNominate(current, nominatorId, nomineeId, s.players)) {
+          return s;
+        }
         const newNom: DayNomination = {
           id,
           dayNumber: s.dayNumber,
@@ -1590,7 +1800,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       });
       return id;
     },
-    [updateSession]
+    [session.nominationsToday, session.players, updateSession]
   );
 
   const handleToggleVoteForNomination = useCallback(
@@ -1600,9 +1810,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         if (!seat) return s;
         const current = s.nominationsToday || [];
         const nom = current.find((n) => n.id === nominationId);
-        if (!nom) return s;
+        if (!nom || nom.cancelled) return s;
 
         const hasVoted = nom.voterIds.includes(seatId);
+        // Prevent dead players without remaining ghost vote from adding a vote
+        if (!hasVoted && !seat.isAlive && !seat.hasGhostVote) {
+          return s;
+        }
+
         const nextVoters = hasVoted
           ? nom.voterIds.filter((v) => v !== seatId)
           : [...nom.voterIds, seatId];
@@ -1613,22 +1828,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             )
           : s.players;
 
-        const weightOf = (vid: string) => {
-          const vp = s.players.find((p) => p.id === vid);
-          if (!vp) return 1;
-          if (vp.reminders.some((r) => r.reminderId === 'thief_neg')) return -1;
-          if (vp.reminders.some((r) => r.reminderId === 'bureaucrat_3x')) return 3;
-          return 1;
-        };
+        const voteTotal = nextVoters.reduce(
+          (sum, vid) => sum + getSeatVoteWeight(updatedPlayers.find((p) => p.id === vid)),
+          0
+        );
 
-        const voteTotal = nextVoters.reduce((sum, vid) => sum + weightOf(vid), 0);
+        const nextNominationsRaw = current.map((n) =>
+          n.id === nominationId ? { ...n, voterIds: nextVoters, voteTotal } : n
+        );
+        const tieStatus = resolveVoteTieStatus(nextNominationsRaw, updatedPlayers);
+        const nextNominations = tieStatus.isTie
+          ? nextNominationsRaw.map((n) => ({ ...n, markedForExecution: false }))
+          : nextNominationsRaw;
 
         return {
           ...s,
           players: updatedPlayers,
-          nominationsToday: current.map((n) =>
-            n.id === nominationId ? { ...n, voterIds: nextVoters, voteTotal } : n
-          ),
+          nominationsToday: nextNominations,
         };
       });
     },
@@ -1648,7 +1864,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             !p.isAlive && refundedSet.has(p.id) ? { ...p, hasGhostVote: true } : p
           ),
           nominationsToday: current.map((n) =>
-            n.id === nominationId ? { ...n, voterIds: [], voteTotal: 0 } : n
+            n.id === nominationId
+              ? { ...n, voterIds: [], voteTotal: 0, markedForExecution: false }
+              : n
           ),
         };
       });
@@ -1658,13 +1876,22 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const handleMarkNomination = useCallback(
     (nominationId: string, mark: boolean) => {
-      updateSession((s) => ({
-        ...s,
-        nominationsToday: (s.nominationsToday || []).map((n) => ({
-          ...n,
-          markedForExecution: n.id === nominationId ? mark : mark ? false : n.markedForExecution,
-        })),
-      }));
+      updateSession((s) => {
+        const current = s.nominationsToday || [];
+        const { nominations, isTieCleared } = applyDayNominationMark(
+          current,
+          nominationId,
+          mark,
+          s.players
+        );
+        return {
+          ...s,
+          nominationsToday: nominations,
+          gameAlertBanner: isTieCleared
+            ? 'SERI (TIE): Lebih dari 1 nominasi mencapai suara tertinggi yang sama — tidak ada yang dieksekusi di atas blok.'
+            : s.gameAlertBanner,
+        };
+      });
     },
     [updateSession]
   );
@@ -1696,20 +1923,31 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const shooter = session.players.find((p) => p.id === slayerPlayerId);
       const target = session.players.find((p) => p.id === targetPlayerId);
       if (!shooter || !target) return 'Pemain tidak ditemukan.';
-
-      if (shooter.perceivedRoleId === 'slayer') {
-        handleAddReminder(shooter.id, 'used_slayer');
+      if (!shooter.isAlive) {
+        return `Pemain yang sudah mati (${shooter.name}) tidak memiliki kemampuan Slayer.`;
+      }
+      if (!target.isAlive) {
+        return `${target.name} sudah mati. Umumkan: "Tidak terjadi apa-apa."`;
       }
 
+      const alreadyUsed = shooter.reminders.some((r) => r.reminderId === 'used_slayer');
       const isRealHealthySlayer =
         shooter.trueRoleId === 'slayer' &&
         !isPlayerPoisoned(shooter) &&
-        !shooter.reminders.some((r) => r.reminderId === 'used_slayer');
+        !alreadyUsed;
 
       const isDemonTarget = ROLE_MAP[target.trueRoleId]?.team === 'demon';
+      const isRecluseTarget =
+        target.trueRoleId === 'recluse' && !isPlayerPoisoned(target);
+
+      const roundLabel = `Siang #${session.dayNumber}`;
+      const usedSlayerRem = {
+        instanceId: `rem-slayer-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        reminderId: 'used_slayer',
+      };
 
       if (isRealHealthySlayer && isDemonTarget) {
-        const aliveCountNow = session.players.filter((p) => p.isAlive).length;
+        const aliveBeforeNonTravellers = countAliveNonTravellers(session.players);
         const healthySW = session.players.find(
           (p) =>
             p.isAlive &&
@@ -1718,49 +1956,99 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             !isPlayerPoisoned(p)
         );
 
-        appendStory(
-          `Siang #${session.dayNumber}`,
-          `Slayer (${shooter.name}) menembak ${target.name}. Tembakan tepat sasaran, ${target.name} (${ROLE_MAP[target.trueRoleId]?.name}) tewas!`,
-          'slayer'
-        );
-
         updateSession((s) => {
-          const next = s.players.map((p) => {
-            if (p.id === target.id)
-              return { ...p, isAlive: false, deathCause: 'slayer' as const };
-            if (aliveCountNow >= 5 && healthySW && p.id === healthySW.id) {
-              return {
-                ...p,
-                trueRoleId: 'imp',
-                perceivedRoleId: 'imp',
-                reminders: [
-                  ...p.reminders,
-                  { instanceId: `rem-sw-slay-${Date.now()}`, reminderId: 'is_demon_sw' },
-                ],
-              };
-            }
-            return p;
-          });
-          evaluateWinConditions(
-            next,
-            aliveCountNow >= 5 && healthySW
-              ? `TEMBAKAN SLAYER BERHASIL! ${target.name} tewas, namun Scarlet Woman (${healthySW.name}) diam-diam menjadi Imp baru!`
-              : undefined
+          const next = sanitizePlayerSeats(
+            s.players.map((p) => {
+              let updatedP = p;
+              if (p.id === shooter.id && !p.reminders.some((r) => r.reminderId === 'used_slayer')) {
+                updatedP = { ...updatedP, reminders: [...updatedP.reminders, usedSlayerRem] };
+              }
+              if (p.id === target.id) {
+                return {
+                  ...updatedP,
+                  isAlive: false,
+                  deathCause: 'slayer' as const,
+                  hasGhostVote: true,
+                };
+              }
+              if (aliveBeforeNonTravellers >= 5 && healthySW && p.id === healthySW.id) {
+                return {
+                  ...updatedP,
+                  trueRoleId: 'imp',
+                  perceivedRoleId: 'imp',
+                  reminders: [
+                    ...updatedP.reminders,
+                    { instanceId: `rem-sw-slay-${Date.now()}`, reminderId: 'is_demon_sw' },
+                  ],
+                };
+              }
+              return updatedP;
+            })
           );
-          return { ...s, players: next };
+
+          const story = [
+            ...(s.storyHistory || []),
+            makeStoryRecord(
+              roundLabel,
+              `Slayer (${shooter.name}) menembak ${target.name}. Tembakan tepat sasaran, ${target.name} (${ROLE_MAP[target.trueRoleId]?.name}) tewas!`,
+              'slayer'
+            ),
+            ...(aliveBeforeNonTravellers >= 5 && healthySW
+              ? [
+                  makeStoryRecord(
+                    roundLabel,
+                    `Scarlet Woman (${healthySW.name}) mewarisi tahta Demon Imp secara diam-diam!`,
+                    'starpass' as const
+                  ),
+                ]
+              : []),
+          ];
+
+          const evaluated = applyEvaluatedWinner(s, next, roundLabel, story);
+          return {
+            ...s,
+            players: next,
+            winner: evaluated.winner,
+            storyHistory: evaluated.storyHistory,
+            gameAlertBanner:
+              aliveBeforeNonTravellers >= 5 && healthySW
+                ? `TEMBAKAN SLAYER BERHASIL! ${target.name} tewas, namun Scarlet Woman (${healthySW.name}) diam-diam menjadi Imp baru!`
+                : evaluated.gameAlertBanner,
+          };
         });
 
         return `TEMBAKAN SLAYER BERHASIL! Umumkan: "${target.name} tewas seketika!"`;
       }
 
-      appendStory(
-        `Siang #${session.dayNumber}`,
-        `Slayer (${shooter.name}) menembak ${target.name}. Tembakan meleset atau target bukan Demon.`,
-        'slayer'
-      );
+      updateSession((s) => ({
+        ...s,
+        players: s.players.map((p) => {
+          if (
+            p.id === shooter.id &&
+            p.perceivedRoleId === 'slayer' &&
+            !p.reminders.some((r) => r.reminderId === 'used_slayer')
+          ) {
+            return { ...p, reminders: [...p.reminders, usedSlayerRem] };
+          }
+          return p;
+        }),
+        storyHistory: [
+          ...(s.storyHistory || []),
+          makeStoryRecord(
+            roundLabel,
+            `Slayer (${shooter.name}) menembak ${target.name}. Tembakan tidak membunuh Demon.`,
+            'slayer'
+          ),
+        ],
+      }));
+
+      if (isRealHealthySlayer && isRecluseTarget) {
+        return `Target adalah RECLUSE sehat (${target.name}). Storyteller BOLEH menganggap tembakan membunuh Recluse (jika mau misregister sebagai Demon — matikan via papan Grimoire) atau umumkan "Tidak terjadi apa-apa."`;
+      }
+
       return `Tembakan tidak membuahkan hasil. Umumkan: "Tidak terjadi apa-apa."`;
     },
-    [appendStory, evaluateWinConditions, handleAddReminder, session.dayNumber, session.players, updateSession]
+    [session.dayNumber, session.players, updateSession]
   );
 
   const handleTriggerVirginNomination = useCallback(
@@ -1768,6 +2056,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const virgin = session.players.find((p) => p.id === virginPlayerId);
       const nominator = session.players.find((p) => p.id === nominatorPlayerId);
       if (!virgin || !nominator) return 'Pemain tidak ditemukan.';
+      if (!virgin.isAlive) {
+        return `Virgin (${virgin.name}) sudah mati — kemampuan tidak aktif lagi.`;
+      }
 
       const alreadyUsed = virgin.reminders.some(
         (r) => r.reminderId === 'used_virgin'
@@ -1785,30 +2076,35 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       if (isRealHealthyVirgin && isNominatorRealTownsfolk) {
         handleExecutePlayerInDay(nominator.id);
-        appendStory(
-          `Siang #${session.dayNumber}`,
-          `Kemampuan Virgin aktif! ${nominator.name} (Townsfolk asli: ${
-            ROLE_MAP[nominator.trueRoleId]?.name
-          }) langsung dieksekusi mati setelah menominasikan Virgin (${virgin.name}).`,
-          'execution'
-        );
         return `KEMAMPUAN VIRGIN AKTIF! Karena ${nominator.name} adalah Townsfolk asli (${
           ROLE_MAP[nominator.trueRoleId]?.name
         }), umumkan: "${nominator.name} langsung dieksekusi saat ini juga!"`;
       }
 
       if (isRealHealthyVirgin && nominator.trueRoleId === 'spy') {
-        return `Penominasi adalah SPY (${nominator.name}). Sebagai Storyteller, Anda BOLEH memilih untuk memicu kemampuan Virgin (eksekusi Spy) jika ingin menyamarkannya sebagai Townsfolk, atau biarkan tidak terpicu.`;
+        return `Penominasi adalah SPY (${nominator.name}). Sebagai Storyteller, Anda BOLEH memilih untuk memicu kemampuan Virgin (eksekusi Spy di papan Grimoire) jika ingin menyamarkannya sebagai Townsfolk, atau biarkan tidak terpicu.`;
       }
 
       return `Kemampuan Virgin TIDAK terpicu. Lanjutkan pemungutan suara seperti biasa.`;
     },
-    [appendStory, handleAddReminder, handleExecutePlayerInDay, session.dayNumber, session.players]
+    [handleAddReminder, handleExecutePlayerInDay, session.players]
   );
 
   const setPhase = useCallback(
     (newPhase: GamePhase) => {
-      updateSession((s) => ({ ...s, phase: newPhase }));
+      updateSession((s) => ({
+        ...s,
+        phase: newPhase,
+        phaseStartedAt: Date.now(),
+        dayNumber:
+          newPhase === 'other_night' && s.phase === 'day'
+            ? s.dayNumber + 1
+            : newPhase === 'other_night' && s.dayNumber < 2
+            ? 2
+            : newPhase === 'first_night'
+            ? 1
+            : s.dayNumber,
+      }));
     },
     [updateSession]
   );
@@ -1859,6 +2155,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       storyHistory: session.storyHistory || [],
       velvetColour: session.velvetColour || 'midnight',
       startedAt: session.startedAt,
+      phaseStartedAt: session.phaseStartedAt,
+      dayTimer: session.dayTimer === undefined ? { durationMs: 300_000, remainingMs: 300_000, deadline: null } : session.dayTimer,
       nominationsToday: session.nominationsToday || [],
       canUndo,
       canRedo,
@@ -1872,6 +2170,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       undoLastAction,
       redoLastAction,
       setVelvetColour,
+      handleUpdateTimer,
       completeSetup,
       setPhase,
       setGameAlertBanner,
@@ -1936,6 +2235,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       undoLastAction,
       redoLastAction,
       setVelvetColour,
+      handleUpdateTimer,
       completeSetup,
       setPhase,
       setGameAlertBanner,

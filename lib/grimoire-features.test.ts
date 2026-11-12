@@ -19,6 +19,15 @@ import {
 } from './botc-engine.ts';
 import type { DayNomination, PlayerSeat } from './botc-engine.ts';
 import {
+  applyDayNominationMark,
+  computeTimerRemainingMs,
+  countAliveNonTravellers,
+  evaluateBoardWinner,
+  formatTimerClock,
+  getSeatVoteWeight,
+  resolveVoteTieStatus,
+} from './botc-engine.ts';
+import {
   fitRing,
   placeSeatMenu,
   reminderStack,
@@ -199,4 +208,95 @@ test('history-stack supports multi-step undo, redo, depth limit, and redo invali
   const branched = pushHistorySnapshot(r1.nextStack, 'step-1-branch');
   assert.deepEqual(branched.redo, []);
   assert.deepEqual(branched.undo, ['step-0', 'step-1-branch']);
+});
+
+test('evaluateBoardWinner excludes Travellers from 2-alive Evil win threshold', () => {
+  const base = sampleSeats(5);
+  base[4] = { ...base[4], trueRoleId: 'imp', perceivedRoleId: 'imp', alignment: 'evil' };
+  base[3] = { ...base[3], trueRoleId: 'scapegoat', perceivedRoleId: 'scapegoat', alignment: 'good' };
+  // Kill 2 Townsfolk -> remaining alive: seat 2 (good), seat 3 (Traveller), seat 4 (Imp)
+  // Non-travellers alive = 2 (seat 2 + Imp), total alive = 3 -> Evil MUST win!
+  base[0] = { ...base[0], isAlive: false };
+  base[1] = { ...base[1], isAlive: false };
+
+  assert.equal(countAliveNonTravellers(base), 2);
+  assert.equal(evaluateBoardWinner(base), 'evil');
+
+  // If Demon dies, Good wins immediately even if Evil Minion alive
+  base[4] = { ...base[4], isAlive: false };
+  assert.equal(evaluateBoardWinner(base), 'good');
+});
+
+test('getSeatVoteWeight handles Bureaucrat (+3), Thief (-1), and normal (+1)', () => {
+  const seats = sampleSeats(3);
+  seats[0] = {
+    ...seats[0],
+    reminders: [{ instanceId: 'r1', reminderId: 'bureaucrat_3x' }],
+  };
+  seats[1] = {
+    ...seats[1],
+    reminders: [{ instanceId: 'r2', reminderId: 'thief_neg' }],
+  };
+  assert.equal(getSeatVoteWeight(seats[0]), 3);
+  assert.equal(getSeatVoteWeight(seats[1]), -1);
+  assert.equal(getSeatVoteWeight(seats[2]), 1);
+  assert.equal(getSeatVoteWeight(undefined), 1);
+});
+
+test('resolveVoteTieStatus & applyDayNominationMark auto-clear tied blocks at majority threshold', () => {
+  const seats = sampleSeats(6); // threshold = ceil(6 / 2) = 3
+  const noms: DayNomination[] = [
+    {
+      id: 'n1',
+      dayNumber: 1,
+      nominatorId: seats[0].id,
+      nomineeId: seats[2].id,
+      voterIds: [seats[0].id, seats[1].id, seats[2].id],
+      voteTotal: 3,
+      markedForExecution: false,
+    },
+    {
+      id: 'n2',
+      dayNumber: 1,
+      nominatorId: seats[1].id,
+      nomineeId: seats[3].id,
+      voterIds: [seats[0].id, seats[1].id],
+      voteTotal: 2,
+      markedForExecution: false,
+    },
+  ];
+
+  // Marking unique leader n1 succeeds
+  const markLead = applyDayNominationMark(noms, 'n1', true, seats);
+  assert.equal(markLead.isTieCleared, false);
+  assert.equal(markLead.nominations[0].markedForExecution, true);
+  assert.equal(resolveVoteTieStatus(markLead.nominations, seats).isTie, false);
+  assert.equal(resolveVoteTieStatus(markLead.nominations, seats).onBlockNomination?.id, 'n1');
+
+  // When n2 ties n1 at 3 votes, tie status triggers and clears the block
+  const tiedList: DayNomination[] = [
+    markLead.nominations[0],
+    { ...markLead.nominations[1], voterIds: [seats[0].id, seats[1].id, seats[4].id], voteTotal: 3 },
+  ];
+  const markTied = applyDayNominationMark(tiedList, 'n2', true, seats);
+  assert.equal(markTied.isTieCleared, true);
+  assert.equal(markTied.nominations[0].markedForExecution, false);
+  assert.equal(markTied.nominations[1].markedForExecution, false);
+  const resolved = resolveVoteTieStatus(markTied.nominations, seats);
+  assert.equal(resolved.isTie, true);
+  assert.deepEqual(resolved.tiedNominationIds, ['n1', 'n2']);
+  assert.equal(resolved.onBlockNomination, null);
+});
+
+test('DayTimer computeTimerRemainingMs & formatTimerClock calculate running and paused times', () => {
+  const paused = { durationMs: 300_000, remainingMs: 125_000, deadline: null };
+  assert.equal(computeTimerRemainingMs(paused, 1_000_000), 125_000);
+  assert.equal(formatTimerClock(125_000), '02:05');
+
+  const running = { durationMs: 300_000, remainingMs: 300_000, deadline: 1_090_500 };
+  assert.equal(computeTimerRemainingMs(running, 1_000_000), 90_500);
+  assert.equal(formatTimerClock(90_500), '01:31');
+  assert.equal(computeTimerRemainingMs(running, 2_000_000), 0);
+  assert.equal(formatTimerClock(0), '00:00');
+  assert.equal(formatTimerClock(3_661_000), '1:01:01');
 });

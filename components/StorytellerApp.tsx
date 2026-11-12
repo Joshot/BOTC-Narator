@@ -1149,7 +1149,7 @@ export default function StorytellerApp({
                         ? 'Malam Pertama (First Night)'
                         : phase === 'day'
                         ? `Fase Siang Hari ke-${dayNumber}`
-                        : `Malam ke-${dayNumber + 1}`}
+                        : `Malam ke-${Math.max(2, dayNumber)}`}
                     </h2>
                     <p className="text-xs text-[#B8B0A2]">
                       {phase === 'first_night'
@@ -1171,7 +1171,7 @@ export default function StorytellerApp({
                     className="min-h-[48px] px-6 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#E2BE46] text-[#121016] text-sm sm:text-base font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-lg"
                   >
                     <Sun className="w-5 h-5 fill-current" />
-                    <span>Lanjut ke Siang Hari {phase === 'first_night' ? '1' : dayNumber} (Next Day)</span>
+                    <span>Lanjut ke Siang Hari {phase === 'first_night' ? 1 : Math.max(2, dayNumber)} (Next Day)</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 ) : (

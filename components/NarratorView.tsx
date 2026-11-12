@@ -11,6 +11,7 @@ import {
   Eye,
   Gavel,
   Gem,
+  MessageSquare,
   Moon,
   Sparkles,
   Sun,
@@ -18,14 +19,18 @@ import {
 } from 'lucide-react';
 import { ROLE_MAP, ROLES } from '@/lib/botc-data';
 import {
+  DayTimerState,
   GamePhase,
   PlayerSeat,
   buildNightOrder,
   calculateVoteThreshold,
   isPlayerPoisoned,
 } from '@/lib/botc-engine';
+import type { TimerAction } from '@/context/GameContext';
 import { SilentCardPayload } from './FullscreenCardModal';
 import { CharacterToken } from './TokenArtwork';
+import GameTimerWidget from './grimoire/GameTimerWidget';
+import ShowSheetModal from './grimoire/ShowSheetModal';
 
 interface NarratorViewProps {
   phase: GamePhase;
@@ -35,6 +40,9 @@ interface NarratorViewProps {
   demonBluffIds: string[];
   lastNightDeaths: string[];
   gameAlertBanner: string | null;
+  dayTimer?: DayTimerState | null;
+  phaseStartedAt?: number;
+  onTimerAction?: (action: TimerAction) => void;
   onChangePhase: (nextPhase: GamePhase) => void;
   onSetSingleReminderTarget: (reminderId: string, targetPlayerId: string) => void;
   onResolveImpAttack: (targetPlayerId: string) => { outcomeMessage: string };
@@ -54,6 +62,9 @@ export default function NarratorView({
   demonBluffIds,
   lastNightDeaths,
   gameAlertBanner,
+  dayTimer = null,
+  phaseStartedAt,
+  onTimerAction,
   onChangePhase,
   onSetSingleReminderTarget,
   onResolveImpAttack,
@@ -68,6 +79,8 @@ export default function NarratorView({
   const [completedStepIds, setCompletedStepIds] = useState<string[]>([]);
   const [impFeedback, setImpFeedback] = useState<string | null>(null);
   const [cardRoleToShow, setCardRoleToShow] = useState<string>('washerwoman');
+  const [isShowSheetOpen, setIsShowSheetOpen] = useState(false);
+  const [quickCustomNote, setQuickCustomNote] = useState('');
 
   // Day helper states
   const [selectedExecutionId, setSelectedExecutionId] = useState<string>('');
@@ -131,11 +144,53 @@ export default function NarratorView({
               ? 'Malam Pertama (First Night)'
               : phase === 'day'
               ? `Fase Siang Hari ke-${dayNumber}`
-              : `Malam Berikutnya (Malam ke-${dayNumber + 1})`}
+              : `Malam Berikutnya (Malam ke-${Math.max(2, dayNumber)})`}
           </h2>
         </div>
 
-        <div className="grid grid-cols-3 gap-1.5 p-1 bg-purple-50 dark:bg-[#110F17] border border-purple-200 dark:border-[#292535] rounded-xl">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveStepIdx(0);
+              setCompletedStepIds([]);
+              setImpFeedback(null);
+              setDayActionResult(null);
+              if (phase === 'day') onTransitionDayToNextNight();
+              else onTransitionNightToDay();
+            }}
+            className={`brass-sheen-btn min-h-[42px] px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-md whitespace-nowrap ${
+              phase === 'day'
+                ? 'bg-[#991B1B] hover:bg-[#B91C1C] text-white'
+                : 'bg-[#D4AF37] hover:bg-[#E5C365] text-[#121016]'
+            }`}
+          >
+            {phase === 'day' ? (
+              <>
+                <Moon className="w-3.5 h-3.5 shrink-0" />
+                <span>Lanjut Malam {dayNumber + 1}</span>
+              </>
+            ) : (
+              <>
+                <Sun className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  Lanjut Siang {phase === 'first_night' ? 1 : Math.max(2, dayNumber)}
+                </span>
+              </>
+            )}
+            <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsShowSheetOpen(true)}
+            className="min-h-[42px] px-3.5 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-[#231F30] dark:hover:bg-[#312B44] border border-purple-200 dark:border-[#39324D] text-purple-950 dark:text-[#F5EFE6] text-xs font-semibold flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+          >
+            <Eye className="w-3.5 h-3.5 text-amber-700 dark:text-[#D4AF37]" />
+            <span>Tunjuk Kartu</span>
+          </button>
+
+          <div className="grid grid-cols-3 gap-1 p-1 bg-purple-50 dark:bg-[#110F17] border border-purple-200 dark:border-[#292535] rounded-xl">
           <button
             type="button"
             onClick={() => handlePhaseSwitch('first_night')}
@@ -174,6 +229,7 @@ export default function NarratorView({
             <Sparkles className="w-3.5 h-3.5 shrink-0" />
             <span>Malam Lanjut</span>
           </button>
+          </div>
         </div>
       </div>
 
@@ -542,10 +598,8 @@ export default function NarratorView({
                               type="button"
                               onClick={() =>
                                 onShowSilentCard({
-                                  heading: 'KARAKTER PEMAIN YANG DIEKSEKUSI:',
-                                  subheading: `${executedTarget.name} (Kursi ${
-                                    executedTarget.seatIndex + 1
-                                  })`,
+                                  heading: 'KARAKTER PEMAIN YANG DIEKSEKUSI',
+                                  subheading: 'Eksekusi siang hari',
                                   roleIds: [executedTrueRole.id],
                                 })
                               }
@@ -584,7 +638,7 @@ export default function NarratorView({
                               if (!demon) return;
                               onShowSilentCard({
                                 heading: 'INI ADALAH DEMON ANDA',
-                                subheading: `Kursi ${demon.seatIndex + 1}`,
+                                subheading: 'Storyteller menunjuk ke arah pemain Demon ini',
                                 roleIds: [demon.trueRoleId],
                               });
                             }}
@@ -655,7 +709,7 @@ export default function NarratorView({
                           type="button"
                           onClick={() =>
                             onShowSilentCard({
-                              heading: 'KARAKTER INI ADALAH:',
+                              heading: 'KARAKTER INI ADALAH',
                               roleIds: [cardRoleToShow],
                             })
                           }
@@ -664,7 +718,51 @@ export default function NarratorView({
                           <Eye className="w-3.5 h-3.5 text-amber-700 dark:text-[#D4AF37]" />
                           <span>Tunjuk Token</span>
                         </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsShowSheetOpen(true)}
+                          className="min-h-[40px] px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-950 dark:bg-[#2B2216] dark:hover:bg-[#3B2E1E] dark:border-[#D4AF37]/40 dark:text-[#FDE68A] text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>Semua Kartu Info &amp; Pesan</span>
+                        </button>
                       </div>
+                    </div>
+
+                    {/* Quick Custom Night Note Bar */}
+                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                      <input
+                        type="text"
+                        value={quickCustomNote}
+                        onChange={(e) => setQuickCustomNote(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && quickCustomNote.trim()) {
+                            e.preventDefault();
+                            onShowSilentCard({
+                              heading: 'PESAN STORYTELLER',
+                              bigText: quickCustomNote.trim(),
+                            });
+                          }
+                        }}
+                        placeholder="Ketik pesan / info malam kustom untuk ditunjukkan (mis. Pilih 1 Pemain)..."
+                        className="flex-1 min-h-[38px] rounded-xl bg-purple-50 dark:bg-[#13111A] border border-purple-200 dark:border-[#322D42] px-3 py-1.5 text-xs text-slate-900 dark:text-[#EDE7DB] placeholder:text-slate-400"
+                      />
+                      <button
+                        type="button"
+                        disabled={!quickCustomNote.trim()}
+                        onClick={() => {
+                          if (!quickCustomNote.trim()) return;
+                          onShowSilentCard({
+                            heading: 'PESAN STORYTELLER',
+                            bigText: quickCustomNote.trim(),
+                          });
+                        }}
+                        className="min-h-[38px] px-4 py-1.5 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] disabled:opacity-40 text-[#121016] text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Tunjuk Catatan</span>
+                      </button>
                     </div>
                   </div>
 
@@ -841,8 +939,17 @@ export default function NarratorView({
             </div>
           </div>
 
-          {/* Right Column: Day Abilities Helper (Slayer & Virgin) */}
+          {/* Right Column: Storyteller Timer & Day Abilities Helper (Slayer & Virgin) */}
           <div className="lg:col-span-5 space-y-5">
+            {onTimerAction && (
+              <GameTimerWidget
+                timer={dayTimer}
+                phaseStartedAt={phaseStartedAt}
+                onAction={onTimerAction}
+                variant="panel"
+              />
+            )}
+
             {/* Slayer Day Action */}
             <div className="bg-white dark:bg-[#181520] border border-purple-200 dark:border-[#2A2636] rounded-2xl p-5 space-y-3 shadow-lg">
               <h3 className="font-display text-base font-bold text-slate-900 dark:text-[#F5EFE6] flex items-center gap-2">
@@ -946,6 +1053,14 @@ export default function NarratorView({
           </div>
         </motion.div>
       )}
+
+      <ShowSheetModal
+        isOpen={isShowSheetOpen}
+        players={players}
+        demonBluffIds={demonBluffIds}
+        initialRoleId={cardRoleToShow}
+        onClose={() => setIsShowSheetOpen(false)}
+      />
     </div>
   );
 }

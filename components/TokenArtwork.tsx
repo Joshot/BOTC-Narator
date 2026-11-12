@@ -346,7 +346,7 @@ export function ReminderTokenTrayCard({
           )}
         </div>
         {showRuleDetail && (
-          <p className="text-[11px] leading-snug text-[#5c4a37] dark:text-[#a89f8c] line-clamp-2">
+          <p className="text-[11px] leading-snug text-[#5c4a37] dark:text-[#a89f8c]">
             {rem.description}
           </p>
         )}

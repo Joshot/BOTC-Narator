@@ -64,12 +64,12 @@ export default function NavigationShell({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="min-h-screen bg-[#F1F8F4] dark:bg-[#0C0C10] text-slate-900 dark:text-[#EDEAF0] font-sans antialiased selection:bg-[#3D3552] selection:text-[#FFFFFF] flex flex-col">
+    <div className="min-h-screen overflow-x-hidden bg-[#F1F8F4] dark:bg-[#0C0C10] text-slate-900 dark:text-[#EDEAF0] font-sans antialiased selection:bg-[#3D3552] selection:text-[#FFFFFF] flex flex-col">
       {/*
         Clean Minimal Navbar (Home + Theme + Discreet Room Switcher Max 3 Rooms)
       */}
-      <header className="sticky top-0 z-40 bg-white/90 dark:bg-[#0C0C10]/95 backdrop-blur-md border-b border-purple-200 dark:border-white/[0.08] px-4 sm:px-6 py-2.5 transition-colors shadow-xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-40 bg-white/90 dark:bg-[#0C0C10]/95 backdrop-blur-md border-b border-purple-200 dark:border-white/[0.08] px-3 sm:px-6 py-2.5 transition-colors shadow-xs">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
           {/* Minimal Brand Link */}
           <div className="flex items-center gap-3">
             <Link
@@ -219,7 +219,7 @@ export default function NavigationShell({ children }: { children: React.ReactNod
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 pb-12">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 pb-8 sm:pb-12">
         {children}
       </main>
 

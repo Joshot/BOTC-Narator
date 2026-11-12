@@ -715,7 +715,7 @@ export default function WebPlayMode({
         >
           <div className="max-w-lg mx-auto w-full flex flex-col items-center text-center gap-4">
             <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#c9963a]">
-              Kursi #{assignedSeats.length + 1} · Token Terambil
+              Token Peran Rahasia Anda
             </span>
 
             <TokenFlip3D
@@ -746,7 +746,7 @@ export default function WebPlayMode({
             <form onSubmit={handleConfirmPlayerAndHide} className="w-full space-y-3">
               <div className="text-left space-y-1">
                 <label className="text-xs font-semibold text-[#efe6d2]">
-                  Tulis Nama Kamu (untuk Kursi #{assignedSeats.length + 1}):
+                  Tulis Nama Kamu (untuk Grimoire Storyteller):
                 </label>
                 <input
                   type="text"

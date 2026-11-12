@@ -156,22 +156,8 @@ export default function PeekCardModal({
                 </p>
               </>
             ) : (
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-900 dark:text-[#EDEAF0]">
-                  Kursi {player.seatIndex + 1}
-                </span>
-                <span className="text-slate-400">·</span>
-                <span className="text-xs text-slate-600 dark:text-[#8E8A9E] font-medium">
-                  {showPlayerName ? player.name : '•••••••• (Nama Disembunyikan)'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowPlayerName((p) => !p)}
-                  className="p-1 rounded text-slate-500 hover:text-amber-700 dark:text-[#8E8A9E] dark:hover:text-[#D4AF37] cursor-pointer"
-                  title={showPlayerName ? 'Sembunyikan Nama' : 'Tampilkan Nama'}
-                >
-                  {showPlayerName ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                </button>
+              <div className="text-xs font-bold text-slate-900 dark:text-[#EDEAF0]">
+                Tampilan Pribadi Pemain (Nama &amp; Kursi Disembunyikan)
               </div>
             )}
           </div>
@@ -237,7 +223,7 @@ export default function PeekCardModal({
                     </span>
                     {!isUnder7 && minionPlayers.length > 0 && (
                       <span className="text-[11px] font-normal">
-                        Minion: {minionPlayers.map((m) => `#${m.seatIndex + 1} ${ROLE_MAP[m.trueRoleId]?.name}`).join(', ')}
+                        Minion: {minionPlayers.map((m) => ROLE_MAP[m.trueRoleId]?.name).join(', ')}
                       </span>
                     )}
                   </div>
@@ -283,7 +269,7 @@ export default function PeekCardModal({
                   {!isUnder7 ? (
                     demonPlayer ? (
                       <span className="px-2.5 py-1 rounded-lg bg-red-100 text-xs font-bold text-red-950 border border-red-300 dark:bg-[#3F1B20] dark:text-[#FED7D7] dark:border-[#7F1D1D]">
-                        Kursi {demonPlayer.seatIndex + 1} ({ROLE_MAP[demonPlayer.trueRoleId]?.name})
+                        {ROLE_MAP[demonPlayer.trueRoleId]?.name}
                       </span>
                     ) : (
                       <span className="text-xs text-slate-600 dark:text-[#E2C4C6]">Belum terdaftar</span>

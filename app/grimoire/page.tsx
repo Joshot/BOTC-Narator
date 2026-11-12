@@ -22,8 +22,11 @@ export default function GrimoirePage() {
     winner,
     velvetColour,
     nominationsToday,
+    dayTimer,
+    phaseStartedAt,
     canUndo,
     canRedo,
+    handleUpdateTimer,
     startDemoGame,
     undoLastAction,
     redoLastAction,
@@ -128,6 +131,9 @@ export default function GrimoirePage() {
         winner={winner}
         velvetColour={velvetColour}
         nominationsToday={nominationsToday}
+        dayTimer={dayTimer}
+        phaseStartedAt={phaseStartedAt}
+        onTimerAction={handleUpdateTimer}
         canUndo={canUndo}
         canRedo={canRedo}
         onUndo={undoLastAction}

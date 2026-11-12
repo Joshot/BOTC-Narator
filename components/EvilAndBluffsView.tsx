@@ -71,10 +71,10 @@ export default function EvilAndBluffsView({
               onClick={() =>
                 onShowSilentCard({
                   heading: 'INI ADALAH DEMON ANDA',
-                  subheading: `Duduk di Kursi ${demon.seatIndex + 1}`,
+                  subheading: 'Storyteller menunjuk ke arah pemain Demon Anda',
                   roleIds: [demon.trueRoleId],
                   footerNote:
-                    'Tunjukkan layar ini kepada para Minion saat mereka bangun, sambil menunjuk ke arah tempat duduk Demon.',
+                    'Tunjukkan layar ini kepada para Minion saat mereka bangun, sambil menunjuk ke arah pemain Demon.',
                 })
               }
               className="min-h-[44px] px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold flex items-center gap-2 cursor-pointer shrink-0 transition-colors shadow-md"
@@ -217,9 +217,7 @@ export default function EvilAndBluffsView({
                   heading: '3 KARAKTER INI TIDAK DIMAINKAN',
                   subheading: isUnder7
                     ? 'Opsi Bluff Aman untuk Demon (Under 7: Info Minion Disembunyikan)'
-                    : minions.length > 0
-                    ? `Rekan Minion: Kursi ${minions.map((m) => m.seatIndex + 1).join(', ')}`
-                    : 'Gunakan peran ini sebagai gertakan (Bluff) aman Anda',
+                    : 'Gunakan peran berikut sebagai penyamaran (Bluff) aman Anda',
                   roleIds: demonBluffIds,
                   footerNote:
                     'Tidak ada warga baik yang memegang 3 token ini. Anda dapat mengklaim peran ini dengan aman.',
@@ -253,7 +251,7 @@ export default function EvilAndBluffsView({
                       Bluff #{idx + 1}
                     </span>
                     <h3 className="font-extrabold text-sm text-slate-900 dark:text-[#EDEAF0]">{role.name}</h3>
-                    <p className="text-xs text-slate-600 dark:text-[#8E8A9E] leading-relaxed line-clamp-3">
+                    <p className="text-xs text-slate-600 dark:text-[#8E8A9E] leading-relaxed">
                       {role.ability}
                     </p>
                   </div>

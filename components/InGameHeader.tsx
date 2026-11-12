@@ -14,6 +14,7 @@ import {
   Swords,
 } from 'lucide-react';
 import { useGameSession } from '@/context/GameContext';
+import GameTimerWidget from './grimoire/GameTimerWidget';
 
 interface InGameHeaderProps {
   currentTab?: 'grimoire' | 'evil' | 'narrator' | 'webplay';
@@ -24,6 +25,9 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
   const {
     phase,
     dayNumber,
+    dayTimer,
+    phaseStartedAt,
+    handleUpdateTimer,
     setPhase,
     handleTransitionNightToDay,
     handleTransitionDayToNextNight,
@@ -158,7 +162,7 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
                   ? 'Malam Pertama (First Night)'
                   : phase === 'day'
                   ? `Fase Siang Hari ke-${dayNumber}`
-                  : `Malam ke-${dayNumber + 1}`}
+                  : `Malam ke-${Math.max(2, dayNumber)}`}
               </h2>
               <p className="text-xs text-slate-600 dark:text-[#8E8A9E] leading-tight">
                 {phase === 'first_night'
@@ -172,18 +176,25 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
         </div>
 
         {/* Phase Buttons: Instant Execution Without Browser Confirm Alerts */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+        <div className="flex flex-wrap items-center justify-end gap-2.5 shrink-0">
+          <GameTimerWidget
+            timer={dayTimer}
+            phaseStartedAt={phaseStartedAt}
+            onAction={handleUpdateTimer}
+            variant="compact"
+          />
+
           {isNightPhase ? (
             <motion.button
               type="button"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
               onClick={handleTransitionNightToDay}
-              className="brass-sheen-btn min-h-[44px] px-5 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] text-xs sm:text-sm font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+              className="brass-sheen-btn min-h-[44px] px-4 sm:px-5 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] text-xs sm:text-sm font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg"
             >
-              <Sun className="w-4 h-4 fill-current" />
-              <span>Lanjut ke Siang Hari {phase === 'first_night' ? '1' : dayNumber}</span>
-              <ChevronRight className="w-4 h-4" />
+              <Sun className="w-4 h-4 fill-current shrink-0" />
+              <span>Lanjut ke Siang Hari {phase === 'first_night' ? 1 : Math.max(2, dayNumber)}</span>
+              <ChevronRight className="w-4 h-4 shrink-0" />
             </motion.button>
           ) : (
             <motion.button
@@ -191,11 +202,11 @@ export default function InGameHeader({ currentTab }: InGameHeaderProps) {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
               onClick={handleTransitionDayToNextNight}
-              className="brass-sheen-btn min-h-[44px] px-5 py-2 rounded-xl bg-[#991B1B] hover:bg-[#B91C1C] text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+              className="brass-sheen-btn min-h-[44px] px-4 sm:px-5 py-2 rounded-xl bg-[#991B1B] hover:bg-[#B91C1C] text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg"
             >
-              <Moon className="w-4 h-4" />
+              <Moon className="w-4 h-4 shrink-0" />
               <span>Lanjut ke Malam Hari {dayNumber + 1}</span>
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4 shrink-0" />
             </motion.button>
           )}
 
