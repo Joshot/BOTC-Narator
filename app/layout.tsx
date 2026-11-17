@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Atkinson_Hyperlegible, Grenze, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import { LanguageProvider } from '@/context/LanguageContext';
 import { GameProvider } from '@/context/GameContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import NavigationShell from '@/components/NavigationShell';
@@ -84,9 +85,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         }
       >
         <ThemeProvider>
-          <GameProvider>
-            <NavigationShell>{children}</NavigationShell>
-          </GameProvider>
+          <LanguageProvider>
+            <GameProvider>
+              <NavigationShell>{children}</NavigationShell>
+            </GameProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

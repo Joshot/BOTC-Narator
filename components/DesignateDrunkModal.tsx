@@ -3,7 +3,8 @@
 import React from 'react';
 import { Beer, Check, Sparkles, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ROLE_MAP } from '@/lib/botc-data';
+import { ROLE_MAP, getRoleName } from '@/lib/botc-data';
+import { useLanguage } from '@/context/LanguageContext';
 import { PlayerSeat } from '@/lib/botc-engine';
 import { CharacterToken, RoleGlyph } from './TokenArtwork';
 import { useLockBodyScroll } from './grimoire/useLockBodyScroll';
@@ -23,6 +24,7 @@ export default function DesignateDrunkModal({
   onSelectDrunkPlayer,
   onClose,
 }: DesignateDrunkModalProps) {
+  const { language } = useLanguage();
   useLockBodyScroll(isOpen);
 
   if (!isOpen) return null;
@@ -37,7 +39,7 @@ export default function DesignateDrunkModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Tentukan Pemain Drunk"
+      aria-label={language === 'en' ? 'Designate Drunk Player' : 'Tentukan Pemain Drunk'}
       className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 dark:bg-black/85 backdrop-blur-md overflow-hidden"
       onClick={onClose}
     >
@@ -56,10 +58,10 @@ export default function DesignateDrunkModal({
             </div>
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-[#F59E0B]">
-                Rahasia Storyteller (Trouble Brewing)
+                {language === 'en' ? 'Storyteller Secret (Trouble Brewing)' : 'Rahasia Storyteller (Trouble Brewing)'}
               </span>
               <h2 className="font-display text-base sm:text-xl font-black text-slate-900 dark:text-white leading-tight">
-                Tentukan Siapa yang Menjadi The Drunk
+                {language === 'en' ? 'Designate The Drunk Player' : 'Tentukan Siapa yang Menjadi The Drunk'}
               </h2>
             </div>
           </div>
@@ -67,7 +69,7 @@ export default function DesignateDrunkModal({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Tutup"
+            aria-label={language === 'en' ? 'Close' : 'Tutup'}
             className="w-8 h-8 rounded-xl bg-amber-100 hover:bg-amber-200 dark:bg-[#2E2016] dark:hover:bg-[#422E1E] text-amber-950 dark:text-[#EDE7DB] flex items-center justify-center cursor-pointer transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
@@ -77,7 +79,15 @@ export default function DesignateDrunkModal({
         {/* Modal Body (Zero Scroll Fit) */}
         <div className="p-3 sm:p-5 overflow-hidden space-y-3">
           <div className="px-3 py-2 rounded-xl bg-amber-50 dark:bg-[#261E13] border border-amber-300 dark:border-[#D97706]/60 text-xs text-amber-950 dark:text-[#FDE68A] leading-snug">
-            Pilih <strong>1 pemain</strong> pemegang token Townsfolk berikut yang secara rahasia menjadi <strong>The Drunk</strong>:
+            {language === 'en' ? (
+              <>
+                Select <strong>1 player</strong> holding a Townsfolk token below who secretly becomes <strong>The Drunk</strong>:
+              </>
+            ) : (
+              <>
+                Pilih <strong>1 pemain</strong> pemegang token Townsfolk berikut yang secara rahasia menjadi <strong>The Drunk</strong>:
+              </>
+            )}
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -108,13 +118,10 @@ export default function DesignateDrunkModal({
 
                     <div className="min-w-0">
                       <div className="text-[10px] font-mono font-bold text-amber-800 dark:text-[#D4AF37]">
-                        Kursi {player.seatIndex + 1} · {player.name}
+                        {language === 'en' ? 'Seat' : 'Kursi'} {player.seatIndex + 1} · {player.name}
                       </div>
                       <p className="text-xs text-blue-800 dark:text-[#93C5FD] font-bold truncate">
-                        {role?.name}
-                      </p>
-                      <p className="text-[10px] text-slate-600 dark:text-[#A8A092] truncate">
-                        {role?.indonesianName}
+                        {getRoleName(role, language)}
                       </p>
                     </div>
                   </div>
@@ -137,7 +144,7 @@ export default function DesignateDrunkModal({
             onClick={onClose}
             className="brass-sheen-btn w-full sm:w-auto px-6 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F59E0B] hover:brightness-110 text-[#121016] font-black text-xs sm:text-sm cursor-pointer transition-all shadow-md"
           >
-            Simpan & Buka Meja Grimoire
+            {language === 'en' ? 'Save & Open Grimoire Table' : 'Simpan & Buka Meja Grimoire'}
           </button>
         </div>
       </motion.div>

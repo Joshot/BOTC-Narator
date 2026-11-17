@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { GameStoryEntry } from '@/context/GameContext';
 import { useLockBodyScroll } from './grimoire/useLockBodyScroll';
+import { useLanguage } from '@/context/LanguageContext';
 
 const ITEMS_PER_PAGE = 4;
 
@@ -37,6 +38,8 @@ export default function StoryRecapModal({
   winner,
   activeRoomName,
 }: StoryRecapModalProps) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [copied, setCopied] = useState(false);
   const [page, setPage] = useState(0);
 
@@ -56,13 +59,16 @@ export default function StoryRecapModal({
       const formattedLines = storyHistory.map(
         (entry) => `[${entry.round}] ${entry.text}`
       );
-      const header = `=== KRONOLOGI CERITA GRIMOIRE BOTC: ${activeRoomName} ===\nStatus: ${
+      const statusText =
         winner === 'good'
-          ? 'Kemenangan Tim Good (Warga Kota Menang)'
+          ? (isEn ? 'Good Team Victory (Townsfolk Won)' : 'Kemenangan Tim Good (Warga Kota Menang)')
           : winner === 'evil'
-          ? 'Kemenangan Tim Evil (Kelompok Jahat Menang)'
-          : 'Permainan Sedang Berlangsung'
-      }\n\n`;
+          ? (isEn ? 'Evil Team Victory (Evil Won)' : 'Kemenangan Tim Evil (Kelompok Jahat Menang)')
+          : (isEn ? 'Game In Progress' : 'Permainan Sedang Berlangsung');
+
+      const header = isEn
+        ? `=== BOTC GRIMOIRE STORY CHRONOLOGY: ${activeRoomName} ===\nStatus: ${statusText}\n\n`
+        : `=== KRONOLOGI CERITA GRIMOIRE BOTC: ${activeRoomName} ===\nStatus: ${statusText}\n\n`;
 
       await navigator.clipboard.writeText(header + formattedLines.join('\n'));
       setCopied(true);
@@ -128,10 +134,10 @@ export default function StoryRecapModal({
             </div>
             <div>
               <h3 className="font-display text-lg sm:text-xl font-bold text-slate-900 dark:text-[#EDEAF0]">
-                Kronologi & Riwayat Cerita Permainan
+                {isEn ? 'Game Story Chronicle & History' : 'Kronologi & Riwayat Cerita Permainan'}
               </h3>
               <p className="text-xs text-slate-600 dark:text-[#8E8A9E] font-mono">
-                {activeRoomName} · {storyHistory.length} Peristiwa Tercatat
+                {activeRoomName} · {storyHistory.length} {isEn ? 'Events Recorded' : 'Peristiwa Tercatat'}
               </p>
             </div>
           </div>
@@ -143,25 +149,25 @@ export default function StoryRecapModal({
               className="brass-sheen-btn px-3 py-1.5 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Halaman Penuh & Role Awal</span>
-              <span className="sm:hidden">Halaman Penuh</span>
+              <span className="hidden sm:inline">{isEn ? 'Full Page & Starting Roles' : 'Halaman Penuh & Role Awal'}</span>
+              <span className="sm:hidden">{isEn ? 'Full Page' : 'Halaman Penuh'}</span>
             </Link>
 
             <button
               type="button"
               onClick={handleCopyStory}
               className="px-3 py-1.5 rounded-xl bg-white hover:bg-purple-100 dark:bg-[#222230] dark:hover:bg-[#2C2C3E] border border-purple-200 dark:border-white/[0.08] text-xs font-semibold text-purple-950 dark:text-[#EDEAF0] flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-              title="Salin Kisah Permainan ke Clipboard"
+              title={isEn ? 'Copy Game Story to Clipboard' : 'Salin Kisah Permainan ke Clipboard'}
             >
               {copied ? (
                 <>
                   <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-[#34D399]" />
-                  <span className="text-emerald-700 dark:text-[#34D399]">Tersalin!</span>
+                  <span className="text-emerald-700 dark:text-[#34D399]">{isEn ? 'Copied!' : 'Tersalin!'}</span>
                 </>
               ) : (
                 <>
                   <Copy className="w-3.5 h-3.5 text-slate-500 dark:text-[#A6A2B2]" />
-                  <span>Salin Kisah</span>
+                  <span>{isEn ? 'Copy Story' : 'Salin Kisah'}</span>
                 </>
               )}
             </button>
@@ -170,7 +176,7 @@ export default function StoryRecapModal({
               type="button"
               onClick={onClose}
               className="p-2 rounded-xl text-slate-500 dark:text-[#8E8A9E] hover:text-slate-900 dark:hover:text-[#EDEAF0] hover:bg-purple-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
-              aria-label="Tutup Riwayat Cerita"
+              aria-label={isEn ? 'Close Story History' : 'Tutup Riwayat Cerita'}
             >
               <X className="w-5 h-5" />
             </button>
@@ -198,13 +204,17 @@ export default function StoryRecapModal({
             <div>
               <div className="font-display text-sm sm:text-base font-bold">
                 {winner === 'good'
-                  ? 'PERMAINAN SELESAI: KEMENANGAN TIM WARGA (GOOD WINS)'
-                  : 'PERMAINAN SELESAI: KEMENANGAN KELOMPOK JAHAT (EVIL WINS)'}
+                  ? (isEn ? 'GAME OVER: GOOD TEAM VICTORIOUS' : 'PERMAINAN SELESAI: KEMENANGAN TIM WARGA (GOOD WINS)')
+                  : (isEn ? 'GAME OVER: EVIL TEAM VICTORIOUS' : 'PERMAINAN SELESAI: KEMENANGAN KELOMPOK JAHAT (EVIL WINS)')}
               </div>
               <p className="text-xs opacity-90">
                 {winner === 'good'
-                  ? 'Seluruh Demon telah dieliminasi dan kota Ravenswood Bluff kembali damai!'
-                  : 'Demon berhasil memperdaya kota hingga hanya tersisa 2 warga atau Saint dieksekusi.'}
+                  ? (isEn
+                      ? 'All Demons have been executed and the town of Ravenswood Bluff is at peace!'
+                      : 'Seluruh Demon telah dieliminasi dan kota Ravenswood Bluff kembali damai!')
+                  : (isEn
+                      ? 'The Demon has deceived the town until only 2 players remain or the Saint was executed.'
+                      : 'Demon berhasil memperdaya kota hingga hanya tersisa 2 warga atau Saint dieksekusi.')}
               </p>
             </div>
           </div>
@@ -216,7 +226,7 @@ export default function StoryRecapModal({
             <div className="py-10 text-center space-y-2">
               <Scroll className="w-8 h-8 mx-auto text-slate-400 dark:text-[#4A4756]" />
               <p className="text-xs text-slate-500 dark:text-[#8E8A9E]">
-                Belum ada peristiwa cerita tercatat dalam sesi ini.
+                {isEn ? 'No story events recorded in this session yet.' : 'Belum ada peristiwa cerita tercatat dalam sesi ini.'}
               </p>
             </div>
           ) : (
@@ -275,7 +285,7 @@ export default function StoryRecapModal({
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#222230] border border-purple-200 dark:border-white/[0.08] text-[11px] font-bold disabled:opacity-40 cursor-pointer"
               >
-                Prev
+                {isEn ? 'Prev' : 'Prev'}
               </button>
               <span className="text-[11px] font-mono text-slate-600 dark:text-[#8E8A9E]">
                 {safePage + 1}/{totalPages}
@@ -286,12 +296,12 @@ export default function StoryRecapModal({
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#222230] border border-purple-200 dark:border-white/[0.08] text-[11px] font-bold disabled:opacity-40 cursor-pointer"
               >
-                Next
+                {isEn ? 'Next' : 'Next'}
               </button>
             </div>
           ) : (
             <span className="text-[11px] text-slate-600 dark:text-[#8E8A9E]">
-              Tersimpan lokal di browser.
+              {isEn ? 'Stored locally in browser.' : 'Tersimpan lokal di browser.'}
             </span>
           )}
           <button
@@ -299,11 +309,10 @@ export default function StoryRecapModal({
             onClick={onClose}
             className="px-5 py-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-[#222230] dark:hover:bg-[#2C2C3E] text-xs font-bold text-purple-950 dark:text-[#EDEAF0] transition-colors cursor-pointer"
           >
-            Tutup
+            {isEn ? 'Close' : 'Tutup'}
           </button>
         </div>
       </motion.div>
     </div>
   );
 }
-

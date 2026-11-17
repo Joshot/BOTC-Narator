@@ -25,10 +25,14 @@ import {
   Users,
 } from 'lucide-react';
 import { useGameSession, GameStoryEntry, InitialPlayerRoster } from '@/context/GameContext';
-import { ROLE_MAP } from '@/lib/botc-data';
+import { ROLE_MAP, getRoleName, getTeamName } from '@/lib/botc-data';
 import InGameHeader from '@/components/InGameHeader';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function StoryPage() {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
+
   const {
     hasActiveGame,
     players,
@@ -59,10 +63,12 @@ export default function StoryPage() {
         </div>
         <div className="space-y-2">
           <h2 className="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-[#EDEAF0]">
-            Belum Ada Kisah Permainan
+            {isEn ? 'No Story Chronicle Recorded' : 'Belum Ada Kisah Permainan'}
           </h2>
           <p className="text-sm text-slate-600 dark:text-[#8E8A9E] leading-relaxed">
-            Riwayat cerita dan alur permainan akan otomatis tercatat secara kronologis begitu sesi permainan dimulai.
+            {isEn
+              ? 'Game history and events will be recorded chronologically as soon as a game session begins.'
+              : 'Riwayat cerita dan alur permainan akan otomatis tercatat secara kronologis begitu sesi permainan dimulai.'}
           </p>
         </div>
         <div className="pt-2">
@@ -71,7 +77,7 @@ export default function StoryPage() {
             className="brass-sheen-btn inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] font-bold text-xs shadow-lg transition-colors cursor-pointer"
           >
             <Compass className="w-4 h-4" />
-            <span>Mulai Setup Permainan</span>
+            <span>{isEn ? 'Start Game Setup' : 'Mulai Setup Permainan'}</span>
           </Link>
         </div>
       </div>
@@ -93,22 +99,34 @@ export default function StoryPage() {
 
   const handleCopyStory = async () => {
     try {
-      const header = `=== KRONOLOGI CERITA & SUSUNAN PERAN: ${activeRoom.name} ===\nStatus: ${
+      const statusText =
         winner === 'good'
-          ? 'Kemenangan Tim Good (Warga Kota Menang)'
+          ? (isEn ? 'Good Team Victory (Townsfolk Won)' : 'Kemenangan Tim Good (Warga Kota Menang)')
           : winner === 'evil'
-          ? 'Kemenangan Tim Evil (Kelompok Jahat Menang)'
-          : `Permainan Sedang Berlangsung (Fase ${phase}, Hari ${dayNumber})`
-      }\n\n--- SUSUNAN PERAN AWAL PEMAIN ---\n${roster
-        .map(
-          (p) =>
-            `Kursi ${p.seatIndex + 1}: ${p.name} - Peran Awal: ${
-              ROLE_MAP[p.roleId]?.name || p.roleId
-            } (${p.team})`
-        )
-        .join('\n')}\n\n--- KRONOLOGI ALUR CERITA ---\n${storyHistory
-        .map((entry) => `[${entry.round}] ${entry.text}`)
-        .join('\n')}\n`;
+          ? (isEn ? 'Evil Team Victory (Evil Won)' : 'Kemenangan Tim Evil (Kelompok Jahat Menang)')
+          : (isEn ? `Game in Progress (Phase ${phase}, Day ${dayNumber})` : `Permainan Sedang Berlangsung (Fase ${phase}, Hari ${dayNumber})`);
+
+      const header = isEn
+        ? `=== STORY CHRONOLOGY & INITIAL ROSTER: ${activeRoom.name} ===\nStatus: ${statusText}\n\n--- INITIAL PLAYER ROSTER ---\n${roster
+            .map(
+              (p) =>
+                `Seat #${p.seatIndex + 1}: ${p.name} - Initial Role: ${
+                  getRoleName(ROLE_MAP[p.roleId], language) || p.roleId
+                } (${getTeamName(p.team as any, language)})`
+            )
+            .join('\n')}\n\n--- STORY CHRONOLOGY ---\n${storyHistory
+            .map((entry) => `[${entry.round}] ${entry.text}`)
+            .join('\n')}\n`
+        : `=== KRONOLOGI CERITA & SUSUNAN PERAN: ${activeRoom.name} ===\nStatus: ${statusText}\n\n--- SUSUNAN PERAN AWAL PEMAIN ---\n${roster
+            .map(
+              (p) =>
+                `Kursi ${p.seatIndex + 1}: ${p.name} - Peran Awal: ${
+                  getRoleName(ROLE_MAP[p.roleId], language) || p.roleId
+                } (${getTeamName(p.team as any, language)})`
+            )
+            .join('\n')}\n\n--- KRONOLOGI ALUR CERITA ---\n${storyHistory
+            .map((entry) => `[${entry.round}] ${entry.text}`)
+            .join('\n')}\n`;
 
       await navigator.clipboard.writeText(header);
       setCopied(true);
@@ -129,19 +147,19 @@ export default function StoryPage() {
       case 'starpass':
         return {
           icon: <RefreshCw className="w-3.5 h-3.5 text-purple-700 dark:text-[#C084FC]" />,
-          label: 'STARPASS / BUNUH DIRI',
+          label: isEn ? 'STARPASS / SELF-KILL' : 'STARPASS / BUNUH DIRI',
           classes: 'bg-purple-100 dark:bg-[#A855F7]/15 border-purple-300 dark:border-[#A855F7]/40 text-purple-950 dark:text-[#E9D5FF] font-bold',
         };
       case 'death':
         return {
           icon: <Skull className="w-3.5 h-3.5 text-red-700 dark:text-[#F87171]" />,
-          label: 'KEMATIAN',
+          label: isEn ? 'DEATH' : 'KEMATIAN',
           classes: 'bg-red-100 dark:bg-[#EF4444]/15 border-red-300 dark:border-[#EF4444]/40 text-red-950 dark:text-[#FCA5A5] font-bold',
         };
       case 'execution':
         return {
           icon: <Gavel className="w-3.5 h-3.5 text-amber-700 dark:text-[#FBBF24]" />,
-          label: 'EKSEKUSI',
+          label: isEn ? 'EXECUTION' : 'EKSEKUSI',
           classes: 'bg-amber-100 dark:bg-[#F59E0B]/15 border-amber-300 dark:border-[#F59E0B]/40 text-amber-950 dark:text-[#FDE68A] font-bold',
         };
       case 'slayer':
@@ -153,14 +171,14 @@ export default function StoryPage() {
       case 'win':
         return {
           icon: <Trophy className="w-3.5 h-3.5 text-amber-700 dark:text-[#FACC15]" />,
-          label: 'KEMENANGAN',
+          label: isEn ? 'VICTORY' : 'KEMENANGAN',
           classes: 'bg-amber-100 dark:bg-[#EAB308]/20 border-amber-400 dark:border-[#EAB308]/50 text-amber-950 dark:text-[#FEF08A] font-black',
         };
       case 'start':
       default:
         return {
           icon: <Sparkles className="w-3.5 h-3.5 text-emerald-700 dark:text-[#34D399]" />,
-          label: 'AWAL',
+          label: isEn ? 'START' : 'AWAL',
           classes: 'bg-emerald-100 dark:bg-[#10B981]/15 border-emerald-300 dark:border-[#10B981]/40 text-emerald-950 dark:text-[#A7F3D0] font-bold',
         };
     }
@@ -189,26 +207,26 @@ export default function StoryPage() {
       }
     >
       {/* Top Phase Header & Sub-Nav */}
-      <InGameHeader />
+      <InGameHeader currentTab="story" />
 
       <div className={isDesktop ? 'flex-1 min-h-0 overflow-y-auto pr-1 space-y-4 pb-2' : 'space-y-6'}>
       {/* Main Page Title & Top Actions Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-[#FAF6EE] dark:bg-[#14141B] border border-[#C9963A]/35 dark:border-white/[0.08] shadow-sm">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-[#1C1C26] border border-purple-200 dark:border-white/[0.08] flex items-center justify-center text-[#D4AF37] shrink-0 shadow-inner">
+          <div className="w-12 h-12 rounded-2xl bg-[#F2EBDB] dark:bg-[#1C1C26] border border-[#C9963A]/30 dark:border-white/[0.08] flex items-center justify-center text-[#C9963A] shrink-0 shadow-inner">
             <History className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-[#D4AF37]/20 text-[10px] font-mono font-bold text-amber-800 dark:text-[#FDE68A] uppercase">
-                Kronologi Lengkap
+              <span className="px-2.5 py-0.5 rounded-full bg-[#C9963A]/20 dark:bg-[#D4AF37]/20 text-[10px] font-mono font-bold text-[#2A2018] dark:text-[#FDE68A] uppercase">
+                {isEn ? 'Full Chronology' : 'Kronologi Lengkap'}
               </span>
-              <span className="text-xs text-slate-500 dark:text-[#8E8A9E] font-mono">
+              <span className="text-xs text-[#5C4A37] dark:text-[#8E8A9E] font-mono">
                 {activeRoom.name}
               </span>
             </div>
-            <h1 className="font-display text-xl sm:text-2xl font-bold text-slate-900 dark:text-[#EDEAF0]">
-              Kisah & Riwayat Permainan
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-[#2A2018] dark:text-[#EDEAF0]">
+              {isEn ? 'Game Story & History' : 'Kisah & Riwayat Permainan'}
             </h1>
           </div>
         </div>
@@ -217,17 +235,19 @@ export default function StoryPage() {
           <button
             type="button"
             onClick={handleCopyStory}
-            className="px-4 py-2.5 rounded-xl bg-purple-50 dark:bg-[#222230] hover:bg-purple-100 dark:hover:bg-[#2C2C3E] border border-purple-200 dark:border-white/[0.08] text-xs font-semibold text-purple-900 dark:text-[#EDEAF0] flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95"
+            className="px-4 py-2.5 rounded-xl bg-[#F2EBDB] dark:bg-[#222230] hover:bg-[#E8DFC7] dark:hover:bg-[#2C2C3E] border border-[#C9963A]/30 dark:border-white/[0.08] text-xs font-semibold text-[#2A2018] dark:text-[#EDEAF0] flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95"
           >
             {copied ? (
               <>
                 <Check className="w-4 h-4 text-emerald-600 dark:text-[#34D399]" />
-                <span className="text-emerald-700 dark:text-[#34D399] font-bold">Kisah Tersalin!</span>
+                <span className="text-emerald-700 dark:text-[#34D399] font-bold">
+                  {isEn ? 'Story Copied!' : 'Kisah Tersalin!'}
+                </span>
               </>
             ) : (
               <>
                 <Copy className="w-4 h-4 text-slate-500 dark:text-[#A6A2B2]" />
-                <span>Salin Seluruh Kisah</span>
+                <span>{isEn ? 'Copy Full Story' : 'Salin Seluruh Kisah'}</span>
               </>
             )}
           </button>
@@ -237,7 +257,7 @@ export default function StoryPage() {
             className="px-4 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] text-xs font-bold flex items-center gap-1.5 transition-all shadow-md active:scale-95"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Kembali ke Grimoire</span>
+            <span>{isEn ? 'Back to Grimoire' : 'Kembali ke Grimoire'}</span>
           </Link>
         </div>
       </div>
@@ -263,13 +283,17 @@ export default function StoryPage() {
           <div>
             <h2 className="font-display text-lg sm:text-xl font-bold">
               {winner === 'good'
-                ? 'KEMENANGAN WARGA KOTA (TIM GOOD MENANG)'
-                : 'KEMENANGAN KELOMPOK JAHAT (TIM EVIL MENANG)'}
+                ? (isEn ? 'TOWN VICTORY (GOOD TEAM WINS)' : 'KEMENANGAN WARGA KOTA (TIM GOOD MENANG)')
+                : (isEn ? 'EVIL VICTORY (EVIL TEAM WINS)' : 'KEMENANGAN KELOMPOK JAHAT (TIM EVIL MENANG)')}
             </h2>
             <p className="text-xs sm:text-sm opacity-90 mt-0.5 leading-relaxed">
               {winner === 'good'
-                ? 'Seluruh Demon berhasil dimusnahkan oleh warga kota Ravenwood Bluff!'
-                : 'Kekuatan jahat berhasil memperdaya kota hingga syarat kemenangan terpenuhi.'}
+                ? (isEn
+                    ? 'All Demons have been eliminated by the townsfolk of Ravenswood Bluff!'
+                    : 'Seluruh Demon berhasil dimusnahkan oleh warga kota Ravenwood Bluff!')
+                : (isEn
+                    ? 'Evil forces deceived the town until victory conditions were fulfilled.'
+                    : 'Kekuatan jahat berhasil memperdaya kota hingga syarat kemenangan terpenuhi.')}
             </p>
           </div>
         </div>
@@ -281,11 +305,11 @@ export default function StoryPage() {
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-amber-600 dark:text-[#D4AF37]" />
             <h2 className="font-display text-base sm:text-lg font-bold text-slate-900 dark:text-[#EDEAF0]">
-              Susunan Awal Peran Pemain ({roster.length} Pemain)
+              {isEn ? `Initial Player Roster (${roster.length} Players)` : `Susunan Awal Peran Pemain (${roster.length} Pemain)`}
             </h2>
           </div>
           <span className="text-xs text-slate-500 dark:text-[#8E8A9E]">
-            Peran rahasia yang dibagikan pada awal permainan
+            {isEn ? 'Secret roles distributed at the beginning of the game' : 'Peran rahasia yang dibagikan pada awal permainan'}
           </span>
         </div>
 
@@ -300,28 +324,32 @@ export default function StoryPage() {
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="px-2 py-0.5 rounded-md bg-purple-100 dark:bg-[#1C1C26] border border-purple-200 dark:border-white/[0.06] text-[10px] font-mono text-purple-900 dark:text-[#D4AF37] font-bold">
-                    Kursi #{player.seatIndex + 1}
+                    {isEn ? `Seat #${player.seatIndex + 1}` : `Kursi #${player.seatIndex + 1}`}
                   </span>
                   <span
                     className={`px-2 py-0.5 rounded-full border text-[9px] font-mono uppercase tracking-wider ${getTeamBadge(
                       player.team
                     )}`}
                   >
-                    {player.team}
+                    {getTeamName(player.team as any, language)}
                   </span>
                 </div>
 
                 <div>
-                  <div className="text-xs text-slate-600 dark:text-[#8E8A9E] font-medium">Nama Pemain:</div>
+                  <div className="text-xs text-slate-600 dark:text-[#8E8A9E] font-medium">
+                    {isEn ? 'Player Name:' : 'Nama Pemain:'}
+                  </div>
                   <div className="font-display text-base font-extrabold text-slate-900 dark:text-[#EDEAF0] truncate group-hover:text-amber-600 dark:group-hover:text-[#D4AF37] transition-colors">
                     {player.name}
                   </div>
                 </div>
 
                 <div className="pt-1 border-t border-purple-100 dark:border-white/[0.06] flex items-center justify-between text-xs">
-                  <span className="text-slate-600 dark:text-[#8E8A9E]">Peran Awal:</span>
+                  <span className="text-slate-600 dark:text-[#8E8A9E]">
+                    {isEn ? 'Initial Role:' : 'Peran Awal:'}
+                  </span>
                   <span className="font-black text-slate-900 dark:text-[#EDEAF0] font-mono">
-                    {role?.name || player.roleId}
+                    {getRoleName(role, language) || player.roleId}
                   </span>
                 </div>
               </div>
@@ -335,7 +363,7 @@ export default function StoryPage() {
             <div className="flex items-center gap-2">
               <Swords className="w-4 h-4 text-red-600 dark:text-[#EF4444]" />
               <span className="text-xs font-bold text-red-900 dark:text-[#FCA5A5] uppercase tracking-wider font-mono">
-                Peran Bluff Demon (Tidak Ada di Permainan):
+                {isEn ? 'Demon Bluff Roles (Not in Play):' : 'Peran Bluff Demon (Tidak Ada di Permainan):'}
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -346,7 +374,7 @@ export default function StoryPage() {
                     key={bid}
                     className="px-3 py-1 rounded-xl bg-white dark:bg-[#2A1216] border border-red-200 dark:border-[#EF4444]/40 text-xs font-bold text-red-900 dark:text-[#FCA5A5] shadow-sm"
                   >
-                    {r?.name || bid}
+                    {getRoleName(r, language) || bid}
                   </span>
                 );
               })}
@@ -361,7 +389,9 @@ export default function StoryPage() {
           <div className="flex items-center gap-2">
             <Scroll className="w-4 h-4 text-[#D4AF37]" />
             <h2 className="font-display text-base sm:text-lg font-bold text-slate-900 dark:text-[#EDEAF0]">
-              Kronologi Alur Cerita ({filteredHistory.length} Peristiwa)
+              {isEn
+                ? `Story Chronology (${filteredHistory.length} Events)`
+                : `Kronologi Alur Cerita (${filteredHistory.length} Peristiwa)`}
             </h2>
           </div>
 
@@ -376,7 +406,7 @@ export default function StoryPage() {
                   : 'bg-purple-50 dark:bg-[#1C1C26] text-purple-900 dark:text-[#A6A2B2] hover:bg-purple-100 dark:hover:text-[#EDEAF0]'
               }`}
             >
-              Semua
+              {isEn ? 'All' : 'Semua'}
             </button>
             <button
               type="button"
@@ -387,7 +417,7 @@ export default function StoryPage() {
                   : 'bg-purple-50 dark:bg-[#1C1C26] text-purple-900 dark:text-[#A6A2B2] hover:bg-purple-100 dark:hover:text-[#EDEAF0]'
               }`}
             >
-              Kematian & Bunuh Diri
+              {isEn ? 'Deaths & Self-Kills' : 'Kematian & Bunuh Diri'}
             </button>
             <button
               type="button"
@@ -398,7 +428,7 @@ export default function StoryPage() {
                   : 'bg-purple-50 dark:bg-[#1C1C26] text-purple-900 dark:text-[#A6A2B2] hover:bg-purple-100 dark:hover:text-[#EDEAF0]'
               }`}
             >
-              Eksekusi
+              {isEn ? 'Executions' : 'Eksekusi'}
             </button>
             <button
               type="button"
@@ -419,7 +449,9 @@ export default function StoryPage() {
           <div className="py-12 text-center rounded-3xl bg-white dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] p-6 space-y-2">
             <History className="w-8 h-8 mx-auto text-[#4A4756]" />
             <p className="text-xs text-slate-500 dark:text-[#8E8A9E]">
-              Tidak ada peristiwa cerita yang sesuai dengan filter yang dipilih.
+              {isEn
+                ? 'No story events matching the selected filter.'
+                : 'Tidak ada peristiwa cerita yang sesuai dengan filter yang dipilih.'}
             </p>
           </div>
         ) : (
@@ -473,4 +505,3 @@ export default function StoryPage() {
     </div>
   );
 }
-

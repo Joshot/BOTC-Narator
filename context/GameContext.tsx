@@ -40,6 +40,8 @@ import {
   stepHistoryUndo,
 } from '@/lib/history-stack';
 import { SilentCardPayload } from '@/components/FullscreenCardModal';
+import { useLanguage } from '@/context/LanguageContext';
+import type { AppLanguage, TranslationKey } from '@/lib/translations';
 
 export const ROOMS_STORAGE_KEY = 'botc_tb_rooms_v3';
 export const LEGACY_STORAGE_KEY = 'botc_tb_game_session_v2';
@@ -131,7 +133,12 @@ function createEmptySession(name = 'Game Baru'): PersistedGameSession {
   };
 }
 
-function formatSessionRoundLabel(phase: GamePhase, dayNumber: number): string {
+function formatSessionRoundLabel(phase: GamePhase, dayNumber: number, lang: AppLanguage = 'en'): string {
+  if (lang === 'en') {
+    if (phase === 'first_night') return 'First Night';
+    if (phase === 'day') return `Day ${dayNumber}`;
+    return `Night ${Math.max(2, dayNumber)}`;
+  }
   if (phase === 'first_night') return 'Malam Pertama';
   if (phase === 'day') return `Siang #${dayNumber}`;
   return `Malam #${Math.max(2, dayNumber)}`;
@@ -218,6 +225,9 @@ export interface GameContextType {
   isRefModalOpen: boolean;
   isStoryModalOpen: boolean;
   starpassPending: StarpassPendingData | null;
+  language: AppLanguage;
+  setLanguage: (lang: AppLanguage) => void;
+  t: (key: TranslationKey, ...args: any[]) => any;
 
   // Actions
   startDemoGame: () => void;
@@ -345,6 +355,7 @@ function loadPersistedRooms(): { rooms: GameRoom[]; activeRoomId: string } {
 }
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
+  const { language, setLanguage, t } = useLanguage();
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,
@@ -2213,9 +2224,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       handleCancelNomination,
       handleTriggerSlayerShot,
       handleTriggerVirginNomination,
+      language,
+      setLanguage,
+      t,
     }),
     [
       mounted,
+      language,
+      setLanguage,
+      t,
       rooms,
       activeRoomId,
       activeRoom,

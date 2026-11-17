@@ -3,10 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Eye, X } from 'lucide-react';
-import { ROLE_MAP } from '@/lib/botc-data';
+import { ROLE_MAP, getRoleName, getRoleAbility, getTeamName } from '@/lib/botc-data';
 import { CharacterToken } from './TokenArtwork';
 import VelvetBackdrop from './grimoire/VelvetBackdrop';
 import { useLockBodyScroll } from './grimoire/useLockBodyScroll';
+import { useLanguage } from '@/context/LanguageContext';
 
 export interface SilentCardPayload {
   heading: string;
@@ -18,6 +19,73 @@ export interface SilentCardPayload {
   playerName?: string;
 }
 
+function localizeHeading(text: string, isEn: boolean): string {
+  if (isEn) {
+    if (text.includes('3 KARAKTER INI TIDAK DIMAINKAN')) return 'THESE 3 CHARACTERS ARE NOT IN PLAY';
+    if (text.includes('INI ADALAH DEMON ANDA')) return 'THIS IS YOUR DEMON';
+    if (text.includes('PERAN ANDA ADALAH')) return 'YOUR ROLE IS';
+    if (text.includes('KARAKTER PEMAIN YANG DIEKSEKUSI')) return 'EXECUTED PLAYER CHARACTER';
+    if (text.includes('KARAKTER INI ADALAH')) return 'THIS CHARACTER IS';
+    if (text.includes('INFORMASI ANGKA MALAM INI')) return 'NIGHT NUMBER INFO';
+    if (text.includes('PESAN STORYTELLER')) return 'STORYTELLER MESSAGE';
+    return text;
+  } else {
+    if (text.includes('THESE 3 CHARACTERS ARE NOT IN PLAY')) return '3 KARAKTER INI TIDAK DIMAINKAN';
+    if (text.includes('THIS IS YOUR DEMON')) return 'INI ADALAH DEMON ANDA';
+    if (text.includes('YOUR ROLE IS')) return 'PERAN ANDA ADALAH';
+    if (text.includes('EXECUTED PLAYER CHARACTER')) return 'KARAKTER PEMAIN YANG DIEKSEKUSI';
+    if (text.includes('THIS CHARACTER IS')) return 'KARAKTER INI ADALAH';
+    if (text.includes('NIGHT NUMBER INFO')) return 'INFORMASI ANGKA MALAM INI';
+    if (text.includes('STORYTELLER MESSAGE')) return 'PESAN STORYTELLER';
+    return text;
+  }
+}
+
+function localizeSubheading(text: string | undefined, isEn: boolean): string | undefined {
+  if (!text) return undefined;
+  if (isEn) {
+    if (text.includes('Rekan Minion:')) return text.replace('Rekan Minion:', 'Minion Teammates:').replace('Kursi', 'Seat');
+    if (text.includes('Storyteller menunjuk ke arah pemain Demon')) return 'The Storyteller points towards your Demon';
+    if (text.includes('Gunakan peran berikut sebagai penyamaran')) return 'Use these characters as your safe bluffs';
+    if (text.includes('Opsi Bluff Aman untuk Demon')) return 'Safe bluff options for the Demon';
+    if (text.includes('Pemain di Kursi')) return text.replace('Pemain di Kursi', 'Player in Seat');
+    if (text.includes('Eksekusi siang hari')) return 'Daytime execution';
+    return text;
+  } else {
+    if (text.includes('Minion Teammates:')) return text.replace('Minion Teammates:', 'Rekan Minion:').replace('Seat', 'Kursi');
+    if (text.includes('The Storyteller points towards your Demon')) return 'Storyteller menunjuk ke arah pemain Demon Anda';
+    if (text.includes('Use these characters as your safe bluffs')) return 'Gunakan peran berikut sebagai penyamaran (Bluff) aman Anda';
+    if (text.includes('Safe bluff options for the Demon')) return 'Opsi Bluff Aman untuk Demon';
+    if (text.includes('Player in Seat')) return text.replace('Player in Seat', 'Pemain di Kursi');
+    if (text.includes('Daytime execution')) return 'Eksekusi siang hari';
+    return text;
+  }
+}
+
+function localizeFooterNote(text: string | undefined, isEn: boolean): string | undefined {
+  if (!text) return undefined;
+  if (isEn) {
+    if (text.includes('Tidak ada warga baik yang memegang 3 token ini')) {
+      return 'None of the good players hold these 3 tokens. You can safely claim these roles.';
+    }
+    if (text.includes('Ketuk di atas jika siap melihat peran') || text.includes('Ketuk di atas bila pemain sudah siap')) {
+      return 'Tap above when ready to reveal role, then close before returning the device.';
+    }
+    if (text.includes('Tunjukkan layar ini kepada para Minion')) {
+      return 'Show this screen to the Minions when they wake, pointing to the Demon.';
+    }
+    return text;
+  } else {
+    if (text.includes('None of the good players hold these 3 tokens')) {
+      return 'Tidak ada warga baik yang memegang 3 token ini. Anda dapat mengklaim peran ini dengan aman.';
+    }
+    if (text.includes('Tap above when ready to reveal role')) {
+      return 'Ketuk di atas jika siap melihat peran, lalu tekan Tutup sebelum mengembalikan perangkat.';
+    }
+    return text;
+  }
+}
+
 export default function FullscreenCardModal({
   card,
   onClose,
@@ -25,6 +93,8 @@ export default function FullscreenCardModal({
   card: SilentCardPayload | null;
   onClose: () => void;
 }) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [revealed, setRevealed] = useState(false);
 
   useLockBodyScroll(Boolean(card));
@@ -37,6 +107,9 @@ export default function FullscreenCardModal({
 
   const isLocked = Boolean(card.requireTapToReveal && !revealed);
   const tokenCount = card.roleIds?.length ?? 0;
+  const headingText = localizeHeading(card.heading, isEn);
+  const subheadingText = localizeSubheading(card.subheading, isEn);
+  const footerText = localizeFooterNote(card.footerNote, isEn);
 
   return (
     <div
@@ -52,7 +125,7 @@ export default function FullscreenCardModal({
       >
         <div className="w-full max-w-3xl flex items-center justify-between gap-2 shrink-0">
           <span className="text-[11px] sm:text-xs font-mono font-semibold uppercase tracking-wider text-[#c9963a]">
-            Layar Tunjuk Bisu Storyteller
+            {isEn ? 'Silent Screen Presenter' : 'Layar Tunjuk Bisu Storyteller'}
           </span>
           <button
             type="button"
@@ -60,11 +133,11 @@ export default function FullscreenCardModal({
               setRevealed(false);
               onClose();
             }}
-            aria-label="Tutup layar kartu"
+            aria-label={isEn ? 'Close card screen' : 'Tutup layar kartu'}
             className="min-h-[42px] px-3.5 sm:px-4 py-2 rounded-xl border border-[#c9963a]/40 bg-black/50 text-xs sm:text-sm font-semibold text-[#efe6d2] hover:bg-black/75 flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
           >
             <X className="w-4 h-4" />
-            <span>Tutup</span>
+            <span>{isEn ? 'Close' : 'Tutup'}</span>
           </button>
         </div>
 
@@ -80,13 +153,15 @@ export default function FullscreenCardModal({
             >
               <div className="space-y-1.5">
                 <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#c9963a]">
-                  Privasi Terjaga
+                  {isEn ? 'Privacy Protected' : 'Privasi Terjaga'}
                 </p>
                 <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#efe6d2]">
-                  Kartu Rahasia Siap Dibuka
+                  {isEn ? 'Secret Card Ready to Reveal' : 'Kartu Rahasia Siap Dibuka'}
                 </h2>
                 <p className="text-xs sm:text-sm text-[#a89f8c] leading-relaxed">
-                  Pastikan pemain lain tidak melihat layar sebelum Anda mengetuk tombol di bawah.
+                  {isEn
+                    ? 'Ensure other players cannot see the screen before tapping the button below.'
+                    : 'Pastikan pemain lain tidak melihat layar sebelum Anda mengetuk tombol di bawah.'}
                 </p>
               </div>
 
@@ -98,7 +173,7 @@ export default function FullscreenCardModal({
                 className="brass-sheen-btn min-h-[52px] px-7 py-3.5 rounded-2xl bg-[#c9963a] hover:bg-[#d8a74c] text-[#2a2018] font-bold text-sm sm:text-base flex items-center gap-2.5 shadow-xl cursor-pointer transition-colors"
               >
                 <Eye className="w-5 h-5" />
-                <span>Ketuk untuk Melihat Peran</span>
+                <span>{isEn ? 'Tap to Reveal Role' : 'Ketuk untuk Melihat Peran'}</span>
               </motion.button>
             </motion.div>
           ) : (
@@ -111,11 +186,11 @@ export default function FullscreenCardModal({
             >
               <div className="space-y-1 shrink-0">
                 <h2 className="font-display text-2xl sm:text-4xl font-bold text-[#efe6d2] text-balance leading-tight">
-                  {card.heading}
+                  {headingText}
                 </h2>
-                {card.subheading && (
+                {subheadingText && (
                   <p className="text-xs sm:text-base font-medium text-[#c9963a]">
-                    {card.subheading}
+                    {subheadingText}
                   </p>
                 )}
               </div>
@@ -148,6 +223,10 @@ export default function FullscreenCardModal({
                   {card.roleIds.map((id, i) => {
                     const role = ROLE_MAP[id];
                     if (!role) return null;
+                    const roleName = isEn ? role.name : (role.indonesianName || role.name);
+                    const teamLabel = getTeamName(role.team, language);
+                    const abilityText = isEn ? (role.abilityEn || role.ability) : role.ability;
+
                     return (
                       <motion.div
                         key={`${id}-${i}`}
@@ -173,13 +252,13 @@ export default function FullscreenCardModal({
                           showAbility={false}
                         />
                         <span className="font-display text-base sm:text-xl font-bold text-[#efe6d2] mt-0.5 leading-tight">
-                          {role.name}
+                          {roleName}
                         </span>
-                        <span className="text-[11px] sm:text-xs text-[#c9963a] font-semibold">
-                          {role.indonesianName}
+                        <span className="text-[11px] sm:text-xs text-[#c9963a] font-semibold uppercase tracking-wider">
+                          {teamLabel}
                         </span>
                         <p className="text-[11px] sm:text-xs text-[#dfd6c3] leading-snug sm:leading-relaxed">
-                          {role.ability}
+                          {abilityText}
                         </p>
                       </motion.div>
                     );
@@ -187,9 +266,9 @@ export default function FullscreenCardModal({
                 </div>
               )}
 
-              {card.footerNote && (
+              {footerText && (
                 <p className="text-[11px] sm:text-xs text-[#a89f8c] max-w-md leading-relaxed border-t border-[#c9963a]/25 pt-2 shrink-0">
-                  {card.footerNote}
+                  {footerText}
                 </p>
               )}
             </motion.div>
@@ -197,7 +276,9 @@ export default function FullscreenCardModal({
         </AnimatePresence>
 
         <div className="text-[11px] text-[#a89f8c] font-mono shrink-0">
-          Tekan tombol Tutup di atas setelah pemain selesai melihat.
+          {isEn
+            ? 'Press Close button above after the player has finished reading.'
+            : 'Tekan tombol Tutup di atas setelah pemain selesai melihat.'}
         </div>
       </VelvetBackdrop>
     </div>

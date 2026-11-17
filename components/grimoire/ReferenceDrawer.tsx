@@ -2,11 +2,20 @@
 
 import React, { useState } from 'react';
 import { BookOpen, Moon, Sun, X } from 'lucide-react';
-import { ALL_TB_ROLES, ROLE_MAP } from '@/lib/botc-data';
+import {
+  ALL_TB_ROLES,
+  ROLE_MAP,
+  getRoleAbility,
+  getRoleFirstNightInstruction,
+  getRoleName,
+  getRoleOtherNightInstruction,
+  getTeamName,
+} from '@/lib/botc-data';
 import { ART_ASSETS, GRIMOIRE_PALETTE, TeamKey } from '@/lib/grimoire-theme';
 import ParchmentSurface from './ParchmentSurface';
 import { CharacterTokenFront, renderAbilitySegments } from './TokenPrimitives';
 import { useLockBodyScroll } from './useLockBodyScroll';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface ReferenceDrawerProps {
   isOpen: boolean;
@@ -16,14 +25,6 @@ interface ReferenceDrawerProps {
 
 type DrawerTab = 'townsfolk' | 'outsider_evil' | 'traveller' | 'first_night' | 'other_nights';
 
-const DRAWER_TABS: { id: DrawerTab; label: string }[] = [
-  { id: 'townsfolk', label: 'Townsfolk' },
-  { id: 'outsider_evil', label: 'Out & Evil' },
-  { id: 'traveller', label: 'Traveller' },
-  { id: 'first_night', label: 'Malam 1' },
-  { id: 'other_nights', label: 'Malam 2+' },
-];
-
 /**
  * Centered single-screen Parchment Script & Night Sheet modal with zero internal scrolling.
  */
@@ -32,9 +33,19 @@ export default function ReferenceDrawer({
   inPlayRoleIds,
   onClose,
 }: ReferenceDrawerProps) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [tab, setTab] = useState<DrawerTab>('townsfolk');
   const [onlyInPlay, setOnlyInPlay] = useState(false);
   const [selectedRoleId, setSelectedRoleId] = useState<string>('washerwoman');
+
+  const drawerTabs: { id: DrawerTab; label: string }[] = [
+    { id: 'townsfolk', label: 'Townsfolk' },
+    { id: 'outsider_evil', label: 'Out & Evil' },
+    { id: 'traveller', label: 'Traveller' },
+    { id: 'first_night', label: isEn ? 'Night 1' : 'Malam 1' },
+    { id: 'other_nights', label: isEn ? 'Night 2+' : 'Malam 2+' },
+  ];
 
   useLockBodyScroll(isOpen);
 
@@ -71,7 +82,7 @@ export default function ReferenceDrawer({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Panduan Skrip & Urutan Malam Trouble Brewing"
+      aria-label={isEn ? 'Official Trouble Brewing Script & Night Order' : 'Panduan Skrip & Urutan Malam Trouble Brewing'}
       className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs overflow-hidden"
       onClick={onClose}
     >
@@ -90,10 +101,10 @@ export default function ReferenceDrawer({
               />
               <div className="min-w-0">
                 <div className="text-[10px] font-mono uppercase tracking-widest text-[#5c4a37]">
-                  Referensi Resmi Trouble Brewing
+                  {isEn ? 'Official Trouble Brewing Reference' : 'Referensi Resmi Trouble Brewing'}
                 </div>
                 <h2 className="font-display text-base sm:text-lg font-bold text-[#2a2018] truncate">
-                  Skrip Karakter &amp; Urutan Malam
+                  {isEn ? 'Character Script & Night Order' : 'Skrip Karakter & Urutan Malam'}
                 </h2>
               </div>
             </div>
@@ -108,13 +119,13 @@ export default function ReferenceDrawer({
                       : 'border-[#655342]/30 text-[#5c4a37]'
                   }`}
                 >
-                  {onlyInPlay ? 'Aktif Saja' : 'Semua'}
+                  {onlyInPlay ? (isEn ? 'In Play Only' : 'Aktif Saja') : (isEn ? 'All' : 'Semua')}
                 </button>
               )}
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Tutup panduan"
+                aria-label={isEn ? 'Close guide' : 'Tutup panduan'}
                 className="w-8 h-8 rounded-xl bg-[#66533f]/10 hover:bg-[#66533f]/20 flex items-center justify-center text-[#2a2018] cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -124,7 +135,7 @@ export default function ReferenceDrawer({
 
           {/* Section Tabs */}
           <div className="px-4 sm:px-5 pt-2.5 pb-2 border-b border-[#655342]/15 bg-[#66533f]/[0.03] grid grid-cols-5 gap-1">
-            {DRAWER_TABS.map((t) => (
+            {drawerTabs.map((t) => (
               <button
                 key={t.id}
                 type="button"
@@ -138,79 +149,52 @@ export default function ReferenceDrawer({
                 ) : (
                   <BookOpen className="w-3 h-3 shrink-0 hidden sm:inline" />
                 )}
-                <span className="truncate">{t.label}</span>
+                <span>{t.label}</span>
               </button>
             ))}
           </div>
 
-          {/* Zero-Scroll Body */}
-          <div className="p-3 sm:p-4 space-y-3 overflow-hidden">
-            {tab === 'first_night' && (
-              <div className="grid grid-cols-2 gap-1.5">
-                <div className="flex items-center gap-2 p-2 rounded-xl border border-[#655342]/20 bg-[#66533f]/[0.06]">
-                  <img src={ART_ASSETS.generic.minionInfo} alt="" className="w-6 h-6 object-contain shrink-0" />
-                  <div className="text-[11px] leading-tight">
-                    <div className="font-bold text-[#760a0d]">Info Minion (7+)</div>
-                    <div className="text-[#5c4a37]">Kenal sesama Minion & Demon.</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 p-2 rounded-xl border border-[#655342]/20 bg-[#66533f]/[0.06]">
-                  <img src={ART_ASSETS.generic.demonInfo} alt="" className="w-6 h-6 object-contain shrink-0" />
-                  <div className="text-[11px] leading-tight">
-                    <div className="font-bold text-[#760a0d]">Info Demon (7+)</div>
-                    <div className="text-[#5c4a37]">Lihat Minion &amp; 3 Bluff aman.</div>
-                  </div>
-                </div>
-              </div>
-            )}
+          {/* Body: Single-Screen Layout (Grid + Pinned Detail + Legend) */}
+          <div className="p-3 sm:p-4 space-y-2.5 overflow-hidden">
+            {/* Roles Grid (compact) */}
+            <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 gap-1.5 max-h-[260px] overflow-y-auto pr-1">
+              {activeList.map((role) => {
+                const isSelected = inspectedRole?.id === role.id;
+                const isInPlay = inPlayRoleIds.has(role.id);
+                const orderNum =
+                  tab === 'first_night'
+                    ? role.firstNightOrder
+                    : tab === 'other_nights'
+                    ? role.otherNightOrder
+                    : null;
 
-            {activeList.length === 0 ? (
-              <p className="py-8 text-center text-xs text-[#5c4a37] italic">
-                Tidak ada peran aktif pada kategori ini di permainan saat ini.
-              </p>
-            ) : (
-              <div
-                className={`grid gap-1.5 ${
-                  isScriptTab ? 'grid-cols-4 sm:grid-cols-5' : 'grid-cols-3 sm:grid-cols-4'
-                }`}
-              >
-                {activeList.map((role, idx) => {
-                  const isInPlay = inPlayRoleIds.has(role.id);
-                  const isSelected = inspectedRole?.id === role.id;
-                  return (
-                    <button
-                      key={role.id}
-                      type="button"
-                      onClick={() => setSelectedRoleId(role.id)}
-                      className={`p-1.5 rounded-xl border flex items-center gap-1.5 text-left cursor-pointer transition-all ${
-                        isSelected
-                          ? 'border-[#c9963a] bg-[#c9963a]/25 ring-1 ring-[#c9963a]'
-                          : isInPlay
-                          ? 'border-[#c9963a]/60 bg-[#c9963a]/10 hover:bg-[#c9963a]/20'
-                          : 'border-[#655342]/20 bg-[#66533f]/[0.04] hover:bg-[#66533f]/[0.12]'
-                      }`}
-                    >
-                      {!isScriptTab && (
-                        <span className="font-mono text-[10px] font-bold text-[#5c4a37] shrink-0">
-                          {idx + 1}.
-                        </span>
-                      )}
-                      <CharacterTokenFront role={role} size={28} showSetupLeaf={isScriptTab} />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[10px] sm:text-[11px] font-bold text-[#2a2018] truncate">
-                          {role.name}
-                        </div>
-                        {isInPlay && (
-                          <div className="text-[9px] font-mono text-[#7a5210] font-bold truncate">
-                            Aktif
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+                return (
+                  <button
+                    key={role.id}
+                    type="button"
+                    onClick={() => setSelectedRoleId(role.id)}
+                    className={`relative p-1 rounded-xl border flex flex-col items-center gap-0.5 text-center cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-[#c9963a] bg-[#c9963a]/25 ring-1 ring-[#c9963a]'
+                        : 'border-[#655342]/20 hover:bg-[#66533f]/10'
+                    }`}
+                  >
+                    {orderNum !== null && (
+                      <span className="absolute top-0.5 left-1 text-[9px] font-mono font-bold text-[#c9963a]">
+                        #{orderNum}
+                      </span>
+                    )}
+                    {isInPlay && (
+                      <span className="absolute top-0.5 right-1 w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                    )}
+                    <CharacterTokenFront role={role} size={36} showSetupLeaf />
+                    <span className="text-[10px] font-bold text-[#2a2018] truncate w-full leading-tight">
+                      {getRoleName(role, language)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
 
             {/* Pinned Detail Bar for Selected Role */}
             {inspectedRole && (
@@ -222,21 +206,18 @@ export default function ReferenceDrawer({
                       className="font-display text-sm sm:text-base font-bold"
                       style={{ color: GRIMOIRE_PALETTE.teamOnPaper[inspectedRole.team as TeamKey] }}
                     >
-                      {inspectedRole.name}{' '}
-                      <span className="text-xs font-normal text-[#5c4a37]">
-                        ({inspectedRole.indonesianName})
-                      </span>
+                      {getRoleName(inspectedRole, language)}
                     </span>
                     <span className="text-[10px] font-mono uppercase text-[#5c4a37]">
-                      {inspectedRole.team}
+                      {getTeamName(inspectedRole.team, language)}
                     </span>
                   </div>
                   <p className="text-xs text-[#2a2018] leading-snug">
                     {tab === 'first_night'
-                      ? inspectedRole.firstNightInstruction || renderAbilitySegments(inspectedRole.ability)
+                      ? renderAbilitySegments(getRoleFirstNightInstruction(inspectedRole, language) || getRoleAbility(inspectedRole, language))
                       : tab === 'other_nights'
-                      ? inspectedRole.otherNightInstruction || renderAbilitySegments(inspectedRole.ability)
-                      : renderAbilitySegments(inspectedRole.ability)}
+                      ? renderAbilitySegments(getRoleOtherNightInstruction(inspectedRole, language) || getRoleAbility(inspectedRole, language))
+                      : renderAbilitySegments(getRoleAbility(inspectedRole, language))}
                   </p>
                 </div>
               </div>
@@ -246,7 +227,9 @@ export default function ReferenceDrawer({
             <div className="px-3 py-2 rounded-xl bg-[#66533f]/10 text-[10px] text-[#5c4a37] flex items-center gap-2">
               <Sun className="w-3.5 h-3.5 text-[#c9963a] shrink-0" />
               <span>
-                Daun Kiri: Malam 1 · Daun Kanan: Malam 2+ · Bunga Jingga: Pengubah Setup. Klik peran untuk melihat instruksi lengkap.
+                {isEn
+                  ? 'Left Leaf: Night 1 · Right Leaf: Night 2+ · Orange Flower: Setup modifier. Click character to inspect full instructions.'
+                  : 'Daun Kiri: Malam 1 · Daun Kanan: Malam 2+ · Bunga Jingga: Pengubah Setup. Klik peran untuk melihat instruksi lengkap.'}
               </span>
             </div>
           </div>

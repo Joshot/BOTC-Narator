@@ -17,7 +17,8 @@ import {
   Sun,
   Sunrise,
 } from 'lucide-react';
-import { ROLE_MAP, ROLES } from '@/lib/botc-data';
+import { ROLE_MAP, ROLES, getRoleName, getRoleAbility } from '@/lib/botc-data';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   DayTimerState,
   GamePhase,
@@ -75,6 +76,7 @@ export default function NarratorView({
   onTriggerVirginNomination,
   onShowSilentCard,
 }: NarratorViewProps) {
+  const { language } = useLanguage();
   const [activeStepIdx, setActiveStepIdx] = useState(0);
   const [completedStepIds, setCompletedStepIds] = useState<string[]>([]);
   const [impFeedback, setImpFeedback] = useState<string | null>(null);
@@ -92,7 +94,7 @@ export default function NarratorView({
   const nightSteps =
     phase === 'day'
       ? []
-      : buildNightOrder(phase, players, executedTodayPlayerId, demonBluffIds);
+      : buildNightOrder(phase, players, executedTodayPlayerId, demonBluffIds, language);
 
   const safeStepIdx =
     nightSteps.length === 0 ? 0 : Math.min(activeStepIdx, nightSteps.length - 1);
@@ -137,14 +139,14 @@ export default function NarratorView({
       <div className="bg-white dark:bg-[#181520] border border-purple-200 dark:border-[#2A2636] rounded-2xl p-3 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
         <div className="space-y-0.5 px-1">
           <div className="text-xs text-amber-700 dark:text-[#C8A951] font-semibold">
-            Siklus Otomasi Narator Storyteller
+            {language === 'en' ? 'Storyteller Automation Cycle' : 'Siklus Otomasi Narator Storyteller'}
           </div>
           <h2 className="font-display text-lg font-bold text-slate-900 dark:text-[#F5EFE6]">
             {phase === 'first_night'
-              ? 'Malam Pertama (First Night)'
+              ? (language === 'en' ? 'First Night' : 'Malam Pertama')
               : phase === 'day'
-              ? `Fase Siang Hari ke-${dayNumber}`
-              : `Malam Berikutnya (Malam ke-${Math.max(2, dayNumber)})`}
+              ? (language === 'en' ? `Day Phase (Day ${dayNumber})` : `Fase Siang Hari ke-${dayNumber}`)
+              : (language === 'en' ? `Later Night (Night ${Math.max(2, dayNumber)})` : `Malam Berikutnya (Malam ke-${Math.max(2, dayNumber)})`)}
           </h2>
         </div>
 
@@ -169,13 +171,15 @@ export default function NarratorView({
               {phase === 'day' ? (
                 <>
                   <Moon className="w-3.5 h-3.5 shrink-0" />
-                  <span>Lanjut Malam {dayNumber + 1}</span>
+                  <span>{language === 'en' ? `Next: Night ${dayNumber + 1}` : `Lanjut Malam ${dayNumber + 1}`}</span>
                 </>
               ) : (
                 <>
                   <Sun className="w-3.5 h-3.5 shrink-0" />
                   <span>
-                    Lanjut Siang {phase === 'first_night' ? 1 : Math.max(2, dayNumber)}
+                    {language === 'en'
+                      ? `Next: Day ${phase === 'first_night' ? 1 : Math.max(2, dayNumber)}`
+                      : `Lanjut Siang ${phase === 'first_night' ? 1 : Math.max(2, dayNumber)}`}
                   </span>
                 </>
               )}
@@ -188,7 +192,7 @@ export default function NarratorView({
               className="min-h-[40px] px-3 sm:px-3.5 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-[#231F30] dark:hover:bg-[#312B44] border border-purple-200 dark:border-[#39324D] text-purple-950 dark:text-[#F5EFE6] text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
               <Eye className="w-3.5 h-3.5 text-amber-700 dark:text-[#D4AF37]" />
-              <span>Tunjuk Kartu</span>
+              <span>{language === 'en' ? 'Show Card' : 'Tunjuk Kartu'}</span>
             </button>
           </div>
 
@@ -203,7 +207,7 @@ export default function NarratorView({
             }`}
           >
             <Moon className="w-3.5 h-3.5 shrink-0" />
-            <span>Malam 1</span>
+            <span>{language === 'en' ? 'Night 1' : 'Malam 1'}</span>
           </button>
 
           <button
@@ -216,7 +220,7 @@ export default function NarratorView({
             }`}
           >
             <Sun className="w-3.5 h-3.5 shrink-0" />
-            <span>Siang Hari</span>
+            <span>{language === 'en' ? 'Day Phase' : 'Siang Hari'}</span>
           </button>
 
           <button
@@ -229,7 +233,7 @@ export default function NarratorView({
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 shrink-0" />
-            <span>Malam Lanjut</span>
+            <span>{language === 'en' ? 'Later Night' : 'Malam Lanjut'}</span>
           </button>
           </div>
         </div>
@@ -242,10 +246,10 @@ export default function NarratorView({
           <div className="lg:col-span-4 bg-white dark:bg-[#181520] border border-purple-200 dark:border-[#2A2636] rounded-2xl p-4 space-y-3 shadow-lg">
             <div className="flex items-center justify-between px-1">
               <h3 className="font-display text-sm font-bold text-slate-900 dark:text-[#F5EFE6]">
-                Urutan Bangun Resmi
+                {language === 'en' ? 'Official Wake Order' : 'Urutan Bangun Resmi'}
               </h3>
               <span className="font-mono text-xs text-slate-600 dark:text-[#A8A092] tabular-nums">
-                {completedStepIds.length}/{nightSteps.length} Selesai
+                {completedStepIds.length}/{nightSteps.length} {language === 'en' ? 'Done' : 'Selesai'}
               </span>
             </div>
 
@@ -338,7 +342,7 @@ export default function NarratorView({
                       </div>
                       <div>
                         <div className="text-xs font-mono font-bold text-amber-700 dark:text-[#D4AF37] tabular-nums">
-                          LANGKAH {safeStepIdx + 1} DARI {nightSteps.length}
+                          {language === 'en' ? 'STEP' : 'LANGKAH'} {safeStepIdx + 1} {language === 'en' ? 'OF' : 'DARI'} {nightSteps.length}
                         </div>
                         <h3 className="font-display text-xl sm:text-2xl font-bold text-slate-900 dark:text-[#F5EFE6]">
                           {currentStep.title}
@@ -363,7 +367,7 @@ export default function NarratorView({
                   {/* Main Narration & Physical Action Instruction */}
                   <div className="space-y-2">
                     <div className="text-xs font-semibold text-slate-600 dark:text-[#A8A092]">
-                      Panduan Tindakan & Narasi Storyteller:
+                      {language === 'en' ? 'Storyteller Action Guide & Script:' : 'Panduan Tindakan & Narasi Storyteller:'}
                     </div>
                     <p className="text-sm sm:text-base text-slate-900 dark:text-[#F5EFE6] leading-relaxed bg-purple-50/70 dark:bg-[#13101A] border border-purple-200 dark:border-[#292438] rounded-xl p-4">
                       {currentStep.instruction}
@@ -374,7 +378,7 @@ export default function NarratorView({
                   {currentStep.dynamicHelperText && (
                     <div className="p-4 rounded-xl bg-sky-50 dark:bg-[#162231] border border-sky-300 dark:border-[#38BDF8]/40 text-xs sm:text-sm text-sky-950 dark:text-[#BAE6FD] leading-relaxed">
                       <strong className="block text-sky-800 dark:text-[#7DD3FC] mb-0.5">
-                        Kalkulasi Otomatis Sistem Grimoire:
+                        {language === 'en' ? 'Automated Grimoire Calculations:' : 'Kalkulasi Otomatis Sistem Grimoire:'}
                       </strong>
                       {currentStep.dynamicHelperText}
                     </div>
@@ -384,7 +388,9 @@ export default function NarratorView({
                   {currentStep.roleId === 'poisoner' && !currentStep.isDrunkPlayer && (
                     <div className="pt-2 space-y-2">
                       <div className="text-xs font-semibold text-red-800 dark:text-[#FCA5A5]">
-                        Pilih Target Racun Poisoner Malam Ini (Otomatis Pasang Token Poisoned):
+                        {language === 'en'
+                          ? 'Select Poisoner Night Target (Auto-assigns Poisoned token):'
+                          : 'Pilih Target Racun Poisoner Malam Ini (Otomatis Pasang Token Poisoned):'}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {players.map((p) => {
@@ -400,7 +406,7 @@ export default function NarratorView({
                                   : 'bg-purple-50 hover:bg-purple-100 text-slate-800 border-purple-200 dark:bg-[#1E1A2A] dark:hover:bg-[#2B253B] dark:text-[#EDE7DB] dark:border-[#342E46]'
                               }`}
                             >
-                              #{p.seatIndex + 1} {p.name} {hasPoison ? '(Diracun)' : ''}
+                              #{p.seatIndex + 1} {p.name} {hasPoison ? (language === 'en' ? '(Poisoned)' : '(Diracun)') : ''}
                             </button>
                           );
                         })}
@@ -411,7 +417,9 @@ export default function NarratorView({
                   {currentStep.roleId === 'monk' && (
                     <div className="pt-2 space-y-2">
                       <div className="text-xs font-semibold text-blue-900 dark:text-[#93C5FD]">
-                        Pilih Pemain yang Dilindungi Monk (Selain Diri Sendiri):
+                        {language === 'en'
+                          ? 'Select Player Protected by Monk (Other than themselves):'
+                          : 'Pilih Pemain yang Dilindungi Monk (Selain Diri Sendiri):'}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {players
@@ -446,7 +454,9 @@ export default function NarratorView({
                   {currentStep.roleId === 'butler' && (
                     <div className="pt-2 space-y-2">
                       <div className="text-xs font-semibold text-blue-900 dark:text-[#93C5FD]">
-                        Pilih Tuan (Master) yang Ditunjuk Butler:
+                        {language === 'en'
+                          ? 'Select Master Chosen by Butler:'
+                          : 'Pilih Tuan (Master) yang Ditunjuk Butler:'}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {players
@@ -477,7 +487,9 @@ export default function NarratorView({
                   {currentStep.roleId === 'imp' && phase === 'other_night' && (
                     <div className="pt-2 space-y-3">
                       <div className="text-xs font-semibold text-red-800 dark:text-[#FCA5A5]">
-                        Pilih Target Serangan Imp Malam Ini (Sistem Otomatis Cek Monk, Soldier & Starpass):
+                        {language === 'en'
+                          ? 'Select Imp Attack Target (Automatically verifies Monk, Soldier & Starpass):'
+                          : 'Pilih Target Serangan Imp Malam Ini (Sistem Otomatis Cek Monk, Soldier & Starpass):'}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {players.map((p) => {
@@ -499,8 +511,8 @@ export default function NarratorView({
                               }`}
                             >
                               #{p.seatIndex + 1} {p.name}
-                              {p.id === currentStep.playerId ? ' (Bunuh Diri / Starpass)' : ''}
-                              {markedDie ? ' [MATI]' : ''}
+                              {p.id === currentStep.playerId ? (language === 'en' ? ' (Suicide / Starpass)' : ' (Bunuh Diri / Starpass)') : ''}
+                              {markedDie ? (language === 'en' ? ' [DEAD]' : ' [MATI]') : ''}
                             </button>
                           );
                         })}
@@ -527,7 +539,9 @@ export default function NarratorView({
                       <div className="pt-2 space-y-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="text-xs font-semibold text-purple-950 dark:text-[#E9D5FF]">
-                            Pilih / Konfirmasi Korban Eksekusi Siang Tadi (Klik Nama Pemain):
+                            {language === 'en'
+                              ? 'Confirm Today\'s Execution Victim (Click Player Name):'
+                              : 'Pilih / Konfirmasi Korban Eksekusi Siang Tadi (Klik Nama Pemain):'}
                           </div>
                           {executedTarget && (
                             <button
@@ -535,7 +549,7 @@ export default function NarratorView({
                               onClick={() => onSetSingleReminderTarget('died_today', '')}
                               className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#221E2E] dark:hover:bg-[#312B42] text-[11px] font-semibold text-slate-700 dark:text-[#C4BCD0] cursor-pointer transition-colors"
                             >
-                              Kosongkan Eksekusi
+                              {language === 'en' ? 'Clear Execution' : 'Kosongkan Eksekusi'}
                             </button>
                           )}
                         </div>
@@ -561,9 +575,9 @@ export default function NarratorView({
                               >
                                 #{p.seatIndex + 1} {p.name}{' '}
                                 {isExec
-                                  ? '(Dieksekusi)'
+                                  ? (language === 'en' ? '(Executed)' : '(Dieksekusi)')
                                   : !p.isAlive
-                                  ? '(Mati)'
+                                  ? (language === 'en' ? '(Dead)' : '(Mati)')
                                   : ''}
                               </button>
                             );
@@ -574,13 +588,13 @@ export default function NarratorView({
                           <div className="p-3.5 rounded-2xl bg-purple-50/80 dark:bg-[#191524] border border-purple-200 dark:border-[#342E46] space-y-2.5">
                             <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                               <span className="text-slate-700 dark:text-[#D5CEBC]">
-                                Korban:{' '}
+                                {language === 'en' ? 'Victim: ' : 'Korban: '}
                                 <strong className="text-slate-950 dark:text-white">
-                                  {executedTarget.name} (Kursi {executedTarget.seatIndex + 1})
+                                  {executedTarget.name} ({language === 'en' ? 'Seat' : 'Kursi'} {executedTarget.seatIndex + 1})
                                 </strong>{' '}
-                                — Peran Asli:{' '}
+                                — {language === 'en' ? 'True Role: ' : 'Peran Asli: '}
                                 <strong className="text-purple-900 dark:text-[#E9D5FF]">
-                                  {executedTrueRole.name} ({executedTrueRole.indonesianName})
+                                  {getRoleName(executedTrueRole, language)}
                                 </strong>
                               </span>
                             </div>
@@ -591,8 +605,12 @@ export default function NarratorView({
                               currentStep.isPoisonedPlayer) && (
                               <p className="text-[11px] text-amber-800 dark:text-[#FDE68A]">
                                 {currentStep.isDrunkPlayer || currentStep.isPoisonedPlayer
-                                  ? 'Catatan Storyteller: Undertaker sedang Mabuk/Diracun — Anda boleh memakai pemilih token di bawah untuk menampilkan peran palsu.'
-                                  : `Catatan Misregistration: Korban adalah ${executedTrueRole.name}, sehingga Anda boleh menunjuk peran lain via pemilih token di bawah.`}
+                                  ? (language === 'en'
+                                      ? 'Storyteller Note: Undertaker is Drunk/Poisoned — you may use the token selector below to show a false role.'
+                                      : 'Catatan Storyteller: Undertaker sedang Mabuk/Diracun — Anda boleh memakai pemilih token di bawah untuk menampilkan peran palsu.')
+                                  : (language === 'en'
+                                      ? `Misregistration Note: The victim is ${getRoleName(executedTrueRole, language)}, so you may show a different role using the selector below.`
+                                      : `Catatan Misregistration: Korban adalah ${executedTrueRole.name}, sehingga Anda boleh menunjuk peran lain via pemilih token di bawah.`)}
                               </p>
                             )}
 
@@ -600,8 +618,8 @@ export default function NarratorView({
                               type="button"
                               onClick={() =>
                                 onShowSilentCard({
-                                  heading: 'KARAKTER PEMAIN YANG DIEKSEKUSI',
-                                  subheading: 'Eksekusi siang hari',
+                                  heading: language === 'en' ? 'EXECUTED CHARACTER' : 'KARAKTER PEMAIN YANG DIEKSEKUSI',
+                                  subheading: language === 'en' ? 'Day execution' : 'Eksekusi siang hari',
                                   roleIds: [executedTrueRole.id],
                                 })
                               }
@@ -609,13 +627,17 @@ export default function NarratorView({
                             >
                               <Eye className="w-4 h-4 shrink-0" />
                               <span>
-                                Tunjukkan Token {executedTrueRole.name} ke Undertaker (Layar Penuh)
+                                {language === 'en'
+                                  ? `Show ${getRoleName(executedTrueRole, language)} Token to Undertaker (Fullscreen)`
+                                  : `Tunjukkan Token ${executedTrueRole.name} ke Undertaker (Layar Penuh)`}
                               </span>
                             </button>
                           </div>
                         ) : (
                           <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#191622] border border-purple-200/80 dark:border-[#2C263B] text-xs text-slate-600 dark:text-[#A8A092]">
-                            Belum ada korban eksekusi dipilih. Klik salah satu pemain di atas jika siang tadi ada eksekusi, atau biarkan kosong dan lewati membangunkan Undertaker.
+                            {language === 'en'
+                              ? 'No execution victim selected yet. Click a player above if someone was executed today, or leave empty to skip waking the Undertaker.'
+                              : 'Belum ada korban eksekusi dipilih. Klik salah satu pemain di atas jika siang tadi ada eksekusi, atau biarkan kosong dan lewati membangunkan Undertaker.'}
                           </div>
                         )}
                       </div>
@@ -625,7 +647,7 @@ export default function NarratorView({
                   {/* Silent Fullscreen Card Quick Helpers inside Narrator */}
                   <div className="pt-3 border-t border-purple-100 dark:border-[#292535] space-y-3">
                     <div className="text-xs font-medium text-slate-600 dark:text-[#A8A092]">
-                      Alat Bantu Layar Tunjuk Bisu (Tampilkan ke Pemain Tanpa Bicara):
+                      {language === 'en' ? 'Silent Card Tools (Show to Players in Secret):' : 'Alat Bantu Layar Tunjuk Bisu (Tampilkan ke Pemain Tanpa Bicara):'}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -639,19 +661,21 @@ export default function NarratorView({
                               );
                               if (!demon) return;
                               onShowSilentCard({
-                                heading: 'INI ADALAH DEMON ANDA',
-                                subheading: 'Storyteller menunjuk ke arah pemain Demon ini',
+                                heading: language === 'en' ? 'THIS IS YOUR DEMON' : 'INI ADALAH DEMON ANDA',
+                                subheading: language === 'en' ? 'Storyteller points to this Demon player' : 'Storyteller menunjuk ke arah pemain Demon ini',
                                 roleIds: [demon.trueRoleId],
                               });
                             }}
                             className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
                           >
                             <Eye className="w-3.5 h-3.5" />
-                            <span>Layar Info Demon</span>
+                            <span>{language === 'en' ? 'Demon Info Screen' : 'Layar Info Demon'}</span>
                           </button>
                         ) : (
                           <span className="text-xs text-red-800 dark:text-[#FCA5A5] italic px-2.5 py-1 bg-red-50 dark:bg-[#1C1318] rounded-lg border border-red-200 dark:border-[#DC2626]/30">
-                            Permainan di bawah 7 pemain: Minion tidak dibangunkan untuk info Demon.
+                            {language === 'en'
+                              ? 'Under 7 players: Minions are not woken for Demon info.'
+                              : 'Permainan di bawah 7 pemain: Minion tidak dibangunkan untuk info Demon.'}
                           </span>
                         )
                       )}
@@ -661,18 +685,18 @@ export default function NarratorView({
                           type="button"
                           onClick={() =>
                             onShowSilentCard({
-                              heading: '3 KARAKTER INI TIDAK DIMAINKAN',
+                              heading: language === 'en' ? 'THESE 3 CHARACTERS ARE NOT IN PLAY' : '3 KARAKTER INI TIDAK DIMAINKAN',
                               subheading:
                                 players.length < 7
-                                  ? 'Opsi Bluff Aman untuk Demon (Under 7: Info Minion Disembunyikan)'
-                                  : 'Opsi Bluff Aman untuk Demon',
+                                  ? (language === 'en' ? 'Safe Bluff Options for Demon (Under 7: Minion Info Hidden)' : 'Opsi Bluff Aman untuk Demon (Under 7: Info Minion Disembunyikan)')
+                                  : (language === 'en' ? 'Safe Bluff Options for Demon' : 'Opsi Bluff Aman untuk Demon'),
                               roleIds: demonBluffIds,
                             })
                           }
                           className="brass-sheen-btn min-h-[40px] px-3.5 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] text-[#0C0C10] text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-md"
                         >
                           <Eye className="w-3.5 h-3.5" />
-                          <span>Layar 3 Bluff Demon</span>
+                          <span>{language === 'en' ? '3 Demon Bluffs Screen' : 'Layar 3 Bluff Demon'}</span>
                         </button>
                       )}
 
@@ -683,27 +707,27 @@ export default function NarratorView({
                           type="button"
                           onClick={() =>
                             onShowSilentCard({
-                              heading: 'INFORMASI ANGKA MALAM INI',
+                              heading: language === 'en' ? 'NIGHT NUMBER INFORMATION' : 'INFORMASI ANGKA MALAM INI',
                               bigText: num,
                             })
                           }
                           className="min-h-[40px] min-w-[42px] px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-950 dark:bg-[#221E2E] dark:hover:bg-[#302A40] dark:border-[#38324B] dark:text-[#FDE68A] font-mono text-xs font-bold cursor-pointer transition-colors"
                         >
-                          Angka {num}
+                          {language === 'en' ? 'Number' : 'Angka'} {num}
                         </button>
                       ))}
 
                       {/* Quick Role Token Show Selector */}
                       <div className="flex items-center gap-1.5">
                         <select
-                          aria-label="Pilih token karakter untuk ditampilkan di layar penuh"
+                          aria-label={language === 'en' ? 'Select character token to show fullscreen' : 'Pilih token karakter untuk ditampilkan di layar penuh'}
                           value={cardRoleToShow}
                           onChange={(e) => setCardRoleToShow(e.target.value)}
                           className="min-h-[40px] rounded-xl bg-purple-50 dark:bg-[#13111A] border border-purple-200 dark:border-[#322D42] px-2.5 py-1.5 text-xs text-slate-900 dark:text-[#EDE7DB]"
                         >
                           {ROLES.map((r) => (
                             <option key={r.id} value={r.id}>
-                              Token: {r.name}
+                              Token: {getRoleName(r, language)}
                             </option>
                           ))}
                         </select>
@@ -711,14 +735,14 @@ export default function NarratorView({
                           type="button"
                           onClick={() =>
                             onShowSilentCard({
-                              heading: 'KARAKTER INI ADALAH',
+                              heading: language === 'en' ? 'THIS CHARACTER IS' : 'KARAKTER INI ADALAH',
                               roleIds: [cardRoleToShow],
                             })
                           }
                           className="min-h-[40px] px-3 py-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 border border-purple-200 text-purple-950 dark:bg-[#221E2E] dark:hover:bg-[#302A40] dark:border-[#38324B] dark:text-[#EDE7DB] text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
                         >
                           <Eye className="w-3.5 h-3.5 text-amber-700 dark:text-[#D4AF37]" />
-                          <span>Tunjuk Token</span>
+                          <span>{language === 'en' ? 'Show Token' : 'Tunjuk Token'}</span>
                         </button>
 
                         <button
@@ -727,7 +751,7 @@ export default function NarratorView({
                           className="min-h-[40px] px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-950 dark:bg-[#2B2216] dark:hover:bg-[#3B2E1E] dark:border-[#D4AF37]/40 dark:text-[#FDE68A] text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
-                          <span>Semua Kartu Info &amp; Pesan</span>
+                          <span>{language === 'en' ? 'All Info Cards & Notes' : 'Semua Kartu Info & Pesan'}</span>
                         </button>
                       </div>
                     </div>
@@ -742,12 +766,16 @@ export default function NarratorView({
                           if (e.key === 'Enter' && quickCustomNote.trim()) {
                             e.preventDefault();
                             onShowSilentCard({
-                              heading: 'PESAN STORYTELLER',
+                              heading: language === 'en' ? 'STORYTELLER NOTE' : 'PESAN STORYTELLER',
                               bigText: quickCustomNote.trim(),
                             });
                           }
                         }}
-                        placeholder="Ketik pesan / info malam kustom untuk ditunjukkan (mis. Pilih 1 Pemain)..."
+                        placeholder={
+                          language === 'en'
+                            ? 'Type custom night note to show (e.g. Choose 1 Player)...'
+                            : 'Ketik pesan / info malam kustom untuk ditunjukkan (mis. Pilih 1 Pemain)...'
+                        }
                         className="flex-1 min-h-[38px] rounded-xl bg-purple-50 dark:bg-[#13111A] border border-purple-200 dark:border-[#322D42] px-3 py-1.5 text-xs text-slate-900 dark:text-[#EDE7DB] placeholder:text-slate-400"
                       />
                       <button
@@ -756,14 +784,14 @@ export default function NarratorView({
                         onClick={() => {
                           if (!quickCustomNote.trim()) return;
                           onShowSilentCard({
-                            heading: 'PESAN STORYTELLER',
+                            heading: language === 'en' ? 'STORYTELLER NOTE' : 'PESAN STORYTELLER',
                             bigText: quickCustomNote.trim(),
                           });
                         }}
                         className="min-h-[38px] px-4 py-1.5 rounded-xl bg-[#D4AF37] hover:bg-[#E5C365] disabled:opacity-40 text-[#121016] text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
                       >
                         <Eye className="w-3.5 h-3.5" />
-                        <span>Tunjuk Catatan</span>
+                        <span>{language === 'en' ? 'Show Note' : 'Tunjuk Catatan'}</span>
                       </button>
                     </div>
                   </div>
@@ -779,7 +807,7 @@ export default function NarratorView({
                       className="min-h-[46px] px-4 py-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 disabled:opacity-40 text-purple-950 dark:bg-[#221E2E] dark:hover:bg-[#2F2A40] dark:text-[#EDE7DB] text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4" />
-                      <span>Langkah Sebelumnya</span>
+                      <span>{language === 'en' ? 'Previous Step' : 'Langkah Sebelumnya'}</span>
                     </button>
 
                     {safeStepIdx < nightSteps.length - 1 ? (
@@ -789,7 +817,7 @@ export default function NarratorView({
                         className="brass-sheen-btn min-h-[46px] px-6 py-2.5 rounded-xl bg-[#991B1B] hover:bg-[#B91C1C] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-md"
                       >
                         <Check className="w-4 h-4" />
-                        <span>Tandai Selesai & Langkah Berikutnya</span>
+                        <span>{language === 'en' ? 'Mark Done & Next Step' : 'Tandai Selesai & Langkah Berikutnya'}</span>
                         <ChevronRight className="w-4 h-4" />
                       </button>
                     ) : (
@@ -803,7 +831,7 @@ export default function NarratorView({
                         className="brass-sheen-btn min-h-[46px] px-6 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#E2BE46] text-[#121016] text-xs sm:text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-md"
                       >
                         <Sun className="w-4 h-4" />
-                        <span>Selesaikan Malam & Masuk Siang Hari</span>
+                        <span>{language === 'en' ? 'Finish Night & Call Dawn' : 'Selesaikan Malam & Masuk Siang Hari'}</span>
                       </button>
                     )}
                   </div>
@@ -824,19 +852,27 @@ export default function NarratorView({
           <div className="lg:col-span-7 bg-white dark:bg-[#181520] border border-purple-200 dark:border-[#2A2636] rounded-2xl p-5 sm:p-6 space-y-5 shadow-xl">
             <div className="space-y-2 pb-4 border-b border-purple-100 dark:border-[#292535]">
               <div className="text-xs font-mono font-bold text-amber-700 dark:text-[#D4AF37]">
-                PENGUMUMAN PAGI HARI KE-{dayNumber}
+                {language === 'en' ? `MORNING REPORT — DAY ${dayNumber}` : `PENGUMUMAN PAGI HARI KE-${dayNumber}`}
               </div>
               <h3 className="font-display text-xl font-bold text-slate-900 dark:text-[#F5EFE6]">
-                Laporan Fajar & Sidang Warga
+                {language === 'en' ? 'Dawn Chronicle & Town Gathering' : 'Laporan Fajar & Sidang Warga'}
               </h3>
               <p className="text-sm text-slate-800 dark:text-[#DED7CA] bg-purple-50/70 dark:bg-[#13101A] border border-purple-200 dark:border-[#292535] rounded-xl p-4 leading-relaxed">
                 {dayNumber === 1
-                  ? '"Selamat pagi warga Ravenswood Bluff! Tidak ada korban jiwa pada malam pertama. Silakan berdiskusi secara terbuka maupun tertutup sebelum sesi nominasi dibuka."'
+                  ? (language === 'en'
+                      ? '"Good morning, citizens of Ravenswood Bluff! There were no deaths during the first night. Please discuss openly and quietly before nominations open."'
+                      : '"Selamat pagi warga Ravenswood Bluff! Tidak ada korban jiwa pada malam pertama. Silakan berdiskusi secara terbuka maupun tertutup sebelum sesi nominasi dibuka."')
                   : lastNightDeaths.length > 0
-                  ? `"Selamat pagi! Tadi malam, warga menemukan ${lastNightDeaths.join(
-                      ' dan '
-                    )} tewas secara misterius. Mereka kini tidak lagi bisa menominasikan, namun masih menyimpan 1 Suara Hantu."`
-                  : '"Selamat pagi! Malam berlalu dengan sunyi dan TIDAK ADA warga yang mati tadi malam!"'}
+                  ? (language === 'en'
+                      ? `"Good morning! Last night, the town discovered ${lastNightDeaths.join(
+                          ' and '
+                        )} dead under mysterious circumstances. They may no longer nominate, but still retain 1 Ghost Vote."`
+                      : `"Selamat pagi! Tadi malam, warga menemukan ${lastNightDeaths.join(
+                          ' dan '
+                        )} tewas secara misterius. Mereka kini tidak lagi bisa menominasikan, namun masih menyimpan 1 Suara Hantu."`)
+                  : (language === 'en'
+                      ? '"Good morning! The night was quiet and NO ONE died last night!"'
+                      : '"Selamat pagi! Malam berlalu dengan sunyi dan TIDAK ADA warga yang mati tadi malam!"')}
               </p>
             </div>
 
@@ -846,21 +882,25 @@ export default function NarratorView({
                 <div className="text-2xl font-bold text-emerald-700 dark:text-[#6EE7B7]">
                   {voteStats.aliveCount}
                 </div>
-                <div className="text-[11px] font-sans text-slate-600 dark:text-[#A8A092]">Warga Hidup</div>
+                <div className="text-[11px] font-sans text-slate-600 dark:text-[#A8A092]">
+                  {language === 'en' ? 'Living Townsfolk' : 'Warga Hidup'}
+                </div>
               </div>
               <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-[#13101A] border border-amber-300 dark:border-[#D4AF37]/40">
                 <div className="text-2xl font-bold text-amber-900 dark:text-[#FDE68A]">
                   {voteStats.votesNeeded}
                 </div>
                 <div className="text-[11px] font-sans text-amber-950 dark:text-[#D6CFC2]">
-                  Min. Suara Eksekusi
+                  {language === 'en' ? 'Votes to Execute' : 'Min. Suara Eksekusi'}
                 </div>
               </div>
               <div className="p-3 rounded-xl bg-blue-50/70 dark:bg-[#13101A] border border-blue-200 dark:border-[#292535]">
                 <div className="text-2xl font-bold text-blue-700 dark:text-[#93C5FD]">
                   {voteStats.ghostVotesRemaining}
                 </div>
-                <div className="text-[11px] font-sans text-slate-600 dark:text-[#A8A092]">Suara Hantu</div>
+                <div className="text-[11px] font-sans text-slate-600 dark:text-[#A8A092]">
+                  {language === 'en' ? 'Ghost Votes' : 'Suara Hantu'}
+                </div>
               </div>
             </div>
 
@@ -870,7 +910,9 @@ export default function NarratorView({
                 htmlFor="day-execution-select"
                 className="block text-sm font-semibold text-slate-900 dark:text-[#F5EFE6]"
               >
-                Catat Eksekusi Warga Hari Ini (Otomatis Update Undertaker & Cek Kemenangan):
+                {language === 'en'
+                  ? 'Record Today\'s Execution (Updates Undertaker & checks victory):'
+                  : 'Catat Eksekusi Warga Hari Ini (Otomatis Update Undertaker & Cek Kemenangan):'}
               </label>
               <div className="flex flex-col sm:flex-row gap-2.5">
                 <select
@@ -879,10 +921,12 @@ export default function NarratorView({
                   onChange={(e) => setSelectedExecutionId(e.target.value)}
                   className="flex-1 min-h-[44px] rounded-xl bg-purple-50 dark:bg-[#13101A] border border-purple-200 dark:border-[#342E46] px-3 py-2 text-sm text-slate-900 dark:text-[#F5EFE6]"
                 >
-                  <option value="">-- Pilih Pemain yang Dieksekusi (Atau Kosongkan) --</option>
+                  <option value="">
+                    -- {language === 'en' ? 'Select Executed Player (Or Leave Empty)' : 'Pilih Pemain yang Dieksekusi (Atau Kosongkan)'} --
+                  </option>
                   {alivePlayers.map((p) => (
                     <option key={p.id} value={p.id}>
-                      Kursi {p.seatIndex + 1}: {p.name} (Asli: {ROLE_MAP[p.trueRoleId]?.name})
+                      {language === 'en' ? 'Seat' : 'Kursi'} {p.seatIndex + 1}: {p.name} ({language === 'en' ? 'True' : 'Asli'}: {getRoleName(p.trueRoleId, language)})
                     </option>
                   ))}
                 </select>
@@ -892,13 +936,17 @@ export default function NarratorView({
                     if (!selectedExecutionId) {
                       onExecutePlayerInDay(null);
                       setDayActionResult(
-                        'Sidang ditutup tanpa eksekusi warga hari ini.'
+                        language === 'en'
+                          ? 'Town gathering adjourned without executions today.'
+                          : 'Sidang ditutup tanpa eksekusi warga hari ini.'
                       );
                     } else {
                       const target = players.find((p) => p.id === selectedExecutionId);
                       onExecutePlayerInDay(selectedExecutionId);
                       setDayActionResult(
-                        `${target?.name ?? 'Pemain'} resmi dieksekusi, ditandai Mati, dan diberi token "Executed" untuk info Undertaker malam nanti.`
+                        language === 'en'
+                          ? `${target?.name ?? 'Player'} was officially executed, marked Dead, and assigned an "Executed" reminder for the Undertaker.`
+                          : `${target?.name ?? 'Pemain'} resmi dieksekusi, ditandai Mati, dan diberi token "Executed" untuk info Undertaker malam nanti.`
                       );
                       setSelectedExecutionId('');
                     }
@@ -906,13 +954,13 @@ export default function NarratorView({
                   className="min-h-[44px] px-5 py-2 rounded-xl bg-[#991B1B] hover:bg-[#B91C1C] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer shrink-0 shadow-sm"
                 >
                   <Gavel className="w-4 h-4" />
-                  <span>Konfirmasi Eksekusi</span>
+                  <span>{language === 'en' ? 'Confirm Execution' : 'Konfirmasi Eksekusi'}</span>
                 </button>
               </div>
 
               {executedTodayPlayerId && (
                 <div className="text-xs font-semibold text-amber-800 dark:text-[#FDE68A]">
-                  Tercatat dieksekusi hari ini:{' '}
+                  {language === 'en' ? 'Recorded executed today: ' : 'Tercatat dieksekusi hari ini: '}
                   <strong>
                     {players.find((p) => p.id === executedTodayPlayerId)?.name}
                   </strong>
@@ -936,7 +984,11 @@ export default function NarratorView({
                 className="brass-sheen-btn w-full sm:w-auto min-h-[48px] px-6 py-3 rounded-xl bg-[#D4AF37] hover:bg-[#E2BE46] text-[#121016] font-bold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-md"
               >
                 <Moon className="w-4 h-4" />
-                <span>Akhiri Siang & Mulai Malam ke-{dayNumber + 1}</span>
+                <span>
+                  {language === 'en'
+                    ? `End Day & Call Night ${dayNumber + 1}`
+                    : `Akhiri Siang & Mulai Malam ke-${dayNumber + 1}`}
+                </span>
               </button>
             </div>
           </div>
@@ -956,37 +1008,39 @@ export default function NarratorView({
             <div className="bg-white dark:bg-[#181520] border border-purple-200 dark:border-[#2A2636] rounded-2xl p-5 space-y-3 shadow-lg">
               <h3 className="font-display text-base font-bold text-slate-900 dark:text-[#F5EFE6] flex items-center gap-2">
                 <Crosshair className="w-4 h-4 text-blue-600 dark:text-[#60A5FA]" />
-                <span>Uji Klaim Tembakan Slayer</span>
+                <span>{language === 'en' ? 'Test Slayer Shot Claim' : 'Uji Klaim Tembakan Slayer'}</span>
               </h3>
               <p className="text-xs text-slate-600 dark:text-[#A8A092]">
-                Jika ada pemain mengklaim Slayer di siang hari dan menembak seseorang, cek otomatis hasilnya di sini (memperhitungkan Drunk, Poisoned, dan bluff).
+                {language === 'en'
+                  ? 'If a player claims Slayer by day and shoots someone, check the outcome automatically here (evaluates Drunk, Poisoned, and bluffs).'
+                  : 'Jika ada pemain mengklaim Slayer di siang hari dan menembak seseorang, cek otomatis hasilnya di sini (memperhitungkan Drunk, Poisoned, dan bluff).'}
               </p>
 
               <div className="space-y-2">
                 <select
-                  aria-label="Pilih pemain yang mengklaim Slayer"
+                  aria-label={language === 'en' ? 'Select player claiming Slayer' : 'Pilih pemain yang mengklaim Slayer'}
                   value={slayerActorId}
                   onChange={(e) => setSlayerActorId(e.target.value)}
                   className="w-full min-h-[42px] rounded-xl bg-purple-50 dark:bg-[#13101A] border border-purple-200 dark:border-[#322D42] px-3 py-1.5 text-xs text-slate-900 dark:text-[#EDE7DB]"
                 >
-                  <option value="">Pilih Pemain yang Menembak (Klaim Slayer)...</option>
+                  <option value="">{language === 'en' ? 'Select Player Shooting (Slayer Claim)...' : 'Pilih Pemain yang Menembak (Klaim Slayer)...'}</option>
                   {alivePlayers.map((p) => (
                     <option key={p.id} value={p.id}>
-                      #{p.seatIndex + 1} {p.name} ({ROLE_MAP[p.trueRoleId]?.name})
+                      #{p.seatIndex + 1} {p.name} ({getRoleName(p.trueRoleId, language)})
                     </option>
                   ))}
                 </select>
 
                 <select
-                  aria-label="Pilih target tembakan Slayer"
+                  aria-label={language === 'en' ? 'Select target of Slayer shot' : 'Pilih target tembakan Slayer'}
                   value={slayerTargetId}
                   onChange={(e) => setSlayerTargetId(e.target.value)}
                   className="w-full min-h-[42px] rounded-xl bg-purple-50 dark:bg-[#13101A] border border-purple-200 dark:border-[#322D42] px-3 py-1.5 text-xs text-slate-900 dark:text-[#EDE7DB]"
                 >
-                  <option value="">Pilih Target yang Ditembak...</option>
+                  <option value="">{language === 'en' ? 'Select Target Player...' : 'Pilih Target yang Ditembak...'}</option>
                   {alivePlayers.map((p) => (
                     <option key={p.id} value={p.id}>
-                      #{p.seatIndex + 1} {p.name} ({ROLE_MAP[p.trueRoleId]?.name})
+                      #{p.seatIndex + 1} {p.name} ({getRoleName(p.trueRoleId, language)})
                     </option>
                   ))}
                 </select>
@@ -1000,7 +1054,7 @@ export default function NarratorView({
                   }}
                   className="w-full min-h-[42px] rounded-xl bg-purple-100 hover:bg-purple-200 disabled:opacity-40 border border-purple-300 text-purple-950 dark:bg-[#221E2E] dark:hover:bg-[#302A42] dark:border-[#3B3450] dark:text-[#F5EFE6] text-xs font-semibold cursor-pointer transition-colors"
                 >
-                  Proses Tembakan Slayer
+                  {language === 'en' ? 'Process Slayer Shot' : 'Proses Tembakan Slayer'}
                 </button>
               </div>
             </div>
@@ -1009,25 +1063,35 @@ export default function NarratorView({
             <div className="bg-white dark:bg-[#181520] border border-purple-200 dark:border-[#2A2636] rounded-2xl p-5 space-y-3 shadow-lg">
               <h3 className="font-display text-base font-bold text-slate-900 dark:text-[#F5EFE6] flex items-center gap-2">
                 <Gem className="w-4 h-4 text-blue-600 dark:text-[#60A5FA]" />
-                <span>Uji Nominasi Pertama Virgin</span>
+                <span>{language === 'en' ? 'Test Virgin First Nomination' : 'Uji Nominasi Pertama Virgin'}</span>
               </h3>
               {virginSeat ? (
                 <div className="space-y-2.5">
                   <p className="text-xs text-slate-700 dark:text-[#C8C0B3]">
-                    Pemegang token Virgin saat ini: <strong>{virginSeat.name}</strong> (Kursi{' '}
-                    {virginSeat.seatIndex + 1}
-                    {virginSeat.trueRoleId === 'drunk' ? ' — Sebenarnya Drunk!' : ''}). Pilih siapa yang menominasikan {virginSeat.name}:
+                    {language === 'en' ? (
+                      <>
+                        Current Virgin token holder: <strong>{virginSeat.name}</strong> (Seat{' '}
+                        {virginSeat.seatIndex + 1}
+                        {virginSeat.trueRoleId === 'drunk' ? ' — Actually Drunk!' : ''}). Select who nominated {virginSeat.name}:
+                      </>
+                    ) : (
+                      <>
+                        Pemegang token Virgin saat ini: <strong>{virginSeat.name}</strong> (Kursi{' '}
+                        {virginSeat.seatIndex + 1}
+                        {virginSeat.trueRoleId === 'drunk' ? ' — Sebenarnya Drunk!' : ''}). Pilih siapa yang menominasikan {virginSeat.name}:
+                      </>
+                    )}
                   </p>
                   <select
-                    aria-label="Pilih pemain yang menominasikan Virgin"
+                    aria-label={language === 'en' ? 'Select player nominating Virgin' : 'Pilih pemain yang menominasikan Virgin'}
                     value={virginNominatorId}
                     onChange={(e) => setVirginNominatorId(e.target.value)}
                     className="w-full min-h-[42px] rounded-xl bg-purple-50 dark:bg-[#13101A] border border-purple-200 dark:border-[#322D42] px-3 py-1.5 text-xs text-slate-900 dark:text-[#EDE7DB]"
                   >
-                    <option value="">Pilih Penominasi...</option>
+                    <option value="">{language === 'en' ? 'Select Nominator...' : 'Pilih Penominasi...'}</option>
                     {alivePlayers.map((p) => (
                       <option key={p.id} value={p.id}>
-                        #{p.seatIndex + 1} {p.name} (Asli: {ROLE_MAP[p.trueRoleId]?.name})
+                        #{p.seatIndex + 1} {p.name} ({language === 'en' ? 'True' : 'Asli'}: {getRoleName(p.trueRoleId, language)})
                       </option>
                     ))}
                   </select>
@@ -1043,12 +1107,14 @@ export default function NarratorView({
                     }}
                     className="w-full min-h-[42px] rounded-xl bg-purple-100 hover:bg-purple-200 disabled:opacity-40 border border-purple-300 text-purple-950 dark:bg-[#221E2E] dark:hover:bg-[#302A42] dark:border-[#3B3450] dark:text-[#F5EFE6] text-xs font-semibold cursor-pointer transition-colors"
                   >
-                    Cek Efek Nominasi Virgin
+                    {language === 'en' ? 'Check Virgin Nomination Effect' : 'Cek Efek Nominasi Virgin'}
                   </button>
                 </div>
               ) : (
                 <p className="text-xs text-slate-500 dark:text-[#8E8698]">
-                  Tidak ada Virgin yang belum terpakai dalam permainan saat ini.
+                  {language === 'en'
+                    ? 'No unused Virgin in the game currently.'
+                    : 'Tidak ada Virgin yang belum terpakai dalam permainan saat ini.'}
                 </p>
               )}
             </div>

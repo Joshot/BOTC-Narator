@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useId } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   ART_ASSETS,
   AlignmentSide,
@@ -17,6 +18,10 @@ import {
   ROLE_MAP,
   RoleDefinition,
   getCustomNoteText,
+  getReminderDescription,
+  getReminderLabel,
+  getRoleAbility,
+  getRoleName,
   noteInitials,
 } from '@/lib/botc-data';
 
@@ -208,6 +213,10 @@ export function CharacterTokenFront({
   showAbility = false,
   className = '',
 }: CharacterTokenFrontProps) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
+  const displayName = getRoleName(role, language);
+  const displayAbility = getRoleAbility(role, language);
   const team = role.team as TeamKey;
   const artUri = getCharacterArtUri(role.artId || role.id, team, alignment);
   const teamAccent = TEAM_TOKEN_ACCENT[team] ?? TEAM_TOKEN_ACCENT.townsfolk;
@@ -286,24 +295,24 @@ export function CharacterTokenFront({
       >
         <img
           src={artUri}
-          alt={role.name}
+          alt={displayName}
           draggable={false}
           className="w-full h-full object-contain drop-shadow-[0_1px_1px_rgba(0,0,0,0.22)]"
         />
       </div>
 
-      {/* Optional compact English ability print on oversized bag/reveal tokens */}
-      {showAbility && size >= 110 && role.abilityEn && (
+      {/* Optional compact localized ability print on oversized bag/reveal tokens */}
+      {showAbility && size >= 110 && displayAbility && (
         <div
           className="pointer-events-none absolute left-[17%] right-[17%] top-[9%] text-center leading-[1.06] font-sans text-[#2a2018]/90"
           style={{ fontSize: Math.max(6.5, Math.round(size * 0.056)) }}
         >
-          {role.abilityEn.length > 72 ? `${role.abilityEn.slice(0, 69)}...` : role.abilityEn}
+          {displayAbility.length > 72 ? `${displayAbility.slice(0, 69)}...` : displayAbility}
         </div>
       )}
 
       {/* Curved character title at 6 o'clock */}
-      <CurvedTokenName name={role.name} diameter={size} />
+      <CurvedTokenName name={displayName} diameter={size} />
 
       {/* Poisoned red inner pulse indicator */}
       {isPoisoned && (
@@ -330,7 +339,7 @@ export function CharacterTokenFront({
               border: '1px solid rgba(201, 150, 58, 0.5)',
             }}
           >
-            {deathCause === 'demon' ? 'Malam' : deathCause === 'slayer' ? 'Slayer' : 'Gantung'}
+            {deathCause === 'demon' ? (isEn ? 'Night' : 'Malam') : deathCause === 'slayer' ? 'Slayer' : (isEn ? 'Executed' : 'Gantung')}
           </span>
         </div>
       )}
@@ -338,7 +347,7 @@ export function CharacterTokenFront({
       {/* Ghost Vote wax-seal indicator on right edge when dead with vote */}
       {dead && hasGhostVote && (
         <div
-          title="Ghost Vote Tersedia"
+          title={isEn ? "Ghost Vote Ready" : "Ghost Vote Tersedia"}
           className="pointer-events-none absolute bottom-[22%] right-[9%] w-[21%] h-[21%] min-w-[12px] min-h-[12px] rounded-full border border-[#fff8e1] shadow-md"
           style={{
             background: 'radial-gradient(circle at 32% 30%, #fde68a 0%, #d4af37 52%, #8b5e18 100%)',
@@ -361,6 +370,9 @@ export function TokenBackDisc({
   highlighted?: boolean;
   className?: string;
 }) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
+
   return (
     <TokenDisc
       size={size}
@@ -370,7 +382,7 @@ export function TokenBackDisc({
     >
       <img
         src={ART_ASSETS.tokenBack}
-        alt="Token Tertutup"
+        alt={isEn ? "Face-down Token" : "Token Tertutup"}
         draggable={false}
         className="pointer-events-none w-full h-full object-cover"
       />
@@ -395,6 +407,7 @@ export function ReminderDisc({
   className?: string;
   showTooltip?: boolean;
 }) {
+  const { language } = useLanguage();
   const isCustom = reminderId.startsWith('note:');
   const def = REMINDER_MAP[reminderId];
   const noteText = isCustom ? getCustomNoteText(reminderId, customNote) : '';
@@ -403,12 +416,15 @@ export function ReminderDisc({
     ? getCharacterArtUri(role.artId || role.id, role.team as TeamKey)
     : undefined;
 
-  const label = isCustom ? noteText || 'Catatan' : def?.indonesianLabel || def?.label || reminderId;
-  const initials = isCustom ? noteInitials(noteText || 'CAT') : null;
+  const label = isCustom
+    ? noteText || (language === 'en' ? 'Note' : 'Catatan')
+    : getReminderLabel(reminderId, language);
+  const desc = def ? getReminderDescription(reminderId, language) : '';
+  const initials = isCustom ? noteInitials(noteText || (language === 'en' ? 'NOTE' : 'CAT')) : null;
 
   return (
     <div
-      title={showTooltip ? `${label}${def?.description ? ` — ${def.description}` : ''}` : undefined}
+      title={showTooltip ? `${label}${desc ? ` — ${desc}` : ''}` : undefined}
       className={`relative rounded-full select-none overflow-hidden shrink-0 ${className}`}
       style={{
         width: size,

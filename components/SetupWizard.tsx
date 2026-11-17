@@ -18,7 +18,10 @@ import {
   ROLE_MAP,
   ROLES,
   calculateBalancedBag,
+  getRoleName,
+  getRoleAbility,
 } from '@/lib/botc-data';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   PlayerSeat,
   assignRolesToPlayers,
@@ -64,6 +67,7 @@ export default function SetupWizard({
   onCompleteSetup,
   onQuickStartDemo,
 }: SetupWizardProps) {
+  const { language } = useLanguage();
   const [activeMenu, setActiveMenuState] = useState<1 | 2>(initialStep === 2 ? 2 : 1);
   const setActiveMenu = (menu: 1 | 2) => {
     setActiveMenuState(menu);
@@ -85,7 +89,11 @@ export default function SetupWizard({
 
   // Menu 2: Player names + drafted seats + optional pass-and-play Discovery reveal
   const [playerNames, setPlayerNames] = useState<string[]>(() =>
-    Array.from({ length: 15 }, (_, i) => DEFAULT_INDONESIAN_NAMES[i] || `Pemain ${i + 1}`)
+    Array.from({ length: 15 }, (_, i) =>
+      language === 'en'
+        ? `Player ${i + 1}`
+        : DEFAULT_INDONESIAN_NAMES[i] || `Pemain ${i + 1}`
+    )
   );
   const [manualRoleOrder, setManualRoleOrder] = useState<string[] | null>(null);
   const [discoverySeats, setDiscoverySeats] = useState<PlayerSeat[] | null>(null);
@@ -146,7 +154,12 @@ export default function SetupWizard({
 
   const handleGoToSeatsMenu = () => {
     if (!validation.isValid) {
-      setSetupError(validation.errors[0] || 'Komposisi karakter belum lengkap.');
+      setSetupError(
+        validation.errors[0] ||
+          (language === 'en'
+            ? 'Character composition is incomplete.'
+            : 'Komposisi karakter belum lengkap.')
+      );
       return;
     }
     setSetupError(null);
@@ -161,7 +174,13 @@ export default function SetupWizard({
     players: PlayerSeat[];
     isDrunkActive: boolean;
   } => {
-    const namesSlice = playerNames.slice(0, playerCount).map((n, i) => n.trim() || `Pemain ${i + 1}`);
+    const namesSlice = playerNames
+      .slice(0, playerCount)
+      .map(
+        (n, i) =>
+          n.trim() ||
+          (language === 'en' ? `Player ${i + 1}` : `Pemain ${i + 1}`)
+      );
     const roleIdsForEngine = isDrunkActive
       ? Array.from(new Set([...selectedRoleIds.filter((id) => id !== 'drunk'), 'drunk']))
       : selectedRoleIds;
@@ -216,7 +235,7 @@ export default function SetupWizard({
       <div
         className={
           isDesktop
-            ? 'max-w-3xl w-full mx-auto flex-1 min-h-0 flex flex-col'
+            ? 'w-full max-w-5xl mx-auto flex-1 min-h-0 flex flex-col'
             : 'max-w-3xl mx-auto px-3 sm:px-6 py-4 sm:py-6'
         }
       >
@@ -234,13 +253,22 @@ export default function SetupWizard({
               <TokenBackDisc size={112} highlighted className="mx-auto" />
               <div className="space-y-1">
                 <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#c9963a]">
-                  Pembagian Peran Rahasia · Kursi #{discoveryIdx + 1} / {discoverySeats.length}
+                  {language === 'en' ? 'Secret Role Handoff' : 'Pembagian Peran Rahasia'} ·{' '}
+                  {language === 'en' ? 'Seat' : 'Kursi'} #{discoveryIdx + 1} / {discoverySeats.length}
                 </p>
                 <h2 className="font-display text-3xl font-bold text-[#efe6d2]">
-                  Serahkan ke {activeSeat?.name}
+                  {language === 'en' ? 'Pass device to ' : 'Serahkan ke '}{activeSeat?.name}
                 </h2>
                 <p className="text-xs sm:text-sm text-[#a89f8c]">
-                  Hanya <strong>{activeSeat?.name}</strong> yang boleh melihat layar ini. Ketuk tombol di bawah untuk membuka tokenmu.
+                  {language === 'en' ? (
+                    <>
+                      Only <strong>{activeSeat?.name}</strong> may view this screen. Tap the button below to reveal your token.
+                    </>
+                  ) : (
+                    <>
+                      Hanya <strong>{activeSeat?.name}</strong> yang boleh melihat layar ini. Ketuk tombol di bawah untuk membuka tokenmu.
+                    </>
+                  )}
                 </p>
               </div>
               <button
@@ -249,13 +277,13 @@ export default function SetupWizard({
                 className="px-7 py-3.5 rounded-full bg-[#c9963a] hover:bg-[#d8a74c] text-[#2a2018] font-bold text-sm flex items-center gap-2 mx-auto cursor-pointer shadow-xl"
               >
                 <Eye className="w-4 h-4" />
-                <span>Ketuk &amp; Balik Token Saya</span>
+                <span>{language === 'en' ? 'Tap & Flip My Token' : 'Ketuk & Balik Token Saya'}</span>
               </button>
             </div>
           ) : (
             <div className="max-w-md mx-auto w-full space-y-5">
               <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#c9963a]">
-                Peran Rahasia Anda
+                {language === 'en' ? 'Your Secret Role' : 'Peran Rahasia Anda'}
               </p>
 
               {perceivedRole && (
@@ -269,17 +297,14 @@ export default function SetupWizard({
 
               <div>
                 <h2 className="font-display text-3xl font-bold text-[#efe6d2]">
-                  {perceivedRole?.name}{' '}
-                  <span className="text-base font-normal text-[#a89f8c]">
-                    ({perceivedRole?.indonesianName})
-                  </span>
+                  {perceivedRole ? getRoleName(perceivedRole, language) : ''}
                 </h2>
               </div>
 
               {perceivedRole && (
                 <ParchmentSurface className="rounded-2xl p-4 text-left">
                   <p className="text-xs sm:text-sm leading-relaxed text-[#2a2018]">
-                    {renderAbilitySegments(perceivedRole.ability)}
+                    {renderAbilitySegments(getRoleAbility(perceivedRole, language))}
                   </p>
                 </ParchmentSurface>
               )}
@@ -315,8 +340,12 @@ export default function SetupWizard({
                 <EyeOff className="w-4 h-4" />
                 <span>
                   {isLast
-                    ? 'Sembunyikan & Masuk Meja Grimoire Storyteller'
-                    : `Sembunyikan & Oper ke ${discoverySeats[discoveryIdx + 1]?.name}`}
+                    ? (language === 'en'
+                        ? 'Hide & Enter Storyteller Grimoire'
+                        : 'Sembunyikan & Masuk Meja Grimoire Storyteller')
+                    : (language === 'en'
+                        ? `Hide & Pass to ${discoverySeats[discoveryIdx + 1]?.name}`
+                        : `Sembunyikan & Oper ke ${discoverySeats[discoveryIdx + 1]?.name}`)}
                 </span>
               </button>
             </div>
@@ -330,7 +359,7 @@ export default function SetupWizard({
     <div
       className={
         isDesktop
-          ? 'max-w-5xl w-full mx-auto flex-1 min-h-0 flex flex-col'
+          ? 'w-full max-w-7xl mx-auto flex-1 min-h-0 flex flex-col'
           : 'max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6'
       }
     >
@@ -347,10 +376,12 @@ export default function SetupWizard({
             <img src={ART_ASSETS.editionTb} alt="Trouble Brewing" className="w-11 h-11 object-contain" />
             <div>
               <p className="text-[10px] font-mono uppercase tracking-widest text-[#5c4a37]">
-                Mode 2 · Setup Storyteller Biasa
+                {language === 'en' ? 'Mode 2 · Standard Storyteller Setup' : 'Mode 2 · Setup Storyteller Biasa'}
               </p>
               <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#2a2018]">
-                {activeMenu === 1 ? 'Pilih Jumlah & Karakter' : 'Atur Nama Kursi & Bluff'}
+                {activeMenu === 1
+                  ? (language === 'en' ? 'Select Count & Characters' : 'Pilih Jumlah & Karakter')
+                  : (language === 'en' ? 'Player Seating & Bluffs' : 'Atur Nama Kursi & Bluff')}
               </h1>
             </div>
           </div>
@@ -361,7 +392,7 @@ export default function SetupWizard({
               onClick={onQuickStartDemo}
               className="px-3.5 py-2 rounded-xl bg-[#66533f]/15 hover:bg-[#66533f]/25 text-xs font-bold text-[#2a2018] cursor-pointer"
             >
-              Demo Cepat 8 Pemain
+              {language === 'en' ? 'Quick 8-Player Demo' : 'Demo Cepat 8 Pemain'}
             </button>
             {onCancelToDashboard && (
               <button
@@ -370,7 +401,7 @@ export default function SetupWizard({
                 className="px-3.5 py-2 rounded-xl border border-[#655342]/30 text-xs font-bold text-[#5c4a37] hover:bg-[#66533f]/10 flex items-center gap-1 cursor-pointer"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Beranda</span>
+                <span>{language === 'en' ? 'Home' : 'Beranda'}</span>
               </button>
             )}
           </div>
@@ -387,7 +418,7 @@ export default function SetupWizard({
                 : 'bg-[#66533f]/12 text-[#5c4a37]'
             }`}
           >
-            1. Kantong Karakter
+            {language === 'en' ? '1. Character Bag' : '1. Kantong Karakter'}
           </button>
           <button
             type="button"
@@ -399,7 +430,7 @@ export default function SetupWizard({
                 : 'bg-[#66533f]/12 text-[#5c4a37]'
             }`}
           >
-            2. Nama Kursi &amp; Bagikan
+            {language === 'en' ? '2. Player Seating' : '2. Nama Kursi & Bagikan'}
           </button>
         </div>
 
@@ -409,7 +440,7 @@ export default function SetupWizard({
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
               <div className="lg:col-span-7 space-y-2">
                 <span className="text-[11px] font-mono uppercase tracking-wider font-bold text-[#5c4a37]">
-                  Jumlah Pemain (5 – 15)
+                  {language === 'en' ? 'Player Count (5 – 15)' : 'Jumlah Pemain (5 – 15)'}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {Array.from({ length: 11 }, (_, i) => i + 5).map((cnt) => {
@@ -435,7 +466,7 @@ export default function SetupWizard({
                   })}
                 </div>
                 <p className="text-xs text-[#5c4a37]">
-                  Standar {playerCount} pemain:{' '}
+                  {language === 'en' ? `Standard for ${playerCount} players: ` : `Standar ${playerCount} pemain: `}
                   <strong className="text-[#2a2018]">
                     {baseCounts.townsfolk} TF · {baseCounts.outsiders} Out · {baseCounts.minions} Min · 1 Demon
                   </strong>
@@ -456,7 +487,9 @@ export default function SetupWizard({
                   }`}
                 >
                   <Beer className="w-4 h-4" />
-                  <span>Drunk: {isDrunkActive ? 'AKTIF' : 'Nonaktif'}</span>
+                  <span>
+                    Drunk: {isDrunkActive ? (language === 'en' ? 'ACTIVE' : 'AKTIF') : (language === 'en' ? 'Off' : 'Nonaktif')}
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -464,7 +497,7 @@ export default function SetupWizard({
                   className="px-4 py-2.5 rounded-xl bg-[#2a2018] hover:bg-[#3f3125] text-[#efe6d2] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow"
                 >
                   <Shuffle className="w-4 h-4 text-[#c9963a]" />
-                  <span>Acak + Formula</span>
+                  <span>{language === 'en' ? 'Randomize + Formula' : 'Acak + Formula'}</span>
                 </button>
                 <button
                   type="button"
@@ -508,7 +541,8 @@ export default function SetupWizard({
                 </span>
               </div>
               <span className="font-bold text-[#2a2018]">
-                Terpilih: {effectiveRolePool.length}/{playerCount}
+                {language === 'en' ? 'Selected: ' : 'Terpilih: '}
+                {effectiveRolePool.length}/{playerCount}
               </span>
             </div>
 
@@ -551,7 +585,7 @@ export default function SetupWizard({
                                 handleToggleRole(role.id);
                               }
                             }}
-                            title={role.ability}
+                            title={getRoleAbility(role, language)}
                             className={`relative flex flex-col items-center gap-1 p-2 rounded-2xl border transition-all cursor-pointer ${
                               picked || (isDrunkCard && isDrunkActive)
                                 ? 'border-[#c9963a] bg-[#c9963a]/25 ring-2 ring-[#c9963a]/50'
@@ -560,7 +594,7 @@ export default function SetupWizard({
                           >
                             <CharacterTokenFront role={role} size={52} showSetupLeaf />
                             <span className="text-[11px] font-bold text-[#2a2018] truncate w-full text-center">
-                              {role.name}
+                              {getRoleName(role, language)}
                             </span>
                             {(picked || (isDrunkCard && isDrunkActive)) && (
                               <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#2a2018] text-[#c9963a] flex items-center justify-center">
@@ -588,7 +622,7 @@ export default function SetupWizard({
                 onClick={handleGoToSeatsMenu}
                 className="px-6 py-3 rounded-2xl bg-[#2a2018] hover:bg-[#3f3125] text-[#efe6d2] font-bold text-sm flex items-center gap-2 cursor-pointer shadow-lg"
               >
-                <span>Lanjut ke Nama Kursi</span>
+                <span>{language === 'en' ? 'Proceed to Seating' : 'Lanjut ke Nama Kursi'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -599,18 +633,26 @@ export default function SetupWizard({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-xs text-[#5c4a37]">
                 <Users className="w-4 h-4" />
-                <span>Isi nama pemain sesuai urutan duduk searah jarum jam (Kursi 1 – {playerCount}).</span>
+                <span>
+                  {language === 'en'
+                    ? `Enter player names in clockwise seating order (Seat 1 – ${playerCount}).`
+                    : `Isi nama pemain sesuai urutan duduk searah jarum jam (Kursi 1 – ${playerCount}).`}
+                </span>
               </div>
               <button
                 type="button"
                 onClick={() =>
                   setPlayerNames(
-                    Array.from({ length: 15 }, (_, i) => DEFAULT_INDONESIAN_NAMES[i] || `Pemain ${i + 1}`)
+                    Array.from({ length: 15 }, (_, i) =>
+                      language === 'en'
+                        ? `Player ${i + 1}`
+                        : DEFAULT_INDONESIAN_NAMES[i] || `Pemain ${i + 1}`
+                    )
                   )
                 }
                 className="px-3 py-1.5 rounded-xl border border-[#655342]/30 text-xs font-bold text-[#2a2018] cursor-pointer hover:bg-[#66533f]/10"
               >
-                Isi Nama Default
+                {language === 'en' ? 'Fill Default Names' : 'Isi Nama Default'}
               </button>
             </div>
 
@@ -632,7 +674,7 @@ export default function SetupWizard({
                       next[idx] = e.target.value;
                       setPlayerNames(next);
                     }}
-                    placeholder={`Pemain ${idx + 1}`}
+                    placeholder={language === 'en' ? `Player ${idx + 1}` : `Pemain ${idx + 1}`}
                     className="flex-1 min-w-0 bg-white/75 border border-[#655342]/25 rounded-xl px-2.5 py-1.5 text-sm font-semibold text-[#2a2018] focus:outline-none focus:ring-2 focus:ring-[#c9963a]"
                   />
                 </div>
@@ -643,17 +685,25 @@ export default function SetupWizard({
               <div className="p-4 rounded-2xl border border-[#c9963a]/50 bg-[#c9963a]/15 space-y-2">
                 <div className="text-xs font-bold text-[#2a2018] flex items-center gap-1.5">
                   <Beer className="w-4 h-4 text-[#7a5210]" />
-                  <span>Samaran Townsfolk untuk The Drunk (Opsional):</span>
+                  <span>
+                    {language === 'en'
+                      ? 'Townsfolk Disguise for The Drunk (Optional):'
+                      : 'Samaran Townsfolk untuk The Drunk (Opsional):'}
+                  </span>
                 </div>
                 <select
                   value={drunkFakeRoleId ?? ''}
                   onChange={(e) => setDrunkFakeRoleId(e.target.value || null)}
                   className="w-full sm:w-80 rounded-xl border border-[#655342]/35 bg-white/85 px-3 py-2 text-xs font-semibold text-[#2a2018]"
                 >
-                  <option value="">Otomatis dari salah satu Townsfolk terpilih</option>
+                  <option value="">
+                    {language === 'en'
+                      ? 'Auto-select from one of the drafted Townsfolk'
+                      : 'Otomatis dari salah satu Townsfolk terpilih'}
+                  </option>
                   {unusedTownsfolk.map((r) => (
                     <option key={r.id} value={r.id}>
-                      {r.name} ({r.indonesianName})
+                      {getRoleName(r, language)}
                     </option>
                   ))}
                 </select>
@@ -667,7 +717,7 @@ export default function SetupWizard({
                 className="px-4 py-2.5 rounded-xl border border-[#655342]/30 text-xs font-bold text-[#5c4a37] flex items-center gap-1.5 cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Kembali Edit Peran</span>
+                <span>{language === 'en' ? 'Back to Edit Roles' : 'Kembali Edit Peran'}</span>
               </button>
 
               <div className="flex flex-wrap items-center gap-2.5">
@@ -682,7 +732,7 @@ export default function SetupWizard({
                   className="px-5 py-3 rounded-2xl border-2 border-[#2a2018] bg-[#c9963a]/25 hover:bg-[#c9963a]/40 text-[#2a2018] text-xs sm:text-sm font-bold flex items-center gap-2 cursor-pointer"
                 >
                   <Eye className="w-4 h-4" />
-                  <span>Tunjuk Kartu Bergilir (Discovery)</span>
+                  <span>{language === 'en' ? 'Pass-and-Play Reveal (Discovery)' : 'Tunjuk Kartu Bergilir (Discovery)'}</span>
                 </button>
 
                 <button
@@ -691,7 +741,7 @@ export default function SetupWizard({
                   className="px-6 py-3 rounded-2xl bg-[#2a2018] hover:bg-[#3f3125] text-[#efe6d2] text-xs sm:text-sm font-bold flex items-center gap-2 cursor-pointer shadow-lg"
                 >
                   <Sparkles className="w-4 h-4 text-[#c9963a]" />
-                  <span>Acak &amp; Langsung Buka Meja Grimoire</span>
+                  <span>{language === 'en' ? 'Shuffle & Open Grimoire' : 'Acak & Langsung Buka Meja Grimoire'}</span>
                 </button>
               </div>
             </div>

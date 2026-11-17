@@ -2,9 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { Eye, MessageSquare, Sparkles, X } from 'lucide-react';
-import { ALL_TB_ROLES, ROLE_MAP } from '@/lib/botc-data';
+import { ALL_TB_ROLES, ROLE_MAP, getRoleAbility, getRoleName, getTeamName } from '@/lib/botc-data';
 import { GRIMOIRE_PALETTE, VelvetColour } from '@/lib/grimoire-theme';
 import { PlayerSeat } from '@/lib/botc-engine';
+import { useLanguage } from '@/context/LanguageContext';
+import { AppLanguage } from '@/lib/translations';
 import VelvetBackdrop from './VelvetBackdrop';
 import ParchmentSurface from './ParchmentSurface';
 import { CharacterTokenFront } from './TokenPrimitives';
@@ -12,13 +14,24 @@ import { useLockBodyScroll } from './useLockBodyScroll';
 
 type TeamTab = 'townsfolk' | 'outsider' | 'evil' | 'traveller' | 'all';
 
-const TEAM_TABS: { id: TeamTab; label: string }[] = [
-  { id: 'townsfolk', label: 'Townsfolk (13)' },
-  { id: 'outsider', label: 'Outsider (4)' },
-  { id: 'evil', label: 'Evil (5)' },
-  { id: 'traveller', label: 'Traveller (5)' },
-  { id: 'all', label: 'Semua' },
-];
+function getTeamTabs(lang: AppLanguage): { id: TeamTab; label: string }[] {
+  if (lang === 'en') {
+    return [
+      { id: 'townsfolk', label: 'Townsfolk (13)' },
+      { id: 'outsider', label: 'Outsiders (4)' },
+      { id: 'evil', label: 'Evil (5)' },
+      { id: 'traveller', label: 'Travellers (5)' },
+      { id: 'all', label: 'All' },
+    ];
+  }
+  return [
+    { id: 'townsfolk', label: 'Warga Kota (13)' },
+    { id: 'outsider', label: 'Orang Luar (4)' },
+    { id: 'evil', label: 'Evil (5)' },
+    { id: 'traveller', label: 'Musafir (5)' },
+    { id: 'all', label: 'Semua' },
+  ];
+}
 
 type SheetKind =
   | 'you_are'
@@ -30,29 +43,59 @@ type SheetKind =
   | 'not_in_play'
   | 'custom_note';
 
-const SHEET_LABELS: { id: SheetKind; label: string; heading: string }[] = [
-  { id: 'you_are', label: 'Anda Adalah...', heading: 'ANDA ADALAH' },
-  { id: 'this_player_is', label: 'Pemain Ini Adalah...', heading: 'PEMAIN INI ADALAH' },
-  { id: 'token_only', label: 'Token Saja', heading: '' },
-  { id: 'selected_you', label: 'Karakter Memilih Anda', heading: 'KARAKTER INI MEMILIH ANDA' },
-  { id: 'this_is_demon', label: 'Demon Anda', heading: 'INI ADALAH DEMON ANDA' },
-  { id: 'these_are_minions', label: 'Minion Anda', heading: 'INI ADALAH MINION ANDA' },
-  { id: 'not_in_play', label: '3 Bluff (Tidak Main)', heading: '3 KARAKTER INI TIDAK DIMAINKAN' },
-  { id: 'custom_note', label: 'Catatan / Angka', heading: 'PESAN STORYTELLER' },
-];
+function getSheetLabels(lang: AppLanguage): { id: SheetKind; label: string; heading: string }[] {
+  if (lang === 'en') {
+    return [
+      { id: 'you_are', label: 'You Are...', heading: 'YOU ARE' },
+      { id: 'this_player_is', label: 'This Player Is...', heading: 'THIS PLAYER IS' },
+      { id: 'token_only', label: 'Token Only', heading: '' },
+      { id: 'selected_you', label: 'This Character Selected You', heading: 'THIS CHARACTER SELECTED YOU' },
+      { id: 'this_is_demon', label: 'Your Demon', heading: 'THIS IS YOUR DEMON' },
+      { id: 'these_are_minions', label: 'Your Minions', heading: 'THESE ARE YOUR MINIONS' },
+      { id: 'not_in_play', label: '3 Bluffs (Not in Play)', heading: 'THESE 3 CHARACTERS ARE NOT IN PLAY' },
+      { id: 'custom_note', label: 'Note / Number', heading: 'STORYTELLER MESSAGE' },
+    ];
+  }
+  return [
+    { id: 'you_are', label: 'Anda Adalah...', heading: 'ANDA ADALAH' },
+    { id: 'this_player_is', label: 'Pemain Ini Adalah...', heading: 'PEMAIN INI ADALAH' },
+    { id: 'token_only', label: 'Token Saja', heading: '' },
+    { id: 'selected_you', label: 'Karakter Memilih Anda', heading: 'KARAKTER INI MEMILIH ANDA' },
+    { id: 'this_is_demon', label: 'Demon Anda', heading: 'INI ADALAH DEMON ANDA' },
+    { id: 'these_are_minions', label: 'Minion Anda', heading: 'INI ADALAH MINION ANDA' },
+    { id: 'not_in_play', label: '3 Bluff (Tidak Main)', heading: '3 KARAKTER INI TIDAK DIMAINKAN' },
+    { id: 'custom_note', label: 'Catatan / Angka', heading: 'PESAN STORYTELLER' },
+  ];
+}
 
-const QUICK_NIGHT_NOTES: string[] = [
-  '0',
-  '1',
-  '2',
-  '3',
-  'Ya',
-  'Tidak',
-  'Pilih 1 Pemain',
-  'Pilih 2 Pemain',
-  'Pasangan Evil Terdeteksi',
-  'Anda Diracun / Mabuk',
-];
+function getQuickNightNotes(lang: AppLanguage): string[] {
+  if (lang === 'en') {
+    return [
+      '0',
+      '1',
+      '2',
+      '3',
+      'Yes',
+      'No',
+      'Choose 1 Player',
+      'Choose 2 Players',
+      'Evil Pair Detected',
+      'You are Poisoned / Drunk',
+    ];
+  }
+  return [
+    '0',
+    '1',
+    '2',
+    '3',
+    'Ya',
+    'Tidak',
+    'Pilih 1 Pemain',
+    'Pilih 2 Pemain',
+    'Pasangan Evil Terdeteksi',
+    'Anda Diracun / Mabuk',
+  ];
+}
 
 interface ShowSheetModalProps {
   isOpen: boolean;
@@ -75,6 +118,12 @@ export default function ShowSheetModal({
   initialRoleId,
   onClose,
 }: ShowSheetModalProps) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
+  const teamTabs = getTeamTabs(language);
+  const sheetLabels = getSheetLabels(language);
+  const quickNightNotes = getQuickNightNotes(language);
+
   const [sheetKind, setSheetKind] = useState<SheetKind>(
     initialRoleId ? 'this_player_is' : 'not_in_play'
   );
@@ -104,7 +153,7 @@ export default function ShowSheetModal({
     return role.team === teamTab;
   });
 
-  const activePreset = SHEET_LABELS.find((s) => s.id === sheetKind) ?? SHEET_LABELS[0];
+  const activePreset = sheetLabels.find((s) => s.id === sheetKind) ?? sheetLabels[0];
 
   const handleSelectKind = (kind: SheetKind) => {
     setSheetKind(kind);
@@ -156,7 +205,7 @@ export default function ShowSheetModal({
         >
           <div className="w-full max-w-3xl flex items-center justify-between shrink-0">
             <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#c9963a]">
-              Layar Tunjuk Bisu Storyteller
+              {isEn ? 'Storyteller Silent Display' : 'Layar Tunjuk Bisu Storyteller'}
             </span>
             <button
               type="button"
@@ -164,7 +213,7 @@ export default function ShowSheetModal({
               className="px-3.5 py-2 rounded-xl border border-[#c9963a]/40 bg-black/50 text-[#efe6d2] text-xs font-bold hover:bg-black/70 cursor-pointer flex items-center gap-1.5"
             >
               <X className="w-4 h-4" />
-              <span>Kembali Edit</span>
+              <span>{isEn ? 'Back to Edit' : 'Kembali Edit'}</span>
             </button>
           </div>
 
@@ -215,13 +264,13 @@ export default function ShowSheetModal({
                         showAbility={false}
                       />
                       <div className="font-display text-base sm:text-xl font-bold text-[#efe6d2] leading-tight">
-                        {role.name}
+                        {getRoleName(role, language)}
                       </div>
-                      <div className="text-[11px] sm:text-xs text-[#c9963a] font-semibold">
-                        {role.indonesianName}
+                      <div className="text-[11px] sm:text-xs text-[#c9963a] font-semibold tracking-wider uppercase">
+                        {getTeamName(role.team, language)}
                       </div>
                       <p className="text-[11px] sm:text-xs text-[#dfd6c3] leading-snug sm:leading-relaxed">
-                        {role.ability}
+                        {getRoleAbility(role, language)}
                       </p>
                     </div>
                   );
@@ -233,7 +282,9 @@ export default function ShowSheetModal({
               sheetKind === 'this_is_demon' ||
               sheetKind === 'these_are_minions') && (
               <p className="text-xs text-[#a89f8c] font-medium">
-                Storyteller menunjuk ke arah pemain terkait secara diam-diam (tanpa menampilkan nomor kursi atau nama).
+                {isEn
+                  ? 'The Storyteller silently points to the player (without revealing seat numbers or names).'
+                  : 'Storyteller menunjuk ke arah pemain terkait secara diam-diam (tanpa menampilkan nomor kursi atau nama).'}
               </p>
             )}
           </div>
@@ -243,7 +294,7 @@ export default function ShowSheetModal({
             onClick={onClose}
             className="shrink-0 px-6 py-2.5 rounded-full bg-[#c9963a] hover:bg-[#d8a74c] text-[#2a2018] font-bold text-sm cursor-pointer shadow-lg"
           >
-            Selesai &amp; Tutup
+            {isEn ? 'Done & Close' : 'Selesai & Tutup'}
           </button>
         </VelvetBackdrop>
       </div>
@@ -254,7 +305,7 @@ export default function ShowSheetModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Siapkan Kartu Tunjuk Malam"
+      aria-label={isEn ? "Configure Night Show Card" : "Siapkan Kartu Tunjuk Malam"}
       className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs overflow-hidden"
       onClick={onClose}
     >
@@ -266,16 +317,16 @@ export default function ShowSheetModal({
           <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 sm:py-3 border-b border-[#655342]/25">
             <div>
               <p className="text-[10px] font-mono uppercase tracking-widest text-[#5c4a37]">
-                Layar Komunikasi Bisu Storyteller
+                {isEn ? 'Storyteller Silent Communication Screen' : 'Layar Komunikasi Bisu Storyteller'}
               </p>
               <h3 className="font-display text-base sm:text-xl font-bold text-[#2a2018]">
-                Show a Card &amp; Catatan Malam
+                {isEn ? 'Show a Card & Night Notes' : 'Show a Card & Catatan Malam'}
               </h3>
             </div>
             <button
               type="button"
               onClick={onClose}
-              aria-label="Tutup"
+              aria-label={isEn ? "Close" : "Tutup"}
               className="w-8 h-8 rounded-xl bg-[#66533f]/10 hover:bg-[#66533f]/20 flex items-center justify-center text-[#2a2018] cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -285,7 +336,7 @@ export default function ShowSheetModal({
           <div className="p-3 sm:p-4 space-y-2.5 overflow-hidden">
             {/* Sheet type chips */}
             <div className="flex flex-wrap gap-1.5">
-              {SHEET_LABELS.map((item) => {
+              {sheetLabels.map((item) => {
                 const active = item.id === sheetKind;
                 return (
                   <button
@@ -309,10 +360,10 @@ export default function ShowSheetModal({
                 <div className="space-y-1">
                   <div className="text-[11px] font-semibold text-[#5c4a37] flex items-center gap-1">
                     <Sparkles className="w-3.5 h-3.5 text-[#c9963a]" />
-                    <span>Pilih Cepat (Angka &amp; Pesan Malam):</span>
+                    <span>{isEn ? 'Quick Select (Numbers & Night Notes):' : 'Pilih Cepat (Angka & Pesan Malam):'}</span>
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    {QUICK_NIGHT_NOTES.map((preset) => (
+                    {quickNightNotes.map((preset) => (
                       <button
                         key={preset}
                         type="button"
@@ -330,13 +381,13 @@ export default function ShowSheetModal({
                 </div>
                 <label className="text-xs font-semibold text-[#5c4a37] flex items-center gap-1.5">
                   <MessageSquare className="w-4 h-4" />
-                  <span>Atau Tulis Pesan / Catatan Malam Kustom:</span>
+                  <span>{isEn ? 'Or Write Custom Night Note / Message:' : 'Atau Tulis Pesan / Catatan Malam Kustom:'}</span>
                 </label>
                 <textarea
                   rows={3}
                   value={customText}
                   onChange={(e) => setCustomText(e.target.value)}
-                  placeholder="Contoh: Anda terpengaruh Poisoner, atau tunjuk 1 pemain baru..."
+                  placeholder={isEn ? "Example: You were poisoned by Poisoner, or choose 1 player..." : "Contoh: Anda terpengaruh Poisoner, atau tunjuk 1 pemain baru..."}
                   className="w-full p-3 rounded-xl border border-[#655342]/35 bg-white/85 text-sm text-[#2a2018] focus:outline-none focus:ring-2 focus:ring-[#c9963a]"
                 />
               </div>
@@ -344,10 +395,10 @@ export default function ShowSheetModal({
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-1.5">
                   <p className="text-[11px] font-semibold text-[#5c4a37]">
-                    Pilih 1–4 token ({selectedRoleIds.length} dipilih):
+                    {isEn ? `Select 1-4 tokens (${selectedRoleIds.length} selected):` : `Pilih 1–4 token (${selectedRoleIds.length} dipilih):`}
                   </p>
                   <div className="flex flex-wrap gap-1">
-                    {TEAM_TABS.map((t) => (
+                    {teamTabs.map((t) => (
                       <button
                         key={t.id}
                         type="button"
@@ -394,7 +445,7 @@ export default function ShowSheetModal({
                           }`}
                           style={{ color: GRIMOIRE_PALETTE.ink }}
                         >
-                          {role.name}
+                          {getRoleName(role, language)}
                         </span>
                       </button>
                     );
@@ -410,7 +461,7 @@ export default function ShowSheetModal({
               onClick={onClose}
               className="px-4 py-2 rounded-xl border border-[#655342]/30 text-xs font-bold text-[#5c4a37] cursor-pointer"
             >
-              Batal
+              {isEn ? 'Cancel' : 'Batal'}
             </button>
             <button
               type="button"
@@ -421,7 +472,7 @@ export default function ShowSheetModal({
               className="px-5 py-2 rounded-xl bg-[#2a2018] hover:bg-[#3f3125] disabled:opacity-40 text-[#efe6d2] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow"
             >
               <Eye className="w-4 h-4 text-[#c9963a]" />
-              <span>Tampilkan Layar Penuh</span>
+              <span>{isEn ? 'Show Fullscreen Card' : 'Tampilkan Layar Penuh'}</span>
             </button>
           </div>
         </ParchmentSurface>

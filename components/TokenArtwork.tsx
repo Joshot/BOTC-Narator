@@ -27,6 +27,7 @@ import {
 import { ExtendedTeamType, REMINDER_MAP, ROLE_MAP } from '@/lib/botc-data';
 import { AlignmentSide, GRIMOIRE_PALETTE, TeamKey } from '@/lib/grimoire-theme';
 import { CharacterTokenFront, ReminderDisc } from './grimoire/TokenPrimitives';
+import { useLanguage } from '@/context/LanguageContext';
 
 /** Lucide outline symbol helper for compact lists and night sheets (zero emojis). */
 export function RoleGlyph({
@@ -192,6 +193,8 @@ export function CharacterToken({
   onClick?: () => void;
   className?: string;
 }) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const role = ROLE_MAP[roleId];
   const resolvedPx = pixelSize ?? TOKEN_PIXEL_SIZES[size];
 
@@ -228,7 +231,7 @@ export function CharacterToken({
 
       {isDrunkSecret && (
         <span
-          title="Ini sebenarnya The Drunk"
+          title={isEn ? "Secretly The Drunk" : "Ini sebenarnya The Drunk"}
           className="pointer-events-none absolute -top-1 -right-1 z-20 inline-flex items-center gap-0.5 rounded-full border border-[#c9963a] bg-[#2a2018] px-1.5 py-0.5 text-[9px] font-mono font-bold text-[#f2c56b] shadow-md"
         >
           <Beer className="w-2.5 h-2.5" />
@@ -238,10 +241,10 @@ export function CharacterToken({
 
       {isExecutedToday && (
         <span
-          title="Dieksekusi hari ini"
+          title={isEn ? "Executed today" : "Dieksekusi hari ini"}
           className="pointer-events-none absolute -bottom-1 left-1/2 -translate-x-1/2 z-20 rounded-full border border-[#c9963a]/80 bg-[#760a0d] px-1.5 py-0.5 text-[8px] font-mono font-bold uppercase tracking-wider text-[#efe6d2] shadow whitespace-nowrap"
         >
-          Dieksekusi
+          {isEn ? 'Executed' : 'Dieksekusi'}
         </span>
       )}
     </div>

@@ -3,9 +3,10 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Crown, RefreshCw, Swords, X } from 'lucide-react';
-import { ROLE_MAP } from '@/lib/botc-data';
+import { ROLE_MAP, getRoleName } from '@/lib/botc-data';
 import { StarpassPendingData } from '@/context/GameContext';
 import { useLockBodyScroll } from './grimoire/useLockBodyScroll';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface StarpassModalProps {
   pendingData: StarpassPendingData | null;
@@ -18,6 +19,9 @@ export default function StarpassModal({
   onChooseMinion,
   onDismiss,
 }: StarpassModalProps) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
+
   useLockBodyScroll(Boolean(pendingData));
 
   if (!pendingData) return null;
@@ -37,7 +41,7 @@ export default function StarpassModal({
           type="button"
           onClick={onDismiss}
           className="absolute top-4 right-4 p-2 rounded-xl text-slate-500 dark:text-[#8E8A9E] hover:text-slate-900 dark:hover:text-[#EDEAF0] hover:bg-purple-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
-          aria-label="Tutup Pilihan Starpass"
+          aria-label={isEn ? 'Close Starpass selection' : 'Tutup Pilihan Starpass'}
         >
           <X className="w-5 h-5" />
         </button>
@@ -49,13 +53,21 @@ export default function StarpassModal({
           </div>
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-100 dark:bg-[#EF4444]/20 border border-red-300 dark:border-[#EF4444]/40 text-[10px] font-mono uppercase tracking-wider text-red-900 dark:text-[#FCA5A5] font-bold">
-              Aturan Trouble Brewing: Starpass
+              {isEn ? 'Trouble Brewing Rule: Starpass' : 'Aturan Trouble Brewing: Starpass'}
             </div>
             <h3 className="font-display text-xl font-bold text-slate-900 dark:text-[#EDEAF0]">
-              Pilih Minion Menjadi Imp Baru
+              {isEn ? 'Select Minion to Become the New Imp' : 'Pilih Minion Menjadi Imp Baru'}
             </h3>
             <p className="text-xs text-slate-600 dark:text-[#A6A2B2] leading-relaxed">
-              Demon <strong className="text-slate-900 dark:text-white">{dyingDemon.name}</strong> (Kursi {dyingDemon.seatIndex + 1}) bunuh diri atau mati akibat serangan sesama Demon. Karena terdapat lebih dari 1 Minion hidup, pilih Minion yang mewarisi gelar IMP:
+              {isEn ? (
+                <>
+                  Demon <strong className="text-slate-900 dark:text-white">{dyingDemon.name}</strong> (Seat #{dyingDemon.seatIndex + 1}) died by self-attack (Starpass). Since multiple Minions are alive, select the Minion who inherits the IMP mantle:
+                </>
+              ) : (
+                <>
+                  Demon <strong className="text-slate-900 dark:text-white">{dyingDemon.name}</strong> (Kursi {dyingDemon.seatIndex + 1}) bunuh diri atau mati akibat serangan sesama Demon. Karena terdapat lebih dari 1 Minion hidup, pilih Minion yang mewarisi gelar IMP:
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -63,7 +75,7 @@ export default function StarpassModal({
         {/* Minion Candidate List */}
         <div className="space-y-3">
           <div className="text-[11px] font-mono uppercase tracking-wider text-slate-500 dark:text-[#8E8A9E] px-1">
-            Daftar Minion Hidup ({aliveMinions.length})
+            {isEn ? `Alive Minions (${aliveMinions.length})` : `Daftar Minion Hidup (${aliveMinions.length})`}
           </div>
           <div className="grid grid-cols-1 gap-2">
             {aliveMinions.map((minion) => {
@@ -76,10 +88,10 @@ export default function StarpassModal({
                   <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-0.5 rounded-md bg-white dark:bg-[#252533] border border-purple-200 dark:border-white/[0.06] font-mono text-[10px] font-bold text-amber-800 dark:text-[#D4AF37]">
-                        Kursi #{minion.seatIndex + 1}
+                        {isEn ? `Seat #${minion.seatIndex + 1}` : `Kursi #${minion.seatIndex + 1}`}
                       </span>
                       <span className="text-xs text-slate-600 dark:text-[#8E8A9E] font-medium">
-                        Peran Asal: {role?.name || minion.trueRoleId}
+                        {isEn ? `Original Role: ${getRoleName(role, language) || minion.trueRoleId}` : `Peran Asal: ${getRoleName(role, language) || minion.trueRoleId}`}
                       </span>
                     </div>
                     <div className="font-display text-base font-bold text-slate-900 dark:text-[#EDEAF0] group-hover:text-red-700 dark:group-hover:text-[#FCA5A5] transition-colors truncate">
@@ -93,7 +105,7 @@ export default function StarpassModal({
                     className="brass-sheen-btn px-4 py-2 rounded-xl bg-[#DC2626] hover:bg-[#EF4444] text-white text-xs font-bold flex items-center gap-1.5 shrink-0 transition-transform active:scale-95 shadow-md cursor-pointer"
                   >
                     <Crown className="w-3.5 h-3.5 text-amber-200 dark:text-[#FDE68A]" />
-                    <span>Jadikan Imp</span>
+                    <span>{isEn ? 'Make Imp' : 'Jadikan Imp'}</span>
                   </button>
                 </div>
               );
@@ -105,11 +117,12 @@ export default function StarpassModal({
         <div className="p-3 rounded-2xl bg-purple-50 dark:bg-[#0C0C10] border border-purple-200 dark:border-white/[0.06] text-[11px] text-slate-600 dark:text-[#8E8A9E] flex items-center gap-2">
           <Swords className="w-4 h-4 text-red-600 dark:text-[#EF4444] shrink-0" />
           <span>
-            Begitu dipilih, peran Minion bersangkutan langsung berganti menjadi IMP dan token pengingat diperbarui otomatis.
+            {isEn
+              ? 'Once chosen, this Minion instantly becomes the IMP and all reminder tokens are updated.'
+              : 'Begitu dipilih, peran Minion bersangkutan langsung berganti menjadi IMP dan token pengingat diperbarui otomatis.'}
           </span>
         </div>
       </motion.div>
     </div>
   );
 }
-

@@ -3,9 +3,17 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { BookMarked, Search, X } from 'lucide-react';
-import { CHARACTER_COUNTS, ROLES, type RoleDefinition } from '@/lib/botc-data';
+import {
+  CHARACTER_COUNTS,
+  ROLES,
+  getRoleAbility,
+  getRoleName,
+  getTeamName,
+  type RoleDefinition,
+} from '@/lib/botc-data';
 import { CharacterToken } from './TokenArtwork';
 import { useLockBodyScroll } from './grimoire/useLockBodyScroll';
+import { useLanguage } from '@/context/LanguageContext';
 
 type RefTab = 'townsfolk' | 'outsider' | 'evil' | 'rules';
 
@@ -16,6 +24,8 @@ export default function ReferenceSheetModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<RefTab>('townsfolk');
   const [selectedRoleId, setSelectedRoleId] = useState<string>(ROLES[0]?.id ?? 'washerwoman');
@@ -30,7 +40,8 @@ export default function ReferenceSheetModal({
         (r) =>
           r.name.toLowerCase().includes(q) ||
           r.indonesianName.toLowerCase().includes(q) ||
-          r.ability.toLowerCase().includes(q)
+          r.ability.toLowerCase().includes(q) ||
+          (r.abilityEn && r.abilityEn.toLowerCase().includes(q))
       ).slice(0, 15)
     : ROLES.filter((r) => {
         if (activeTab === 'evil') return r.team === 'minion' || r.team === 'demon';
@@ -47,7 +58,7 @@ export default function ReferenceSheetModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Panduan Resmi Karakter Trouble Brewing"
+      aria-label={isEn ? 'Official Trouble Brewing Reference Sheet' : 'Panduan Resmi Karakter Trouble Brewing'}
       className="fixed inset-0 z-50 bg-slate-900/65 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-hidden"
       onClick={onClose}
     >
@@ -63,17 +74,17 @@ export default function ReferenceSheetModal({
           <div className="flex items-center gap-2.5 min-w-0">
             <BookMarked className="w-4 h-4 text-amber-700 dark:text-[#D4AF37] shrink-0" />
             <h2 className="font-display text-base sm:text-lg font-bold text-slate-900 dark:text-[#F5EFE6] truncate">
-              Lembar Referensi Trouble Brewing
+              {isEn ? 'Trouble Brewing Reference Sheet' : 'Lembar Referensi Trouble Brewing'}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Tutup lembar referensi"
+            aria-label={isEn ? 'Close reference sheet' : 'Tutup lembar referensi'}
             className="px-3 py-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 dark:bg-[#262134] dark:hover:bg-[#322C44] text-xs font-semibold text-purple-950 dark:text-[#EDE7DB] flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
-            <span>Tutup</span>
+            <span>{isEn ? 'Close' : 'Tutup'}</span>
           </button>
         </div>
 
@@ -85,8 +96,8 @@ export default function ReferenceSheetModal({
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari karakter atau kemampuan..."
-              aria-label="Cari karakter"
+              placeholder={isEn ? 'Search character or ability...' : 'Cari karakter atau kemampuan...'}
+              aria-label={isEn ? 'Search characters' : 'Cari karakter'}
               className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-purple-50 dark:bg-[#1E1A29] border border-purple-200 dark:border-[#312C40] text-xs sm:text-sm text-slate-900 dark:text-[#F5EFE6] placeholder-slate-400 dark:placeholder-[#7C7589] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
             />
           </div>
@@ -96,7 +107,7 @@ export default function ReferenceSheetModal({
                 ['townsfolk', 'Town (13)'],
                 ['outsider', 'Out (4)'],
                 ['evil', 'Evil (5)'],
-                ['rules', 'Aturan'],
+                ['rules', isEn ? 'Rules' : 'Aturan'],
               ] as const
             ).map(([key, label]) => (
               <button
@@ -123,36 +134,49 @@ export default function ReferenceSheetModal({
           {!q && activeTab === 'rules' ? (
             <div className="space-y-3 my-auto">
               <h3 className="font-display text-sm sm:text-base font-bold text-slate-900 dark:text-[#F5EFE6]">
-                Ringkasan Aturan Storyteller Trouble Brewing
+                {isEn ? 'Trouble Brewing Storyteller Rules Summary' : 'Ringkasan Aturan Storyteller Trouble Brewing'}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs text-slate-700 dark:text-[#D6CFC2] leading-snug">
                 <div className="p-3 rounded-xl bg-purple-50/70 dark:bg-[#1D1927] border border-purple-200 dark:border-[#2C273A]">
-                  <strong className="block text-slate-900 dark:text-[#F5EFE6] mb-1">Drunk & Poisoned</strong>
-                  Pemain Drunk/Poisoned kehilangan kemampuan asli, tapi tetap dibangunkan dan boleh diberi info palsu.
+                  <strong className="block text-slate-900 dark:text-[#F5EFE6] mb-1">
+                    {isEn ? 'Drunk & Poisoned' : 'Drunk & Poisoned'}
+                  </strong>
+                  {isEn
+                    ? 'Drunk or poisoned players lose their true ability, but still wake up and may receive false info.'
+                    : 'Pemain Drunk/Poisoned kehilangan kemampuan asli, tapi tetap dibangunkan dan boleh diberi info palsu.'}
                 </div>
                 <div className="p-3 rounded-xl bg-purple-50/70 dark:bg-[#1D1927] border border-purple-200 dark:border-[#2C273A]">
-                  <strong className="block text-slate-900 dark:text-[#F5EFE6] mb-1">Kematian & Suara Hantu</strong>
-                  Pemain mati tak boleh menominasikan, namun tetap berdiskusi dan punya 1x Ghost Vote hingga akhir game.
+                  <strong className="block text-slate-900 dark:text-[#F5EFE6] mb-1">
+                    {isEn ? 'Death & Ghost Votes' : 'Kematian & Suara Hantu'}
+                  </strong>
+                  {isEn
+                    ? 'Dead players cannot nominate, but still participate in discussions and retain 1 Ghost Vote until the end of the game.'
+                    : 'Pemain mati tak boleh menominasikan, namun tetap berdiskusi dan punya 1x Ghost Vote hingga akhir game.'}
                 </div>
                 <div className="p-3 rounded-xl bg-purple-50/70 dark:bg-[#1D1927] border border-purple-200 dark:border-[#2C273A]">
-                  <strong className="block text-slate-900 dark:text-[#F5EFE6] mb-1">Syarat Menang</strong>
-                  Good menang jika Demon mati (tanpa Scarlet Woman aktif). Evil menang jika tersisa 2 hidup atau Saint dieksekusi.
+                  <strong className="block text-slate-900 dark:text-[#F5EFE6] mb-1">
+                    {isEn ? 'Win Conditions' : 'Syarat Menang'}
+                  </strong>
+                  {isEn
+                    ? 'Good wins if the Demon dies (with no active Scarlet Woman). Evil wins if only 2 alive or Saint is executed.'
+                    : 'Good menang jika Demon mati (tanpa Scarlet Woman aktif). Evil menang jika tersisa 2 hidup atau Saint dieksekusi.'}
                 </div>
               </div>
               <div className="p-3 rounded-xl bg-purple-50/50 dark:bg-[#1C1826] border border-purple-100 dark:border-[#2C273A] text-[11px] text-slate-600 dark:text-[#B8B0A2] leading-relaxed">
-                <strong>Komposisi Pemain ({Object.keys(CHARACTER_COUNTS).length} skala):</strong>{' '}
+                <strong>{isEn ? 'Player Composition Breakdown' : 'Komposisi Pemain'} ({Object.keys(CHARACTER_COUNTS).length} {isEn ? 'scales' : 'skala'}):</strong>{' '}
                 5p (3/0/1/1) · 6p (3/1/1/1) · 7p (5/0/1/1) · 8p (5/1/1/1) · 9p (5/2/1/1) · 10p (7/0/2/1) · 11p (7/1/2/1) · 12p (7/2/2/1) · 13p (9/0/3/1) · 14p (9/1/3/1) · 15p (9/2/3/1).
               </div>
             </div>
           ) : filteredRoles.length === 0 ? (
             <div className="py-10 text-center text-xs text-slate-500 dark:text-[#A8A092]">
-              Tidak ada peran yang cocok dengan pencarian &ldquo;{query}&rdquo;.
+              {isEn ? `No characters matching "${query}".` : `Tidak ada peran yang cocok dengan pencarian "${query}".`}
             </div>
           ) : (
             <>
               <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
                 {filteredRoles.map((role) => {
                   const isSelected = inspectedRole?.id === role.id;
+                  const roleName = getRoleName(role, language);
                   return (
                     <button
                       key={role.id}
@@ -166,7 +190,7 @@ export default function ReferenceSheetModal({
                     >
                       <CharacterToken roleId={role.id} size="sm" showSetupLeaf />
                       <span className="text-[10px] sm:text-[11px] font-bold text-slate-900 dark:text-[#F5EFE6] truncate w-full leading-tight">
-                        {role.name}
+                        {roleName}
                       </span>
                     </button>
                   );
@@ -181,10 +205,8 @@ export default function ReferenceSheetModal({
                   <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-[#A8A092]">
                       <span className="font-display text-sm sm:text-base font-bold text-slate-900 dark:text-[#F5EFE6]">
-                        {inspectedRole.name}
+                        {getRoleName(inspectedRole, language)}
                       </span>
-                      <span>·</span>
-                      <span>{inspectedRole.indonesianName}</span>
                       <span>·</span>
                       <span
                         className={`font-bold ${
@@ -193,14 +215,15 @@ export default function ReferenceSheetModal({
                             : 'text-blue-700 dark:text-[#93C5FD]'
                         }`}
                       >
-                        {inspectedRole.team.toUpperCase()}
+                        {getTeamName(inspectedRole.team, language).toUpperCase()}
                       </span>
                     </div>
                     <p className="text-xs sm:text-sm text-slate-800 dark:text-[#E5DFD3] leading-snug">
-                      {inspectedRole.ability}
+                      {getRoleAbility(inspectedRole, language)}
                     </p>
                     <p className="text-[11px] text-slate-600 dark:text-[#A69F91] leading-snug">
-                      <strong>Panduan Storyteller:</strong> {inspectedRole.storytellerNote}
+                      <strong>{isEn ? 'Storyteller Guide:' : 'Panduan Storyteller:'}</strong>{' '}
+                      {isEn ? (inspectedRole.storytellerNoteEn || inspectedRole.storytellerNote) : inspectedRole.storytellerNote}
                     </p>
                   </div>
                 </div>

@@ -84,28 +84,30 @@ html.dark [data-testid="grimoire-circle"] .font-display {
 }
 
 /* ========================================================
-   2. PASTEL GREEN & SOFT PURPLE LIGHT MODE (html.light)
-   "begitupun light modenya"
-   Clean white cards, soft mint and lavender backgrounds, zero black buttons.
+   2. AUTHENTIC GRIMOIRE LIGHT MODE (html.light & html.desktop-app)
+   Faithfully grounded in botcgrimoire-main (Warm Vellum, Walnut Ink & Antique Brass)
+   No clashing mint or purple; cohesive antique grimoire illuminated manuscript aesthetic.
    ======================================================== */
 
-html.light body {
-  background-color: #F1F8F4 !important;
+html.light body,
+html.desktop-app body {
+  background-color: #F5EFE4 !important;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(209, 250, 229, 0.85) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(237, 233, 254, 0.95) 0px, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(243, 232, 255, 0.5) 0px, transparent 55%) !important;
+    radial-gradient(at 0% 0%, rgba(251, 246, 235, 0.95) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(240, 230, 212, 0.85) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(255, 252, 246, 0.7) 0px, transparent 55%) !important;
   background-attachment: fixed !important;
-  color: #1E1B4B !important;
+  color: #2A2018 !important;
 }
 
-html.light header {
-  background-color: rgba(255, 255, 255, 0.96) !important;
-  border-bottom: 1px solid rgba(139, 92, 246, 0.18) !important;
-  box-shadow: 0 2px 12px rgba(139, 92, 246, 0.05) !important;
+html.light header,
+html.desktop-app header {
+  background-color: rgba(250, 246, 238, 0.96) !important;
+  border-bottom: 1px solid rgba(201, 150, 58, 0.3) !important;
+  box-shadow: 0 2px 14px rgba(42, 32, 24, 0.05) !important;
 }
 
-/* All Outer Containers & Cards mapped to Clean White */
+/* All Outer Containers & Cards mapped to Illuminated Antique Parchment */
 html.light [class*="bg-[#14141B]"],
 html.light [class*="bg-[#181822]"],
 html.light [class*="bg-[#181520]"],
@@ -115,16 +117,19 @@ html.light [class*="bg-[#13101A]"],
 html.light [class*="bg-[#14111B]"],
 html.light [class*="bg-[#14121B]"],
 html.light [class*="bg-[#120F1A]"],
-html.light [class*="bg-[#100E17]"] {
-  background-color: #FFFFFF !important;
-  border-color: rgba(139, 92, 246, 0.18) !important;
-  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.06) !important;
-  color: #1E1B4B !important;
+html.light [class*="bg-[#100E17]"],
+html.desktop-app [class*="bg-[#14141B]"],
+html.desktop-app [class*="bg-[#181822]"],
+html.desktop-app [class*="bg-[#181520]"] {
+  background-color: #FAF6EE !important;
+  border-color: rgba(201, 150, 58, 0.35) !important;
+  box-shadow: 0 4px 18px rgba(42, 32, 24, 0.06), 0 1px 3px rgba(42, 32, 24, 0.04) !important;
+  color: #2A2018 !important;
 }
 
 /* Outer canvas background */
 html.light [class*="bg-[#0C0C10]"]:not(button):not(a):not(span.rounded-full):not(span.rounded-md):not(div.w-11) {
-  background-color: #F1F8F4 !important;
+  background-color: #F5EFE4 !important;
 }
 
 /* Secondary bars, sub-cards, and strips */
@@ -142,21 +147,21 @@ html.light [class*="bg-[#2F2A40]"],
 html.light [class*="bg-[#302A42]"],
 html.light [class*="bg-[#3B3450]"],
 html.light [class*="bg-[#1E1A2A]"] {
-  background-color: #F5F2FC !important;
-  border-color: rgba(139, 92, 246, 0.2) !important;
-  color: #1E1B4B !important;
+  background-color: #F2EBDB !important;
+  border-color: rgba(201, 150, 58, 0.28) !important;
+  color: #2A2018 !important;
 }
 
-/* Secondary Button Backgrounds in Light Mode - Soft Lavender Pill */
+/* Secondary Button Backgrounds in Light Mode - Warm Parchment Pill */
 html.light [class*="bg-[#1E1E28]"],
 html.light [class*="bg-[#282838]"],
 html.light [class*="bg-[#222230]"],
 html.light [class*="bg-[#252533]"],
 html.light button[class*="bg-[#0C0C10]"],
 html.light a[class*="bg-[#0C0C10]"] {
-  background-color: #EDE9FE !important;
-  color: #5B21B6 !important;
-  border-color: rgba(139, 92, 246, 0.3) !important;
+  background-color: #F2EBDB !important;
+  color: #2A2018 !important;
+  border-color: rgba(201, 150, 58, 0.35) !important;
 }
 
 html.light [class*="bg-[#1E1E28]"]:hover,
@@ -164,24 +169,24 @@ html.light [class*="bg-[#282838]"]:hover,
 html.light [class*="bg-[#222230]"]:hover,
 html.light button[class*="bg-[#0C0C10]"]:hover,
 html.light a[class*="bg-[#0C0C10]"]:hover {
-  background-color: #DDD6FE !important;
-  color: #4C1D95 !important;
+  background-color: #E8DFC7 !important;
+  color: #2A2018 !important;
 }
 
 /* Inputs & Select Elements in Light Mode */
 html.light select,
 html.light input,
 html.light [class*="bg-[#13111A]"] {
-  background-color: #FFFFFF !important;
-  color: #1E1B4B !important;
-  border-color: rgba(139, 92, 246, 0.3) !important;
+  background-color: #FAF6EE !important;
+  color: #2A2018 !important;
+  border-color: rgba(201, 150, 58, 0.4) !important;
 }
 
 /* Character ability boxes and cards */
 html.light [class*="bg-[#120F1A]"] {
-  background-color: #F8F6FD !important;
-  border-color: rgba(139, 92, 246, 0.25) !important;
-  color: #1E1B4B !important;
+  background-color: #FAF6EE !important;
+  border-color: rgba(201, 150, 58, 0.3) !important;
+  color: #2A2018 !important;
 }
 
 /* Alert / Evil / Red highlights in Light Mode */
@@ -192,16 +197,16 @@ html.light [class*="bg-[#1C1318]"],
 html.light [class*="bg-[#3E1A22]"],
 html.light [class*="bg-[#3D1A1E]"] {
   background-color: #FEF2F2 !important;
-  border-color: #F87171 !important;
+  border-color: rgba(185, 28, 28, 0.4) !important;
   color: #991B1B !important;
 }
 
-/* Info / Blue highlights in Light Mode */
+/* Info / Blue highlights in Light Mode (Townsfolk blue) */
 html.light [class*="bg-[#162231]"],
 html.light [class*="bg-[#182433]"] {
   background-color: #EFF6FF !important;
-  border-color: #93C5FD !important;
-  color: #1E40AF !important;
+  border-color: rgba(0, 100, 172, 0.35) !important;
+  color: #0064AC !important;
 }
 
 /* Warning / Amber highlights in Light Mode */
@@ -213,22 +218,22 @@ html.light [class*="bg-[#3D2008]"],
 html.light [class*="bg-[#2D1B08]"],
 html.light [class*="bg-[#3D250C]"],
 html.light [class*="bg-[#291B06]"] {
-  background-color: #FEF3C7 !important;
-  border-color: #F59E0B !important;
-  color: #92400E !important;
+  background-color: #FFFBEB !important;
+  border-color: rgba(201, 150, 58, 0.45) !important;
+  color: #76614B !important;
 }
 
 /* Demon Kill Surface in Light Mode (keep solid #EF4444 primary buttons crimson) */
 html.light [class*="bg-[#35070A]"] {
   background-color: #FEE2E2 !important;
-  border-color: #F87171 !important;
+  border-color: rgba(185, 28, 28, 0.4) !important;
   color: #991B1B !important;
 }
 
 /* Alive / Health Badges in Light Mode */
 html.light [class*="bg-[#142A20]"] {
-  background-color: #D1FAE5 !important;
-  border-color: #10B981 !important;
+  background-color: #ECFDF5 !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
   color: #065F46 !important;
 }
 
@@ -243,7 +248,7 @@ html.light h2.text-white,
 html.light h3.text-white,
 html.light h4.text-white,
 html.light strong.text-white {
-  color: #1E1B4B !important;
+  color: #2A2018 !important;
 }
 
 html.light [class*="text-[#8E8A9E]"],
@@ -254,7 +259,7 @@ html.light [class*="text-[#B8B0A2]"],
 html.light [class*="text-[#9C9486]"],
 html.light [class*="text-[#8E8698]"],
 html.light [class*="text-[#7D758A]"] {
-  color: #4B5563 !important;
+  color: #5C4A37 !important;
 }
 
 /* Border Overrides in Light Mode */
@@ -267,7 +272,52 @@ html.light [class*="border-[#3B3450]"],
 html.light [class*="border-[#38324B]"],
 html.light [class*="border-[#322D42]"],
 html.light [class*="border-white/"] {
-  border-color: rgba(139, 92, 246, 0.18) !important;
+  border-color: rgba(201, 150, 58, 0.3) !important;
+}
+
+/* Clean Purple-Class Mappings to Antique Parchment */
+html.light .bg-purple-50,
+html.light .bg-purple-100,
+html.desktop-app .bg-purple-50,
+html.desktop-app .bg-purple-100 {
+  background-color: #F2EBDB !important;
+  border-color: rgba(201, 150, 58, 0.3) !important;
+  color: #2A2018 !important;
+}
+
+html.light .bg-purple-50:hover,
+html.light .bg-purple-100:hover,
+html.desktop-app .bg-purple-50:hover,
+html.desktop-app .bg-purple-100:hover {
+  background-color: #E8DFC7 !important;
+  color: #2A2018 !important;
+}
+
+html.light .text-slate-900,
+html.light .text-slate-800,
+html.light .text-purple-900,
+html.light .text-purple-950,
+html.desktop-app .text-slate-900,
+html.desktop-app .text-slate-800,
+html.desktop-app .text-purple-900,
+html.desktop-app .text-purple-950 {
+  color: #2A2018 !important;
+}
+
+html.light .text-slate-600,
+html.light .text-slate-500,
+html.desktop-app .text-slate-600,
+html.desktop-app .text-slate-500 {
+  color: #5C4A37 !important;
+}
+
+html.light .border-purple-200,
+html.light .border-purple-300,
+html.light .border-purple-100,
+html.desktop-app .border-purple-200,
+html.desktop-app .border-purple-300,
+html.desktop-app .border-purple-100 {
+  border-color: rgba(201, 150, 58, 0.3) !important;
 }
 
 /* Dead Tokens in Light Mode - clearly visible, not pitch black */
@@ -431,28 +481,28 @@ html.desktop-app body {
   height: 100vh !important;
   max-height: 100vh !important;
   overflow: hidden !important;
-  background-color: #F6F2EA !important;
+  background-color: #F5EFE4 !important;
   background-image:
-    radial-gradient(at 8% 0%, rgba(251, 243, 219, 0.92) 0px, transparent 48%),
-    radial-gradient(at 92% 100%, rgba(254, 226, 226, 0.55) 0px, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(255, 253, 249, 0.7) 0px, transparent 60%) !important;
-  color: #1F1916 !important;
+    radial-gradient(at 0% 0%, rgba(251, 246, 235, 0.95) 0px, transparent 48%),
+    radial-gradient(at 100% 100%, rgba(240, 230, 212, 0.85) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(255, 252, 246, 0.7) 0px, transparent 60%) !important;
+  color: #2A2018 !important;
 }
 
 html.desktop-app header {
-  background-color: rgba(255, 252, 247, 0.96) !important;
-  border-bottom: 1px solid rgba(180, 130, 58, 0.24) !important;
-  box-shadow: 0 2px 14px rgba(92, 66, 32, 0.06) !important;
+  background-color: rgba(250, 246, 238, 0.96) !important;
+  border-bottom: 1px solid rgba(201, 150, 58, 0.3) !important;
+  box-shadow: 0 2px 14px rgba(42, 32, 24, 0.05) !important;
 }
 
 html.desktop-app .bg-white,
 html.desktop-app [class*="bg-[#14141B]"],
 html.desktop-app [class*="bg-[#181822]"],
 html.desktop-app [class*="bg-[#181520]"] {
-  background-color: #FFFCF7 !important;
-  border-color: rgba(180, 138, 72, 0.24) !important;
-  box-shadow: 0 4px 18px rgba(72, 50, 22, 0.06), 0 1px 3px rgba(72, 50, 22, 0.04) !important;
-  color: #1F1916 !important;
+  background-color: #FAF6EE !important;
+  border-color: rgba(201, 150, 58, 0.35) !important;
+  box-shadow: 0 4px 18px rgba(42, 32, 24, 0.06), 0 1px 3px rgba(42, 32, 24, 0.04) !important;
+  color: #2A2018 !important;
 }
 
 html.desktop-app .bg-purple-50,

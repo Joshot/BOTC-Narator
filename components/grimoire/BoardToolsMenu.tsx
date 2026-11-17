@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   BookOpen,
   Clock,
@@ -85,6 +86,8 @@ export default function BoardToolsMenu({
   winner = null,
   onSetWinnerManual,
 }: BoardToolsMenuProps) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [now, setNow] = useState<number>(() => Date.now());
   const isRunning = Boolean(dayTimer?.deadline !== null && dayTimer?.deadline !== undefined);
 
@@ -112,12 +115,12 @@ export default function BoardToolsMenu({
     >
       <div className="flex items-center justify-between px-1 pb-1 border-b border-white/10">
         <span className="text-[10px] font-bold uppercase tracking-wider text-[#c9963a]">
-          Alat Grimoire
+          {isEn ? 'Grimoire Tools' : 'Alat Grimoire'}
         </span>
         <button
           type="button"
           onClick={onClose}
-          aria-label="Tutup menu alat"
+          aria-label={isEn ? "Close tools menu" : "Tutup menu alat"}
           className="p-1 rounded-lg text-[#a89f8c] hover:text-[#efe6d2] hover:bg-white/10 cursor-pointer"
         >
           <X className="w-3.5 h-3.5" />
@@ -140,7 +143,7 @@ export default function BoardToolsMenu({
           ) : (
             <Sparkles className="w-3.5 h-3.5 text-[#c9963a] shrink-0" />
           )}
-          <span className="truncate">{viewMode === 'circle' ? 'Mode Daftar' : 'Lingkaran'}</span>
+          <span className="truncate">{viewMode === 'circle' ? (isEn ? 'Cards View' : 'Mode Daftar') : (isEn ? 'Circle Ring' : 'Lingkaran')}</span>
         </button>
 
         <button
@@ -157,7 +160,7 @@ export default function BoardToolsMenu({
           ) : (
             <BookOpen className="w-3.5 h-3.5 text-[#c9963a] shrink-0" />
           )}
-          <span className="truncate">Panduan Skrip</span>
+          <span className="truncate">{isEn ? 'Script Guide' : 'Panduan Skrip'}</span>
         </button>
       </div>
 
@@ -169,11 +172,11 @@ export default function BoardToolsMenu({
               type="button"
               role="menuitem"
               onClick={() => onRotateRing('ccw')}
-              title="Putar berlawanan jarum jam"
+              title={isEn ? "Rotate counter-clockwise" : "Putar berlawanan jarum jam"}
               className="min-h-[36px] px-2 py-1.5 rounded-xl bg-white/5 hover:bg-white/12 text-[#efe6d2] text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5 text-[#c9963a]" />
-              <span>Kiri</span>
+              <span>{isEn ? 'Left' : 'Kiri'}</span>
             </button>
           )}
           {onToggleArrangeGaps && (
@@ -181,7 +184,7 @@ export default function BoardToolsMenu({
               type="button"
               role="menuitem"
               onClick={onToggleArrangeGaps}
-              title="Tambah / atur kursi baru"
+              title={isEn ? "Add / manage new seats" : "Tambah / atur kursi baru"}
               className={`min-h-[36px] px-2 py-1.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors ${
                 arrangeGapsVisible
                   ? 'bg-[#c9963a] text-[#2a2018]'
@@ -189,7 +192,7 @@ export default function BoardToolsMenu({
               }`}
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Kursi</span>
+              <span>{isEn ? 'Seats' : 'Kursi'}</span>
             </button>
           )}
           {onRotateRing && (
@@ -197,10 +200,10 @@ export default function BoardToolsMenu({
               type="button"
               role="menuitem"
               onClick={() => onRotateRing('cw')}
-              title="Putar searah jarum jam"
+              title={isEn ? "Rotate clockwise" : "Putar searah jarum jam"}
               className="min-h-[36px] px-2 py-1.5 rounded-xl bg-white/5 hover:bg-white/12 text-[#efe6d2] text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer"
             >
-              <span>Kanan</span>
+              <span>{isEn ? 'Right' : 'Kanan'}</span>
               <RotateCw className="w-3.5 h-3.5 text-[#c9963a]" />
             </button>
           )}
@@ -218,11 +221,11 @@ export default function BoardToolsMenu({
               onOpenBluffs();
               onClose();
             }}
-            title={spyStealth ? 'Matikan mode stealth untuk ubah Bluff' : 'Atur 3 Demon Bluffs'}
+            title={spyStealth ? (isEn ? 'Disable stealth mode to edit Bluffs' : 'Matikan mode stealth untuk ubah Bluff') : (isEn ? 'Configure 3 Demon Bluffs' : 'Atur 3 Demon Bluffs')}
             className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/12 disabled:opacity-40 disabled:cursor-not-allowed text-[#efe6d2] text-xs font-bold flex items-center gap-2 cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#c9963a] shrink-0" />
-            <span className="truncate">Atur Bluff</span>
+            <span className="truncate">{isEn ? 'Edit Bluffs' : 'Atur Bluff'}</span>
           </button>
         )}
 
@@ -241,7 +244,7 @@ export default function BoardToolsMenu({
           ) : (
             <Users className="w-3.5 h-3.5 text-[#c9963a] shrink-0" />
           )}
-          <span className="truncate">{spyStealth ? 'Stealth: ON' : 'Stealth'}</span>
+          <span className="truncate">{spyStealth ? (isEn ? 'Stealth: ON' : 'Stealth: AKTIF') : 'Stealth'}</span>
         </button>
       </div>
 
@@ -319,8 +322,8 @@ export default function BoardToolsMenu({
               <button
                 type="button"
                 onClick={() => onTimerAction({ type: 'reset' })}
-                title="Reset Timer"
-                aria-label="Reset Timer"
+                title={isEn ? "Reset Timer" : "Reset Timer"}
+                aria-label={isEn ? "Reset Timer" : "Reset Timer"}
                 className="p-1 rounded bg-white/10 hover:bg-white/20 text-[#efe6d2] cursor-pointer"
               >
                 <RotateCcw className="w-3 h-3" />
@@ -333,8 +336,8 @@ export default function BoardToolsMenu({
               <button
                 type="button"
                 onClick={() => onTimerAction({ type: 'adjustSeconds', deltaSeconds: -30 })}
-                title="Kurangi 30 detik"
-                aria-label="Kurangi 30 detik"
+                title={isEn ? "Subtract 30s" : "Kurangi 30 detik"}
+                aria-label={isEn ? "Subtract 30s" : "Kurangi 30 detik"}
                 className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-[#efe6d2] flex items-center justify-center cursor-pointer"
               >
                 <Minus className="w-3 h-3" />
@@ -353,8 +356,8 @@ export default function BoardToolsMenu({
               <button
                 type="button"
                 onClick={() => onTimerAction({ type: 'adjustSeconds', deltaSeconds: 30 })}
-                title="Tambah 30 detik"
-                aria-label="Tambah 30 detik"
+                title={isEn ? "Add 30s" : "Tambah 30 detik"}
+                aria-label={isEn ? "Add 30s" : "Tambah 30 detik"}
                 className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-[#efe6d2] flex items-center justify-center cursor-pointer"
               >
                 <Plus className="w-3 h-3" />
@@ -371,12 +374,12 @@ export default function BoardToolsMenu({
               {isRunning && remainingMs > 0 ? (
                 <>
                   <Pause className="w-3 h-3" />
-                  <span>Jeda</span>
+                  <span>{isEn ? 'Pause' : 'Jeda'}</span>
                 </>
               ) : (
                 <>
                   <Play className="w-3 h-3" />
-                  <span>Mulai</span>
+                  <span>{isEn ? 'Start' : 'Mulai'}</span>
                 </>
               )}
             </button>
@@ -387,7 +390,7 @@ export default function BoardToolsMenu({
       {/* Velvet Felt Colour */}
       {onVelvetColourChange && (
         <div className="flex items-center justify-between px-2 py-1 rounded-xl bg-white/5">
-          <span className="text-[11px] font-bold text-[#a89f8c]">Kain Meja</span>
+          <span className="text-[11px] font-bold text-[#a89f8c]">{isEn ? 'Table Fabric' : 'Kain Meja'}</span>
           <VelvetColourSelector value={velvetColour} onChange={onVelvetColourChange} compact />
         </div>
       )}
@@ -405,7 +408,7 @@ export default function BoardToolsMenu({
             className="min-h-[36px] px-2 py-1.5 rounded-xl bg-[#0064ac]/45 hover:bg-[#0064ac]/75 text-[#efe6d2] text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Trophy className="w-3.5 h-3.5 text-[#f4e4bc]" />
-            <span>Good Menang</span>
+            <span>{isEn ? 'Good Wins' : 'Good Menang'}</span>
           </button>
           <button
             type="button"
@@ -417,7 +420,7 @@ export default function BoardToolsMenu({
             className="min-h-[36px] px-2 py-1.5 rounded-xl bg-[#760a0d]/55 hover:bg-[#760a0d]/85 text-[#efe6d2] text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Trophy className="w-3.5 h-3.5 text-[#f4e4bc]" />
-            <span>Evil Menang</span>
+            <span>{isEn ? 'Evil Wins' : 'Evil Menang'}</span>
           </button>
         </div>
       )}

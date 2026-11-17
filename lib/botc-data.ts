@@ -1,3 +1,5 @@
+import type { AppLanguage } from './translations';
+
 export type TeamType = 'townsfolk' | 'outsider' | 'minion' | 'demon';
 export type ExtendedTeamType = TeamType | 'traveller';
 
@@ -13,7 +15,10 @@ export interface RoleDefinition {
   otherNightOrder: number | null;
   firstNightInstruction?: string;
   otherNightInstruction?: string;
+  firstNightInstructionEn?: string;
+  otherNightInstructionEn?: string;
   storytellerNote: string;
+  storytellerNoteEn?: string;
   reminderIds: string[];
   setupModifier?: boolean;
   reminderCountBadge?: number;
@@ -26,6 +31,7 @@ export interface ReminderDefinition {
   roleId: string;
   team: 'good' | 'evil' | 'neutral';
   description: string;
+  descriptionEn?: string;
   global?: boolean;
 }
 
@@ -790,4 +796,106 @@ export function calculateBalancedBag(playerCount: number): BalancedBagResult {
     formulaSummary: `Formula Seimbang: ${chosenTownsfolk.length} Townsfolk + ${chosenOutsiders.length} Outsider + ${chosenMinions.length} Minion + 1 Demon`,
     formulaDetails: details,
   };
+}
+
+export function getRoleName(
+  roleOrId: RoleDefinition | string | undefined | null,
+  lang: AppLanguage = 'en'
+): string {
+  if (!roleOrId) return '';
+  const role = typeof roleOrId === 'string' ? ROLE_MAP[roleOrId] : roleOrId;
+  if (!role) return typeof roleOrId === 'string' ? roleOrId : '';
+  return lang === 'id' ? (role.indonesianName || role.name) : role.name;
+}
+
+export function getRoleAbility(
+  roleOrId: RoleDefinition | string | undefined | null,
+  lang: AppLanguage = 'en'
+): string {
+  if (!roleOrId) return '';
+  const role = typeof roleOrId === 'string' ? ROLE_MAP[roleOrId] : roleOrId;
+  if (!role) return '';
+  return lang === 'en' ? (role.abilityEn || role.ability) : role.ability;
+}
+
+export function getRoleFirstNightInstruction(
+  roleOrId: RoleDefinition | string | undefined | null,
+  lang: AppLanguage = 'en'
+): string {
+  if (!roleOrId) return '';
+  const role = typeof roleOrId === 'string' ? ROLE_MAP[roleOrId] : roleOrId;
+  if (!role) return '';
+  return lang === 'en'
+    ? (role.firstNightInstructionEn || role.abilityEn || role.firstNightInstruction || '')
+    : (role.firstNightInstruction || role.ability || '');
+}
+
+export function getRoleOtherNightInstruction(
+  roleOrId: RoleDefinition | string | undefined | null,
+  lang: AppLanguage = 'en'
+): string {
+  if (!roleOrId) return '';
+  const role = typeof roleOrId === 'string' ? ROLE_MAP[roleOrId] : roleOrId;
+  if (!role) return '';
+  return lang === 'en'
+    ? (role.otherNightInstructionEn || role.abilityEn || role.otherNightInstruction || '')
+    : (role.otherNightInstruction || role.ability || '');
+}
+
+export function getTeamName(
+  team: ExtendedTeamType | undefined | null,
+  lang: AppLanguage = 'en'
+): string {
+  if (!team) return '';
+  if (lang === 'en') {
+    switch (team) {
+      case 'townsfolk':
+        return 'Townsfolk';
+      case 'outsider':
+        return 'Outsider';
+      case 'minion':
+        return 'Minion';
+      case 'demon':
+        return 'Demon';
+      case 'traveller':
+        return 'Traveller';
+      default:
+        return team;
+    }
+  } else {
+    switch (team) {
+      case 'townsfolk':
+        return 'Warga Kota';
+      case 'outsider':
+        return 'Warga Luar';
+      case 'minion':
+        return 'Anak Buah';
+      case 'demon':
+        return 'Iblis';
+      case 'traveller':
+        return 'Pengelana';
+      default:
+        return team;
+    }
+  }
+}
+
+export function getReminderLabel(
+  remOrId: ReminderDefinition | string | undefined | null,
+  lang: AppLanguage = 'en'
+): string {
+  if (!remOrId) return '';
+  const rem = typeof remOrId === 'string' ? REMINDER_MAP[remOrId] : remOrId;
+  if (!rem) return typeof remOrId === 'string' ? remOrId : '';
+  return lang === 'id' ? (rem.indonesianLabel || rem.label) : rem.label;
+}
+
+export function getReminderDescription(
+  remOrId: ReminderDefinition | string | undefined | null,
+  lang: AppLanguage = 'en'
+): string {
+  if (!remOrId) return '';
+  const rem = typeof remOrId === 'string' ? REMINDER_MAP[remOrId] : remOrId;
+  if (!rem) return '';
+  return lang === 'en' ? (rem.descriptionEn || rem.description) : rem.description;
 }

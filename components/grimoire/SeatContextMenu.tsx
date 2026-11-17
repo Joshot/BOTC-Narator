@@ -18,8 +18,9 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { ALL_TB_ROLES, ROLE_MAP } from '@/lib/botc-data';
+import { ALL_TB_ROLES, ROLE_MAP, getRoleName } from '@/lib/botc-data';
 import { PlayerSeat, getPlayerAlignment } from '@/lib/botc-engine';
+import { useLanguage } from '@/context/LanguageContext';
 import ParchmentSurface from './ParchmentSurface';
 import { CharacterTokenFront } from './TokenPrimitives';
 
@@ -68,6 +69,8 @@ export default function SeatContextMenu({
   onRemoveSeat,
   onClose,
 }: SeatContextMenuProps) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [subPanel, setSubPanel] = useState<'main' | 'role' | 'rename' | 'kill'>('main');
   const [draftName, setDraftName] = useState(seat.name);
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -113,18 +116,19 @@ export default function SeatContextMenu({
             {trueRole && <CharacterTokenFront role={trueRole} size={32} alignment={effectiveAlignment} />}
             <div className="min-w-0">
               <div className="text-[10px] font-mono uppercase tracking-wider text-[#5c4a37]">
-                Kursi #{seat.seatIndex + 1} · {effectiveAlignment === 'evil' ? 'Evil' : 'Good'}
+                {isEn ? `Seat #${seat.seatIndex + 1} · ` : `Kursi #${seat.seatIndex + 1} · `}
+                {effectiveAlignment === 'evil' ? 'Evil' : 'Good'}
               </div>
               <div className="font-display text-sm font-bold text-[#2a2018] truncate">
-                {seat.name} ({trueRole?.name}
-                {seat.trueRoleId === 'drunk' && perceivedRole ? ` -> ${perceivedRole.name}` : ''})
+                {seat.name} ({getRoleName(trueRole, language)}
+                {seat.trueRoleId === 'drunk' && perceivedRole ? ` -> ${getRoleName(perceivedRole, language)}` : ''})
               </div>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Tutup menu kursi"
+            aria-label={isEn ? "Close seat menu" : "Tutup menu kursi"}
             className="w-7 h-7 rounded-lg hover:bg-[#66533f]/15 flex items-center justify-center text-[#2a2018] cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
@@ -144,7 +148,7 @@ export default function SeatContextMenu({
               className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#c9963a]/20 hover:bg-[#c9963a]/35 font-bold text-[#2a2018] cursor-pointer transition-colors text-left"
             >
               <PlusCircle className="w-4 h-4 text-[#7a5210] shrink-0" />
-              <span>Tambah Pengingat / Catatan</span>
+              <span>{isEn ? 'Add Reminder / Note' : 'Tambah Pengingat / Catatan'}</span>
             </button>
 
             {/* 2. Nominate during Day */}
@@ -158,7 +162,7 @@ export default function SeatContextMenu({
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
               >
                 <Gavel className="w-4 h-4 text-[#760a0d] shrink-0" />
-                <span>Nominasikan untuk Eksekusi</span>
+                <span>{isEn ? 'Nominate for Execution' : 'Nominasikan untuk Eksekusi'}</span>
               </button>
             )}
 
@@ -170,7 +174,7 @@ export default function SeatContextMenu({
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#760a0d]/10 text-[#760a0d] font-semibold cursor-pointer transition-colors text-left"
               >
                 <Skull className="w-4 h-4 shrink-0" />
-                <span>Tandai Pemain Mati...</span>
+                <span>{isEn ? 'Mark Player Dead...' : 'Tandai Pemain Mati...'}</span>
               </button>
             ) : (
               <>
@@ -183,7 +187,7 @@ export default function SeatContextMenu({
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-emerald-800/10 text-emerald-900 font-semibold cursor-pointer transition-colors text-left"
                 >
                   <HeartPulse className="w-4 h-4 shrink-0" />
-                  <span>Hidupkan Kembali</span>
+                  <span>{isEn ? 'Resurrect Player' : 'Hidupkan Kembali'}</span>
                 </button>
                 <button
                   type="button"
@@ -195,7 +199,9 @@ export default function SeatContextMenu({
                 >
                   <Ghost className="w-4 h-4 text-[#5c4a37] shrink-0" />
                   <span>
-                    Ghost Vote: {seat.hasGhostVote ? 'Tersedia (Pakai)' : 'Habis (Pulihkan)'}
+                    {isEn
+                      ? `Ghost Vote: ${seat.hasGhostVote ? 'Ready (Spend)' : 'Spent (Restore)'}`
+                      : `Ghost Vote: ${seat.hasGhostVote ? 'Tersedia (Pakai)' : 'Habis (Pulihkan)'}`}
                   </span>
                 </button>
               </>
@@ -213,7 +219,7 @@ export default function SeatContextMenu({
               className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
             >
               <Eye className="w-4 h-4 text-[#0064ac] shrink-0" />
-              <span>Intip Detail Rahasia</span>
+              <span>{isEn ? 'Peek Secret Dossier' : 'Intip Detail Rahasia'}</span>
             </button>
 
             <button
@@ -225,7 +231,7 @@ export default function SeatContextMenu({
               className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
             >
               <ShieldAlert className="w-4 h-4 text-[#5c4a37] shrink-0" />
-              <span>Tunjuk Token ke Pemain</span>
+              <span>{isEn ? 'Show Token to Player' : 'Tunjuk Token ke Pemain'}</span>
             </button>
 
             <div className="my-0.5 border-t border-[#655342]/18" />
@@ -237,7 +243,9 @@ export default function SeatContextMenu({
               className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
             >
               <ArrowLeftRight className="w-4 h-4 text-[#5c4a37] shrink-0" />
-              <span>Ganti Karakter ({trueRole?.name})</span>
+              <span>
+                {isEn ? `Change Character (${getRoleName(trueRole, language)})` : `Ganti Karakter (${getRoleName(trueRole, language)})`}
+              </span>
             </button>
 
             <button
@@ -250,7 +258,9 @@ export default function SeatContextMenu({
             >
               <Scale className="w-4 h-4 text-[#5c4a37] shrink-0" />
               <span>
-                Aliansi: {effectiveAlignment === 'good' ? 'Good -> Ubah Evil' : 'Evil -> Ubah Good'}
+                {isEn
+                  ? `Alignment: ${effectiveAlignment === 'good' ? 'Good -> Switch Evil' : 'Evil -> Switch Good'}`
+                  : `Aliansi: ${effectiveAlignment === 'good' ? 'Good -> Ubah Evil' : 'Evil -> Ubah Good'}`}
               </span>
             </button>
 
@@ -260,7 +270,7 @@ export default function SeatContextMenu({
               className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#66533f]/12 cursor-pointer transition-colors text-left"
             >
               <Pencil className="w-4 h-4 text-[#5c4a37] shrink-0" />
-              <span>Ubah Nama Pemain</span>
+              <span>{isEn ? 'Rename Player' : 'Ubah Nama Pemain'}</span>
             </button>
 
             {/* 6. Seat Position Controls */}
@@ -268,11 +278,11 @@ export default function SeatContextMenu({
               <button
                 type="button"
                 onClick={() => onMoveSeat('ccw')}
-                title="Geser berlawanan jarum jam"
+                title={isEn ? "Move counter-clockwise" : "Geser berlawanan jarum jam"}
                 className="flex-1 py-1.5 rounded-lg border border-[#655342]/25 bg-[#66533f]/[0.06] hover:bg-[#66533f]/[0.15] flex items-center justify-center gap-1 cursor-pointer"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
-                <span>Geser</span>
+                <span>{isEn ? 'Move' : 'Geser'}</span>
               </button>
               <button
                 type="button"
@@ -280,19 +290,19 @@ export default function SeatContextMenu({
                   onClose();
                   onStartSwap();
                 }}
-                title="Tukar kursi dengan pemain lain"
+                title={isEn ? "Swap seat with another player" : "Tukar kursi dengan pemain lain"}
                 className="flex-1 py-1.5 rounded-lg border border-[#655342]/25 bg-[#66533f]/[0.06] hover:bg-[#66533f]/[0.15] flex items-center justify-center gap-1 cursor-pointer"
               >
                 <ArrowLeftRight className="w-3 h-3" />
-                <span>Tukar</span>
+                <span>{isEn ? 'Swap' : 'Tukar'}</span>
               </button>
               <button
                 type="button"
                 onClick={() => onMoveSeat('cw')}
-                title="Geser searah jarum jam"
+                title={isEn ? "Move clockwise" : "Geser searah jarum jam"}
                 className="flex-1 py-1.5 rounded-lg border border-[#655342]/25 bg-[#66533f]/[0.06] hover:bg-[#66533f]/[0.15] flex items-center justify-center gap-1 cursor-pointer"
               >
-                <span>Geser</span>
+                <span>{isEn ? 'Move' : 'Geser'}</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -306,7 +316,7 @@ export default function SeatContextMenu({
                     className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-[#760a0d] hover:bg-[#760a0d]/10 cursor-pointer transition-colors text-left"
                   >
                     <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                    <span>Hapus Kursi Ini</span>
+                    <span>{isEn ? 'Remove This Seat' : 'Hapus Kursi Ini'}</span>
                   </button>
                 ) : (
                   <button
@@ -317,7 +327,7 @@ export default function SeatContextMenu({
                     }}
                     className="w-full px-3 py-2 rounded-xl bg-[#760a0d] text-[#efe6d2] font-bold text-center cursor-pointer"
                   >
-                    Konfirmasi Hapus {seat.name}
+                    {isEn ? `Confirm Remove ${seat.name}` : `Konfirmasi Hapus ${seat.name}`}
                   </button>
                 )}
               </div>
@@ -328,7 +338,7 @@ export default function SeatContextMenu({
         {/* Kill Cause Subpanel */}
         {subPanel === 'kill' && (
           <div className="p-2.5 space-y-2 text-xs">
-            <p className="font-semibold text-[#5c4a37] px-1">Pilih penyebab kematian:</p>
+            <p className="font-semibold text-[#5c4a37] px-1">{isEn ? 'Select cause of death:' : 'Pilih penyebab kematian:'}</p>
             <button
               type="button"
               onClick={() => {
@@ -338,7 +348,7 @@ export default function SeatContextMenu({
               className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[#760a0d]/15 hover:bg-[#760a0d]/25 text-[#760a0d] font-bold cursor-pointer text-left"
             >
               <Skull className="w-4 h-4 shrink-0" />
-              <span>Dibunuh Demon (Malam)</span>
+              <span>{isEn ? 'Killed by Demon (Night)' : 'Dibunuh Demon (Malam)'}</span>
             </button>
             <button
               type="button"
@@ -349,7 +359,7 @@ export default function SeatContextMenu({
               className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[#c9963a]/25 hover:bg-[#c9963a]/40 text-[#2a2018] font-bold cursor-pointer text-left"
             >
               <Gavel className="w-4 h-4 shrink-0" />
-              <span>Dieksekusi Kota (Siang)</span>
+              <span>{isEn ? 'Executed by Town (Day)' : 'Dieksekusi Kota (Siang)'}</span>
             </button>
             <button
               type="button"
@@ -360,14 +370,14 @@ export default function SeatContextMenu({
               className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[#0064ac]/15 hover:bg-[#0064ac]/25 text-[#0064ac] font-bold cursor-pointer text-left"
             >
               <Crosshair className="w-4 h-4 shrink-0" />
-              <span>Tertembak Slayer (Siang)</span>
+              <span>{isEn ? 'Shot by Slayer (Day)' : 'Tertembak Slayer (Siang)'}</span>
             </button>
             <button
               type="button"
               onClick={() => setSubPanel('main')}
               className="w-full py-1.5 rounded-lg text-center text-[#5c4a37] hover:bg-[#66533f]/10 cursor-pointer"
             >
-              Kembali
+              {isEn ? 'Back' : 'Kembali'}
             </button>
           </div>
         )}
@@ -376,7 +386,7 @@ export default function SeatContextMenu({
         {subPanel === 'rename' && (
           <form onSubmit={handleRenameSubmit} className="p-3 space-y-2.5">
             <label className="block text-[11px] font-mono uppercase tracking-wider text-[#5c4a37]">
-              Nama Baru Kursi #{seat.seatIndex + 1}
+              {isEn ? `New Name for Seat #${seat.seatIndex + 1}` : `Nama Baru Kursi #${seat.seatIndex + 1}`}
             </label>
             <input
               type="text"
@@ -392,13 +402,13 @@ export default function SeatContextMenu({
                 onClick={() => setSubPanel('main')}
                 className="flex-1 py-1.5 rounded-xl border border-[#655342]/30 text-xs font-semibold text-[#5c4a37] cursor-pointer"
               >
-                Batal
+                {isEn ? 'Cancel' : 'Batal'}
               </button>
               <button
                 type="submit"
                 className="flex-1 py-1.5 rounded-xl bg-[#2a2018] text-[#efe6d2] text-xs font-bold cursor-pointer"
               >
-                Simpan
+                {isEn ? 'Save' : 'Simpan'}
               </button>
             </div>
           </form>
@@ -409,23 +419,23 @@ export default function SeatContextMenu({
           <div className="p-2.5 space-y-2">
             <div className="flex items-center justify-between px-0.5">
               <span className="text-[11px] font-mono uppercase tracking-wider text-[#5c4a37]">
-                Pilih Peran Baru
+                {isEn ? 'Choose New Role' : 'Pilih Peran Baru'}
               </span>
               <button
                 type="button"
                 onClick={() => setSubPanel('main')}
                 className="text-xs font-bold text-[#0064ac] cursor-pointer"
               >
-                Kembali
+                {isEn ? 'Back' : 'Kembali'}
               </button>
             </div>
             <div className="grid grid-cols-4 gap-1">
               {(
                 [
-                  { id: 'townsfolk', label: 'Town' },
-                  { id: 'outsider', label: 'Out' },
+                  { id: 'townsfolk', label: isEn ? 'Town' : 'Warga' },
+                  { id: 'outsider', label: isEn ? 'Out' : 'Luar' },
                   { id: 'evil', label: 'Evil' },
-                  { id: 'traveller', label: 'Trav' },
+                  { id: 'traveller', label: isEn ? 'Trav' : 'Musafir' },
                 ] as const
               ).map((tab) => (
                 <button
@@ -460,7 +470,7 @@ export default function SeatContextMenu({
                     }`}
                   >
                     <CharacterTokenFront role={role} size={22} showSetupLeaf={false} />
-                    <span className="truncate text-[#2a2018]">{role.name}</span>
+                    <span className="truncate text-[#2a2018]">{getRoleName(role, language)}</span>
                   </button>
                 );
               })}

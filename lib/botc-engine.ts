@@ -4,12 +4,17 @@ import {
   REMINDER_TOKENS,
   ROLE_MAP,
   ROLES,
-} from './botc-data.ts';
+  getRoleName,
+  getRoleAbility,
+  getRoleFirstNightInstruction,
+  getRoleOtherNightInstruction,
+} from './botc-data';
 import type {
   CharacterCountRow,
   ReminderDefinition,
   RoleDefinition,
-} from './botc-data.ts';
+} from './botc-data';
+import type { AppLanguage } from './translations';
 
 export interface PlacedReminder {
   instanceId: string;
@@ -796,15 +801,17 @@ export function buildNightOrder(
   phase: 'first_night' | 'other_night',
   players: PlayerSeat[],
   executedTodayPlayerId: string | null,
-  demonBluffIds: string[]
+  demonBluffIds: string[],
+  lang: AppLanguage = 'en'
 ): NightOrderStep[] {
   const steps: NightOrderStep[] = [];
+  const isEn = lang === 'en';
 
   steps.push({
     id: `${phase}-dusk`,
     order: 1,
-    title: 'Senja (Dusk) - Semua Mata Tertutup',
-    subtitle: 'Pembukaan Malam',
+    title: isEn ? 'Dusk - All Players Close Their Eyes' : 'Senja - Semua Mata Tertutup',
+    subtitle: isEn ? 'Night Begins' : 'Pembukaan Malam',
     roleId: null,
     playerId: null,
     playerName: null,
@@ -812,8 +819,9 @@ export function buildNightOrder(
     isDrunkPlayer: false,
     isPoisonedPlayer: false,
     isConditional: false,
-    instruction:
-      'Ucapkan kepada seluruh pemain: "Malam telah tiba di Ravenswood Bluff. Semua pemain silakan tutup mata, tundukkan kepala, dan jangan bersuara." Pastikan seluruh mata benar-benar tertutup sebelum melanjutkan.',
+    instruction: isEn
+      ? 'Say to the whole town: "Night has fallen over Ravenswood Bluff. Everyone, please close your eyes, lower your heads, and remain silent." Ensure all eyes are shut before proceeding.'
+      : 'Ucapkan kepada seluruh pemain: "Malam telah tiba di Ravenswood Bluff. Semua pemain silakan tutup mata, tundukkan kepala, dan jangan bersuara." Pastikan seluruh mata benar-benar tertutup sebelum melanjutkan.',
   });
 
   if (phase === 'first_night') {
@@ -824,13 +832,17 @@ export function buildNightOrder(
     // Minion Info
     if (minions.length > 0 && demon) {
       const minionNames = minions
-        .map((m) => `${m.name} (Kursi ${m.seatIndex + 1} - ${ROLE_MAP[m.trueRoleId]?.name})`)
+        .map((m) =>
+          isEn
+            ? `${m.name} (Seat ${m.seatIndex + 1} - ${ROLE_MAP[m.trueRoleId]?.name})`
+            : `${m.name} (Kursi ${m.seatIndex + 1} - ${ROLE_MAP[m.trueRoleId]?.indonesianName || ROLE_MAP[m.trueRoleId]?.name})`
+        )
         .join(', ');
 
       steps.push({
         id: 'first-minion-info',
         order: 5,
-        title: 'Informasi Minion (Minion Info)',
+        title: isEn ? 'Minion Info' : 'Informasi Minion',
         subtitle: minions.map((m) => m.name).join(', '),
         roleId: minions[0].trueRoleId,
         playerId: minions[0].id,
@@ -839,22 +851,26 @@ export function buildNightOrder(
         isDrunkPlayer: false,
         isPoisonedPlayer: false,
         isConditional: isSmallGame,
-        instruction: `Bangunkan seluruh Minion (${minionNames}). Biarkan mereka saling bertatapan untuk mengenal rekan sesama Minion. Kemudian tunjuk pemain Demon yaitu ${demon.name} (Kursi ${demon.seatIndex + 1}) dan perlihatkan kartu "INI ADALAH DEMON ANDA". Tidurkan kembali seluruh Minion.`,
+        instruction: isEn
+          ? `Wake all Minions (${minionNames}). Let them make eye contact to know each other. Then point to the Demon, ${demon.name} (Seat ${demon.seatIndex + 1}), and show the THIS IS THE DEMON card. Put all Minions back to sleep.`
+          : `Bangunkan seluruh Minion (${minionNames}). Biarkan mereka saling bertatapan untuk mengenal rekan sesama Minion. Kemudian tunjuk pemain Demon yaitu ${demon.name} (Kursi ${demon.seatIndex + 1}) dan perlihatkan kartu "INI ADALAH DEMON ANDA". Tidurkan kembali seluruh Minion.`,
         storytellerWarning: isSmallGame
-          ? 'Catatan Aturan 5-6 Pemain (Teensyville): Dalam aturan turnamen 5-6 pemain, Minion & Demon tidak saling mengenal di Malam 1. Namun Anda dapat tetap menjalankan langkah ini jika grup Anda bermain mode standar.'
+          ? isEn
+            ? 'Teensyville Note (5-6 Players): In 5-6 player games, Minions and Demon do not learn each other. You may skip this step if playing standard rules.'
+            : 'Catatan Aturan 5-6 Pemain (Teensyville): Dalam aturan turnamen 5-6 pemain, Minion & Demon tidak saling mengenal di Malam 1. Namun Anda dapat tetap menjalankan langkah ini jika grup Anda bermain mode standar.'
           : undefined,
       });
 
       const bluffNames = demonBluffIds
-        .map((id) => ROLE_MAP[id]?.name)
+        .map((id) => (isEn ? ROLE_MAP[id]?.name : ROLE_MAP[id]?.indonesianName || ROLE_MAP[id]?.name))
         .filter(Boolean)
         .join(', ');
 
       steps.push({
         id: 'first-demon-info',
         order: 10,
-        title: 'Informasi Demon & 3 Bluff Aman (Demon Info)',
-        subtitle: `${demon.name} (Imp)`,
+        title: isEn ? 'Demon Info & 3 Safe Bluffs' : 'Informasi Demon & 3 Bluff Aman',
+        subtitle: isEn ? `${demon.name} (Imp)` : `${demon.name} (Iblis Imp)`,
         roleId: demon.trueRoleId,
         playerId: demon.id,
         playerName: demon.name,
@@ -862,20 +878,24 @@ export function buildNightOrder(
         isDrunkPlayer: false,
         isPoisonedPlayer: false,
         isConditional: isSmallGame,
-        instruction: `Bangunkan Demon yaitu ${demon.name} (Kursi ${demon.seatIndex + 1}). Tunjuk seluruh Minion (${minions.map((m) => `${m.name} di Kursi ${m.seatIndex + 1}`).join(', ')}) sebagai rekannya. Lalu perlihatkan 3 karakter Bluff Aman yang TIDAK ada di permainan: ${bluffNames || 'Lihat Panel Bluff'}. Tidurkan kembali Demon.`,
+        instruction: isEn
+          ? `Wake the Demon, ${demon.name} (Seat ${demon.seatIndex + 1}). Point to all Minions (${minions.map((m) => `${m.name} at Seat ${m.seatIndex + 1}`).join(', ')}) as teammates. Show the 3 safe bluff characters NOT in play: ${bluffNames || 'See Bluff Panel'}. Put the Demon back to sleep.`
+          : `Bangunkan Demon yaitu ${demon.name} (Kursi ${demon.seatIndex + 1}). Tunjuk seluruh Minion (${minions.map((m) => `${m.name} di Kursi ${m.seatIndex + 1}`).join(', ')}) sebagai rekannya. Lalu perlihatkan 3 karakter Bluff Aman yang TIDAK ada di permainan: ${bluffNames || 'Lihat Panel Bluff'}. Tidurkan kembali Demon.`,
         dynamicHelperText: bluffNames
-          ? `3 Bluff Aman Demon: ${bluffNames}`
+          ? isEn
+            ? `3 Safe Demon Bluffs: ${bluffNames}`
+            : `3 Bluff Aman Demon: ${bluffNames}`
           : undefined,
         storytellerWarning: isSmallGame
-          ? 'Catatan 5-6 Pemain: Lewati langkah ini jika Anda memainkan mode Teensyville tanpa info tim Evil.'
+          ? isEn
+            ? '5-6 Players Note: Skip this step if playing Teensyville without evil team info.'
+            : 'Catatan 5-6 Pemain: Lewati langkah ini jika Anda memainkan mode Teensyville tanpa info tim Evil.'
           : undefined,
       });
     }
   }
 
-  // Gather active roles in seat table based on perceivedRoleId (so Drunk wakes up as their fake Townsfolk!)
-  // Wait: what if a player is dead? Dead players do NOT wake up, EXCEPT Ravenkeeper on the night they die, and Spy does not see Grimoire if dead.
-  // Also Scarlet Woman wakes if she became the Imp or check condition.
+  // Gather active roles in seat table based on perceivedRoleId
   interface CandidateWake {
     order: number;
     player: PlayerSeat;
@@ -892,13 +912,9 @@ export function buildNightOrder(
       phase === 'first_night' ? actingRole.firstNightOrder : actingRole.otherNightOrder;
     if (orderNum === null) continue;
 
-    // Alive check: dead players don't wake except Ravenkeeper (who wakes right after dying tonight)
     const diedTonightByImp = player.reminders.some((r) => r.reminderId === 'die_imp');
     if (!player.isAlive && actingRole.id !== 'ravenkeeper') {
       continue;
-    }
-    if (actingRole.id === 'ravenkeeper' && !diedTonightByImp && player.isAlive) {
-      // Still include Ravenkeeper as conditional step so Storyteller remembers if Imp kills them right before!
     }
 
     candidateWakes.push({
@@ -916,37 +932,55 @@ export function buildNightOrder(
     const isPoisoned = isPlayerPoisoned(player);
     const baseInstruction =
       phase === 'first_night'
-        ? actingRole.firstNightInstruction ?? actingRole.ability
-        : actingRole.otherNightInstruction ?? actingRole.ability;
+        ? getRoleFirstNightInstruction(actingRole, lang)
+        : getRoleOtherNightInstruction(actingRole, lang);
 
     let dynamicHelperText: string | undefined;
     let storytellerWarning: string | undefined;
 
     if (isDrunk) {
-      storytellerWarning = `PERINGATAN DRUNK: ${player.name} SEBENARNYA ADALAH THE DRUNK (hanya mengira dirinya ${actingRole.name}). Tetap bangunkan seperti biasa, namun kemampuannya TIDAK berefek dan Anda bebas memberikan informasi palsu yang masuk akal!`;
+      storytellerWarning = isEn
+        ? `DRUNK WARNING: ${player.name} IS ACTUALLY THE DRUNK (believes they are ${actingRole.name}). Wake them normally, but their ability has NO EFFECT and you are free to give convincing false information!`
+        : `PERINGATAN DRUNK: ${player.name} SEBENARNYA ADALAH ORANG MABUK (hanya mengira dirinya ${actingRole.indonesianName}). Tetap bangunkan seperti biasa, namun kemampuannya TIDAK berefek dan Anda bebas memberikan informasi palsu yang masuk akal!`;
     } else if (isPoisoned) {
-      storytellerWarning = `PERINGATAN POISONED: ${player.name} sedang terkena racun (Poisoned)! Kemampuannya tidak bekerja malam ini—berikan informasi palsu/acak atau abaikan efek perlindungannya.`;
+      storytellerWarning = isEn
+        ? `POISON WARNING: ${player.name} is currently POISONED! Their ability does not work tonight—provide false/misleading information or ignore their protection.`
+        : `PERINGATAN RACUN: ${player.name} sedang terkena racun! Kemampuannya tidak bekerja malam ini—berikan informasi palsu/acak atau abaikan efek perlindungannya.`;
     }
 
     // Contextual helper calculations
     if (actingRole.id === 'chef') {
       const chefCalc = calculateChefNumber(players);
-      dynamicHelperText = `Hitung Otomatis Chef: Terdapat ${chefCalc.evilPairs} pasang pemain Evil duduk bersebelahan.${
-        chefCalc.hasRecluseOrSpyNote
-          ? ' (Catatan: Ada Recluse/Spy di permainan yang boleh mengubah angka ini).'
-          : ''
-      }`;
+      dynamicHelperText = isEn
+        ? `Chef Calculation: There are ${chefCalc.evilPairs} pair(s) of evil players sitting adjacent.${
+            chefCalc.hasRecluseOrSpyNote
+              ? ' (Note: Recluse or Spy in play may register differently).'
+              : ''
+          }`
+        : `Hitung Otomatis Koki: Terdapat ${chefCalc.evilPairs} pasang pemain Evil duduk bersebelahan.${
+            chefCalc.hasRecluseOrSpyNote
+              ? ' (Catatan: Ada Pertapa/Mata-mata di permainan yang boleh mengubah angka ini).'
+              : ''
+          }`;
     } else if (actingRole.id === 'empath') {
       const empCalc = calculateEmpathInfo(players, player.seatIndex);
       const leftLabel = empCalc.leftNeighbor
-        ? `${empCalc.leftNeighbor.name} (Kursi ${empCalc.leftNeighbor.seatIndex + 1})`
+        ? isEn
+          ? `${empCalc.leftNeighbor.name} (Seat ${empCalc.leftNeighbor.seatIndex + 1})`
+          : `${empCalc.leftNeighbor.name} (Kursi ${empCalc.leftNeighbor.seatIndex + 1})`
         : '-';
       const rightLabel = empCalc.rightNeighbor
-        ? `${empCalc.rightNeighbor.name} (Kursi ${empCalc.rightNeighbor.seatIndex + 1})`
+        ? isEn
+          ? `${empCalc.rightNeighbor.name} (Seat ${empCalc.rightNeighbor.seatIndex + 1})`
+          : `${empCalc.rightNeighbor.name} (Kursi ${empCalc.rightNeighbor.seatIndex + 1})`
         : '-';
-      dynamicHelperText = `Tetangga Hidup Terdekat: ${leftLabel} & ${rightLabel} -> Jumlah Evil Asli: ${empCalc.evilCount} jari.${
-        empCalc.hasMisregistrationNote ? ' (Ada Recluse/Spy di tetangga).' : ''
-      }`;
+      dynamicHelperText = isEn
+        ? `Closest Alive Neighbours: ${leftLabel} & ${rightLabel} -> True Evil Count: ${empCalc.evilCount} finger(s).${
+            empCalc.hasMisregistrationNote ? ' (Recluse or Spy among neighbours).' : ''
+          }`
+        : `Tetangga Hidup Terdekat: ${leftLabel} & ${rightLabel} -> Jumlah Evil Asli: ${empCalc.evilCount} jari.${
+            empCalc.hasMisregistrationNote ? ' (Ada Pertapa/Mata-mata di tetangga).' : ''
+          }`;
     } else if (actingRole.id === 'undertaker') {
       const executedPlayer = executedTodayPlayerId
         ? players.find((p) => p.id === executedTodayPlayerId)
@@ -955,49 +989,73 @@ export function buildNightOrder(
           );
       if (executedPlayer) {
         const execTrueRole = ROLE_MAP[executedPlayer.trueRoleId];
-        dynamicHelperText = `Dieksekusi Siang Tadi: ${executedPlayer.name} — Peran Asli: ${execTrueRole?.name ?? executedPlayer.trueRoleId}.`;
+        const roleLabel = isEn
+          ? execTrueRole?.name ?? executedPlayer.trueRoleId
+          : execTrueRole?.indonesianName ?? executedPlayer.trueRoleId;
+        dynamicHelperText = isEn
+          ? `Executed Today: ${executedPlayer.name} — True Character: ${roleLabel}.`
+          : `Dieksekusi Siang Tadi: ${executedPlayer.name} — Peran Asli: ${roleLabel}.`;
       } else {
-        dynamicHelperText =
-          'Belum ada pemain berlabel Dieksekusi siang tadi. Jangan bangunkan Undertaker jika tidak ada eksekusi.';
+        dynamicHelperText = isEn
+          ? 'No player was executed today. Do not wake the Undertaker if there was no execution.'
+          : 'Belum ada pemain berlabel Dieksekusi siang tadi. Jangan bangunkan Penggali Kubur jika tidak ada eksekusi.';
       }
     } else if (actingRole.id === 'fortune_teller') {
       const redHerring = players.find((p) =>
         p.reminders.some((r) => r.reminderId === 'decoy_ft')
       );
       const currentDemon = players.find((p) => ROLE_MAP[p.trueRoleId]?.team === 'demon');
-      dynamicHelperText = `Pemicu Anggukan "YA": Demon (${currentDemon ? `${currentDemon.name}` : '-'}) ATAU Red Herring (${
-        redHerring ? `${redHerring.name} di Kursi ${redHerring.seatIndex + 1}` : 'Belum dipasang'
-      }).`;
+      dynamicHelperText = isEn
+        ? `Nod YES trigger: Demon (${currentDemon ? currentDemon.name : '-'}) OR Red Herring (${
+            redHerring ? `${redHerring.name} at Seat ${redHerring.seatIndex + 1}` : 'Not placed'
+          }).`
+        : `Pemicu Anggukan "YA": Demon (${currentDemon ? `${currentDemon.name}` : '-'}) ATAU Red Herring (${
+            redHerring ? `${redHerring.name} di Kursi ${redHerring.seatIndex + 1}` : 'Belum dipasang'
+          }).`;
     } else if (actingRole.id === 'librarian') {
       const outsidersInPlay = players.filter(
         (p) => ROLE_MAP[p.trueRoleId]?.team === 'outsider'
       );
       if (outsidersInPlay.length === 0) {
-        dynamicHelperText =
-          'Hitung Otomatis: 0 Outsider dalam permainan (kecuali Anda ingin memakai Spy untuk terbaca sebagai Outsider). Tunjukkan angka 0.';
+        dynamicHelperText = isEn
+          ? 'Automatic Count: 0 Outsiders in play. Show finger signal 0.'
+          : 'Hitung Otomatis: 0 Warga Luar dalam permainan. Tunjukkan angka 0.';
       } else {
-        dynamicHelperText = `Outsider di Permainan: ${outsidersInPlay
-          .map((o) => `${o.name} (${ROLE_MAP[o.trueRoleId]?.name})`)
-          .join(', ')}.`;
+        dynamicHelperText = isEn
+          ? `Outsiders in play: ${outsidersInPlay
+              .map((o) => `${o.name} (${ROLE_MAP[o.trueRoleId]?.name})`)
+              .join(', ')}.`
+          : `Warga Luar di Permainan: ${outsidersInPlay
+              .map((o) => `${o.name} (${ROLE_MAP[o.trueRoleId]?.indonesianName || ROLE_MAP[o.trueRoleId]?.name})`)
+              .join(', ')}.`;
       }
     } else if (actingRole.id === 'investigator') {
       const minionsInPlay = players.filter(
         (p) => ROLE_MAP[p.trueRoleId]?.team === 'minion'
       );
-      dynamicHelperText = `Minion di Permainan: ${
-        minionsInPlay.map((m) => `${m.name} (${ROLE_MAP[m.trueRoleId]?.name})`).join(', ') || '-'
-      }.`;
+      dynamicHelperText = isEn
+        ? `Minions in play: ${
+            minionsInPlay.map((m) => `${m.name} (${ROLE_MAP[m.trueRoleId]?.name})`).join(', ') || '-'
+          }.`
+        : `Anak Buah di Permainan: ${
+            minionsInPlay.map((m) => `${m.name} (${ROLE_MAP[m.trueRoleId]?.indonesianName || ROLE_MAP[m.trueRoleId]?.name})`).join(', ') || '-'
+          }.`;
     } else if (actingRole.id === 'scarlet_woman') {
       const aliveCount = players.filter((p) => p.isAlive).length;
       const isSwDemonNow = player.reminders.some(
         (r) => r.reminderId === 'is_demon_sw'
       );
       dynamicHelperText = isSwDemonNow
-        ? `AKTIF: Scarlet Woman baru saja berubah menjadi IMP BARU! Bangunkan ia dan tunjukkan token "Anda Adalah -> Imp".`
+        ? isEn
+          ? 'ACTIVE: Scarlet Woman has just become the NEW IMP! Wake them and show the YOU ARE token, then the Imp token.'
+          : 'AKTIF: Wanita Merah baru saja berubah menjadi IBLIS IMP BARU! Bangunkan ia dan tunjukkan token "Anda Adalah -> Imp".'
+        : isEn
+        ? `Standby: ${aliveCount} players alive (Condition: >= 5 alive when Demon dies). Wake only if Demon just died.`
         : `Status Siaga: ${aliveCount} pemain masih hidup (Syarat minimal >= 5 pemain saat Demon mati). Bangunkan hanya jika Demon baru saja mati.`;
     } else if (actingRole.id === 'spy') {
-      dynamicHelperText =
-        'Tunjukkan layar Meja Grimoire secara diam-diam kepada Spy (~15 detik) agar ia dapat melihat semua peran, status mabuk/racun, dan token.';
+      dynamicHelperText = isEn
+        ? 'Show the Grimoire table silently to the Spy (~15 seconds) so they can view all roles, drunk/poisoned states, and reminder tokens.'
+        : 'Tunjukkan layar Meja Grimoire secara diam-diam kepada Mata-mata (~15 detik) agar ia dapat melihat semua peran, status mabuk/racun, dan token.';
     }
 
     const isConditional =
@@ -1008,8 +1066,10 @@ export function buildNightOrder(
     steps.push({
       id: `${phase}-${player.id}-${actingRole.id}`,
       order,
-      title: `${actingRole.name} (${actingRole.indonesianName})`,
-      subtitle: `${player.name} · Kursi ${player.seatIndex + 1}${isDrunk ? ' [ASLI: DRUNK]' : ''}`,
+      title: isEn ? actingRole.name : (actingRole.indonesianName || actingRole.name),
+      subtitle: isEn
+        ? `${player.name} · Seat ${player.seatIndex + 1}${isDrunk ? ' [ACTUAL: DRUNK]' : ''}`
+        : `${player.name} · Kursi ${player.seatIndex + 1}${isDrunk ? ' [ASLI: ORANG MABUK]' : ''}`,
       roleId: actingRole.id,
       playerId: player.id,
       playerName: player.name,
@@ -1030,8 +1090,8 @@ export function buildNightOrder(
   steps.push({
     id: `${phase}-dawn`,
     order: 999,
-    title: 'Fajar Menyingsing (Dawn) - Buka Mata',
-    subtitle: 'Transisi ke Siang Hari',
+    title: isEn ? 'Dawn - All Players Wake' : 'Fajar - Buka Mata',
+    subtitle: isEn ? 'Transition to Day Phase' : 'Transisi ke Siang Hari',
     roleId: null,
     playerId: null,
     playerName: null,
@@ -1041,7 +1101,15 @@ export function buildNightOrder(
     isConditional: false,
     instruction:
       phase === 'first_night'
-        ? 'Tunggu sekitar 5-10 detik agar tidak ada petunjuk suara, lalu ucapkan: "Pagi telah tiba di Ravenswood Bluff! Semua pemain silakan buka mata. Tidak ada korban jiwa malam tadi. Diskusi Siang Hari Pertama dimulai!"'
+        ? isEn
+          ? 'Wait 5-10 seconds to avoid sound cues, then announce: "Dawn has broken over Ravenswood Bluff! Everyone, open your eyes. No one died tonight. Day 1 discussion begins!"'
+          : 'Tunggu sekitar 5-10 detik agar tidak ada petunjuk suara, lalu ucapkan: "Pagi telah tiba di Ravenswood Bluff! Semua pemain silakan buka mata. Tidak ada korban jiwa malam tadi. Diskusi Siang Hari Pertama dimulai!"'
+        : isEn
+        ? `Wait 5-10 seconds, then ask all players to open their eyes. Announce who was found dead tonight (${
+            nightVictimPlayers.length > 0
+              ? nightVictimPlayers.map((v) => v.name).join(', ')
+              : 'No one died tonight'
+          }), without revealing characters or cause of death!`
         : `Tunggu sekitar 5-10 detik, lalu minta semua pemain membuka mata. Umumkan segera siapa yang ditemukan tewas malam ini (${
             nightVictimPlayers.length > 0
               ? nightVictimPlayers.map((v) => v.name).join(', ')
@@ -1049,9 +1117,13 @@ export function buildNightOrder(
           }), tanpa menyebutkan penyebab kematiannya!`,
     dynamicHelperText:
       phase === 'other_night' && nightVictimPlayers.length > 0
-        ? `Target berlabel Mati (Die) malam ini: ${nightVictimPlayers
-            .map((v) => `${v.name} (Kursi ${v.seatIndex + 1})`)
-            .join(', ')}. Klik "Lanjut ke Siang Hari" untuk otomatis mengubah status mereka menjadi Mati.`
+        ? isEn
+          ? `Targets marked Dead tonight: ${nightVictimPlayers
+              .map((v) => `${v.name} (Seat ${v.seatIndex + 1})`)
+              .join(', ')}. Advance to Day will automatically set their status to Dead.`
+          : `Target berlabel Mati malam ini: ${nightVictimPlayers
+              .map((v) => `${v.name} (Kursi ${v.seatIndex + 1})`)
+              .join(', ')}. Klik "Lanjut ke Siang Hari" untuk otomatis mengubah status mereka menjadi Mati.`
         : undefined,
   });
 

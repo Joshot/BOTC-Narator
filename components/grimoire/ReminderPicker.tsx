@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import { Plus, StickyNote, X } from 'lucide-react';
-import { REMINDER_TOKENS, ROLE_MAP } from '@/lib/botc-data';
+import { REMINDER_TOKENS, ROLE_MAP, getReminderDescription, getReminderLabel, getRoleName } from '@/lib/botc-data';
 import { GRIMOIRE_PALETTE } from '@/lib/grimoire-theme';
+import { useLanguage } from '@/context/LanguageContext';
 import ParchmentSurface from './ParchmentSurface';
 import { ReminderDisc } from './TokenPrimitives';
 import { useLockBodyScroll } from './useLockBodyScroll';
@@ -29,6 +30,8 @@ export default function ReminderPicker({
   onAddCustomNote,
   onClose,
 }: ReminderPickerProps) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [noteInput, setNoteInput] = useState('');
   const [activeTab, setActiveTab] = useState<'in_play' | 'other'>('in_play');
 
@@ -63,7 +66,7 @@ export default function ReminderPicker({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Pilih Token Pengingat"
+      aria-label={isEn ? "Select Reminder Token" : "Pilih Token Pengingat"}
       className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/65 backdrop-blur-[2px] overflow-hidden"
       onClick={onClose}
     >
@@ -76,16 +79,16 @@ export default function ReminderPicker({
           <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-[#655342]/25">
             <div className="min-w-0">
               <p className="text-[10px] font-mono uppercase tracking-widest text-[#5c4a37]">
-                Baki Pengingat Trouble Brewing
+                {isEn ? 'Trouble Brewing Reminder Tray' : 'Baki Pengingat Trouble Brewing'}
               </p>
               <h3 className="font-display text-base sm:text-lg font-bold text-[#2a2018] truncate">
-                Pasang Token ke {targetPlayerName}
+                {isEn ? `Add Token to ${targetPlayerName}` : `Pasang Token ke ${targetPlayerName}`}
               </h3>
             </div>
             <button
               type="button"
               onClick={onClose}
-              aria-label="Tutup baki pengingat"
+              aria-label={isEn ? "Close reminder tray" : "Tutup baki pengingat"}
               className="w-8 h-8 rounded-xl bg-[#66533f]/10 hover:bg-[#66533f]/20 text-[#2a2018] flex items-center justify-center cursor-pointer transition-colors shrink-0"
             >
               <X className="w-4 h-4" />
@@ -103,7 +106,7 @@ export default function ReminderPicker({
                   : 'bg-[#66533f]/10 text-[#5c4a37] hover:bg-[#66533f]/20'
               }`}
             >
-              Sedang Main ({inPlayReminders.length})
+              {isEn ? `In Play (${inPlayReminders.length})` : `Sedang Main (${inPlayReminders.length})`}
             </button>
             <button
               type="button"
@@ -114,7 +117,7 @@ export default function ReminderPicker({
                   : 'bg-[#66533f]/10 text-[#5c4a37] hover:bg-[#66533f]/20'
               }`}
             >
-              Lainnya ({notInPlayReminders.length})
+              {isEn ? `Other (${notInPlayReminders.length})` : `Lainnya (${notInPlayReminders.length})`}
             </button>
           </div>
 
@@ -122,7 +125,9 @@ export default function ReminderPicker({
           <div className="p-3 sm:p-4 overflow-hidden">
             {displayedReminders.length === 0 ? (
               <p className="text-xs text-[#5c4a37]/80 italic text-center py-6">
-                Tidak ada token di kategori ini. Coba tab lain atau pasang Catatan Kustom di bawah.
+                {isEn
+                  ? 'No tokens in this category. Try another tab or add a Custom Note below.'
+                  : 'Tidak ada token di kategori ini. Coba tab lain atau pasang Catatan Kustom di bawah.'}
               </p>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
@@ -132,11 +137,15 @@ export default function ReminderPicker({
                     role?.team === 'minion' || role?.team === 'demon'
                       ? GRIMOIRE_PALETTE.teamOnPaper.demon
                       : GRIMOIRE_PALETTE.teamOnPaper.townsfolk;
+                  const label = getReminderLabel(rem.id, language);
+                  const desc = getReminderDescription(rem.id, language);
+                  const roleDisplayName = role ? getRoleName(role, language) : rem.roleId;
+
                   return (
                     <button
                       key={rem.id}
                       type="button"
-                      title={rem.description}
+                      title={desc}
                       onClick={() => {
                         onPickReminder(rem.id);
                         onClose();
@@ -146,13 +155,13 @@ export default function ReminderPicker({
                       <ReminderDisc reminderId={rem.id} size={32} showTooltip={false} />
                       <div className="min-w-0 flex-1">
                         <div className="font-display text-xs sm:text-sm font-bold text-[#2a2018] truncate">
-                          {rem.indonesianLabel}
+                          {label}
                         </div>
                         <div
                           className="text-[10px] font-mono uppercase tracking-wider truncate"
                           style={{ color: teamColor }}
                         >
-                          {role?.name || rem.roleId}
+                          {roleDisplayName}
                         </div>
                       </div>
                     </button>
@@ -173,7 +182,7 @@ export default function ReminderPicker({
               value={noteInput}
               onChange={(e) => setNoteInput(e.target.value)}
               maxLength={32}
-              placeholder="Catatan kustom (mis. Klaim Chef 1)..."
+              placeholder={isEn ? "Custom note (e.g. Claimed Chef 1)..." : "Catatan kustom (mis. Klaim Chef 1)..."}
               className="flex-1 min-w-0 px-3 py-1.5 rounded-xl border border-[#655342]/35 bg-white/80 text-xs sm:text-sm text-[#2a2018] placeholder:text-[#5c4a37]/60 focus:outline-none focus:ring-2 focus:ring-[#c9963a]"
             />
             <button
@@ -182,7 +191,7 @@ export default function ReminderPicker({
               className="px-3 py-1.5 rounded-xl bg-[#2a2018] hover:bg-[#3f3125] disabled:opacity-40 text-[#efe6d2] text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Pasang</span>
+              <span>{isEn ? 'Attach' : 'Pasang'}</span>
             </button>
           </form>
         </ParchmentSurface>

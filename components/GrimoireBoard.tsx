@@ -22,7 +22,8 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { ALL_TB_ROLES, ROLE_MAP } from '@/lib/botc-data';
+import { ALL_TB_ROLES, ROLE_MAP, getRoleName } from '@/lib/botc-data';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   DayNomination,
   DayTimerState,
@@ -156,6 +157,8 @@ export default function GrimoireBoard({
   onCancelNomination,
   onShowSilentCard,
 }: GrimoireBoardProps) {
+  const { language, t } = useLanguage();
+  const isEn = language === 'en';
   const isDesktop = process.env.NEXT_PUBLIC_APP_MODE === 'desktop';
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [stageSize, setStageSize] = useState({ width: 880, height: 580 });
@@ -305,11 +308,11 @@ export default function GrimoireBoard({
   const isTabletStage = stageSize.width >= 640 && stageSize.width < 1024;
 
   const ring = useMemo(() => {
-    const padX = isPhoneStage ? 20 : isTabletStage ? 88 : 132;
-    const padY = isPhoneStage ? 124 : isTabletStage ? 120 : 116;
+    const padX = isPhoneStage ? 20 : isTabletStage ? 80 : 100;
+    const padY = isPhoneStage ? 124 : isTabletStage ? 116 : 96;
     const bandWidth = Math.max(256, stageSize.width - padX);
     const bandHeight = Math.max(260, stageSize.height - padY);
-    const maxToken = isPhoneStage ? 62 : isTabletStage ? 82 : 94;
+    const maxToken = isPhoneStage ? 62 : isTabletStage ? 82 : stageSize.width >= 1500 ? 112 : 98;
     return fitRing({ width: bandWidth, height: bandHeight }, players.length, maxToken);
   }, [isPhoneStage, isTabletStage, players.length, stageSize.height, stageSize.width]);
 
@@ -347,17 +350,17 @@ export default function GrimoireBoard({
 
   const phaseLabel =
     phase === 'first_night'
-      ? 'Malam Pertama'
+      ? (isEn ? 'First Night' : 'Malam Pertama')
       : phase === 'day'
-      ? `Siang Hari ke-${dayNumber}`
-      : `Malam ke-${Math.max(2, dayNumber)}`;
+      ? (isEn ? `Day ${dayNumber}` : `Siang Hari ke-${dayNumber}`)
+      : (isEn ? `Night ${Math.max(2, dayNumber)}` : `Malam ke-${Math.max(2, dayNumber)}`);
 
   const nextPhaseShortLabel =
     phase === 'first_night'
-      ? 'Lanjut Siang 1'
+      ? (isEn ? 'Next: Day 1' : 'Lanjut Siang 1')
       : phase === 'other_night'
-      ? `Lanjut Siang ${Math.max(2, dayNumber)}`
-      : `Lanjut Malam ${dayNumber + 1}`;
+      ? (isEn ? `Next: Day ${Math.max(2, dayNumber)}` : `Lanjut Siang ${Math.max(2, dayNumber)}`)
+      : (isEn ? `Next: Night ${dayNumber + 1}` : `Lanjut Malam ${dayNumber + 1}`);
 
   const handleSeatInteraction = (player: PlayerSeat) => {
     if (swapSourceSeatIdx !== null) {
@@ -391,7 +394,11 @@ export default function GrimoireBoard({
           <div className="flex items-center gap-2">
             <Beer className="w-4 h-4 text-[#c9963a] shrink-0" />
             <span>
-              <strong>The Drunk</strong> aktif di kantong, belum dipilih ke kursi pemain mana.
+              {isEn ? (
+                <><strong>The Drunk</strong> is in play, not yet assigned to any player seat.</>
+              ) : (
+                <><strong>The Drunk</strong> aktif di kantong, belum dipilih ke kursi pemain mana.</>
+              )}
             </span>
           </div>
           <button
@@ -399,7 +406,7 @@ export default function GrimoireBoard({
             onClick={() => setIsDrunkModalOpen(true)}
             className="px-3 py-1 rounded-xl bg-[#c9963a] text-[#2a2018] font-bold cursor-pointer hover:bg-[#d8a74c]"
           >
-            Pilih Pemain Drunk
+            {isEn ? 'Assign Drunk Player' : 'Pilih Pemain Drunk'}
           </button>
         </div>
       )}
@@ -427,7 +434,7 @@ export default function GrimoireBoard({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="px-3 py-1.5 rounded-xl bg-black/50 border border-[#c9963a]/40 font-display text-xs sm:text-sm font-bold text-[#efe6d2]">
-                  {phaseLabel} · {voteStats.aliveCount}H / {voteStats.votesNeeded} Suara
+                  {phaseLabel} · {voteStats.aliveCount} {isEn ? 'Alive / ' : 'Hidup / '}{voteStats.votesNeeded} {isEn ? 'Votes' : 'Suara'}
                 </span>
                 {onTimerAction && (
                   <div className="hidden lg:flex">
@@ -465,7 +472,7 @@ export default function GrimoireBoard({
                   className="min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl bg-black/50 border border-[#c9963a]/45 text-[#c9963a] hover:bg-black/70 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
                 >
                   <Eye className="w-3.5 h-3.5" />
-                  <span>Tunjuk</span>
+                  <span>{isEn ? 'Show' : 'Tunjuk'}</span>
                 </button>
                 <button
                   type="button"
@@ -473,7 +480,7 @@ export default function GrimoireBoard({
                   className="hidden md:flex min-h-[38px] px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-[#efe6d2] font-bold text-xs items-center gap-1.5 cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-[#c9963a]" />
-                  <span>Lingkaran</span>
+                  <span>{isEn ? 'Circle' : 'Lingkaran'}</span>
                 </button>
                 <button
                   type="button"
@@ -481,13 +488,13 @@ export default function GrimoireBoard({
                   className="hidden lg:flex min-h-[38px] px-2.5 py-1.5 rounded-xl bg-black/50 border border-[#c9963a]/35 text-[#efe6d2] font-bold text-xs items-center gap-1.5 cursor-pointer"
                 >
                   <BookOpen className="w-3.5 h-3.5 text-[#c9963a]" />
-                  <span>Skrip</span>
+                  <span>{isEn ? 'Script' : 'Skrip'}</span>
                 </button>
                 {spyStealth && (
                   <button
                     type="button"
                     onClick={() => setSpyStealth(false)}
-                    title="Matikan Mode Stealth"
+                    title={isEn ? "Disable Stealth Mode" : "Matikan Mode Stealth"}
                     className="min-h-[38px] px-2 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
                   >
                     <EyeOff className="w-3.5 h-3.5" />
@@ -499,7 +506,7 @@ export default function GrimoireBoard({
                     type="button"
                     onClick={() => setMoreMenuOpen((prev) => !prev)}
                     aria-label="Menu Alat Grimoire"
-                    title="Alat & Pengaturan Grimoire"
+                    title={isEn ? "Grimoire Tools & Settings" : "Alat & Pengaturan Grimoire"}
                     className={`min-h-[38px] px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
                       moreMenuOpen
                         ? 'bg-[#c9963a]/25 border-[#c9963a] text-[#f4e4bc]'
@@ -507,7 +514,7 @@ export default function GrimoireBoard({
                     }`}
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5 text-[#c9963a]" />
-                    <span className="hidden sm:inline">Alat</span>
+                    <span className="hidden sm:inline">{isEn ? 'Tools' : 'Alat'}</span>
                   </button>
                   <BoardToolsMenu
                     isOpen={moreMenuOpen}
@@ -592,13 +599,14 @@ export default function GrimoireBoard({
                       )}
                       <div className="min-w-0 flex-1">
                         <div className="text-[10px] font-mono uppercase tracking-wider text-[#5c4a37]">
-                          Kursi #{player.seatIndex + 1} · {player.isAlive ? 'Hidup' : 'Mati'}
+                          {isEn ? `Seat #${player.seatIndex + 1} · ` : `Kursi #${player.seatIndex + 1} · `}
+                          {player.isAlive ? (isEn ? 'Alive' : 'Hidup') : (isEn ? 'Dead' : 'Mati')}
                         </div>
                         <div className="font-display text-base font-bold text-[#2a2018] truncate">
                           {player.name}
                         </div>
                         <div className="text-xs font-semibold text-[#5c4a37] truncate">
-                          {role?.name}
+                          {role ? getRoleName(role, language) : ''}
                         </div>
                       </div>
                     </div>
@@ -622,7 +630,7 @@ export default function GrimoireBoard({
                         onClick={() => setReminderPickerSeatId(player.id)}
                         className="flex-1 py-1.5 rounded-xl bg-[#2a2018] text-[#efe6d2] text-xs font-bold cursor-pointer"
                       >
-                        + Pengingat
+                        {isEn ? '+ Reminder' : '+ Pengingat'}
                       </button>
                       <button
                         type="button"
@@ -637,7 +645,7 @@ export default function GrimoireBoard({
                         }}
                         className="px-3 py-1.5 rounded-xl border border-[#655342]/30 text-xs font-bold text-[#2a2018] cursor-pointer"
                       >
-                        {player.isAlive ? 'Matikan' : 'Hidupkan'}
+                        {player.isAlive ? (isEn ? 'Kill' : 'Matikan') : (isEn ? 'Resurrect' : 'Hidupkan')}
                       </button>
                     </div>
                   </ParchmentSurface>
@@ -675,7 +683,7 @@ export default function GrimoireBoard({
                   <button
                     type="button"
                     onClick={() => onRotateRing('ccw')}
-                    title="Putar semua kursi berlawanan jarum jam"
+                    title={isEn ? "Rotate all seats counter-clockwise" : "Putar semua kursi berlawanan jarum jam"}
                     className="p-1.5 rounded-lg text-[#efe6d2] hover:bg-white/10 cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
@@ -683,7 +691,7 @@ export default function GrimoireBoard({
                   <button
                     type="button"
                     onClick={() => onRotateRing('cw')}
-                    title="Putar semua kursi searah jarum jam"
+                    title={isEn ? "Rotate all seats clockwise" : "Putar semua kursi searah jarum jam"}
                     className="p-1.5 rounded-lg text-[#efe6d2] hover:bg-white/10 cursor-pointer"
                   >
                     <RotateCw className="w-3.5 h-3.5" />
@@ -700,10 +708,10 @@ export default function GrimoireBoard({
                       ? 'bg-[#c9963a] text-[#2a2018]'
                       : 'text-[#efe6d2] hover:bg-white/10'
                   }`}
-                  title="Tambahkan kursi Traveller / pemain baru di celah cincin"
+                  title={isEn ? "Add Traveller / new player seat in ring gap" : "Tambahkan kursi Traveller / pemain baru di celah cincin"}
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Kursi</span>
+                  <span>{isEn ? 'Seats' : 'Kursi'}</span>
                 </button>
               )}
 
@@ -714,10 +722,10 @@ export default function GrimoireBoard({
                   setViewMode('cards');
                 }}
                 className="hidden lg:flex min-h-[36px] px-2.5 py-1.5 rounded-xl text-xs font-bold items-center gap-1.5 text-[#efe6d2] hover:bg-white/10 cursor-pointer"
-                title="Buka tampilan daftar kartu"
+                title={isEn ? "Switch to cards list view" : "Buka tampilan daftar kartu"}
               >
                 <LayoutGrid className="w-3.5 h-3.5 text-[#c9963a]" />
-                <span>Daftar</span>
+                <span>{isEn ? 'Cards' : 'Daftar'}</span>
               </button>
 
               <div className="relative flex items-center gap-1 lg:border-l lg:border-[#c9963a]/25 lg:pl-1">
@@ -729,7 +737,7 @@ export default function GrimoireBoard({
                   }}
                   aria-label="Menu Alat Grimoire"
                   aria-expanded={moreMenuOpen}
-                  title="Buka Menu Alat (Timer, Undo/Redo, Skrip, Kain, Pengaturan)"
+                  title={isEn ? "Open Tools Menu (Timer, Undo/Redo, Script, Fabric, Settings)" : "Buka Menu Alat (Timer, Undo/Redo, Skrip, Kain, Pengaturan)"}
                   className={`min-h-[36px] sm:min-h-[38px] lg:min-h-[34px] px-2.5 sm:px-3 lg:px-2 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
                     moreMenuOpen
                       ? 'bg-[#c9963a] text-[#2a2018]'
@@ -737,7 +745,7 @@ export default function GrimoireBoard({
                   }`}
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
-                  <span className="lg:hidden">Menu</span>
+                  <span className="lg:hidden">{isEn ? 'Menu' : 'Menu'}</span>
                   {dayTimer?.deadline && (
                     <span
                       aria-label="Timer aktif"
@@ -750,11 +758,11 @@ export default function GrimoireBoard({
                   <button
                     type="button"
                     onClick={() => setArrangeGapsVisible(false)}
-                    title="Selesai menambah kursi"
+                    title={isEn ? "Done adding seats" : "Selesai menambah kursi"}
                     className="lg:hidden min-h-[36px] px-2.5 py-1.5 rounded-xl bg-[#c9963a] text-[#2a2018] text-xs font-bold flex items-center gap-1 cursor-pointer shadow"
                   >
                     <X className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">+Kursi</span>
+                    <span className="hidden sm:inline">{isEn ? '+Seats' : '+Kursi'}</span>
                   </button>
                 )}
 
@@ -809,7 +817,7 @@ export default function GrimoireBoard({
                 className="min-h-[36px] sm:min-h-[38px] lg:min-h-[34px] px-3 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#d8a74c] text-[#2a2018] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow"
               >
                 <Eye className="w-3.5 h-3.5" />
-                <span>Tunjuk</span>
+                <span>{isEn ? 'Show' : 'Tunjuk'}</span>
               </button>
 
               <button
@@ -818,7 +826,7 @@ export default function GrimoireBoard({
                 className="hidden lg:flex px-2.5 py-1.5 rounded-xl text-[#efe6d2] hover:bg-white/10 text-xs font-bold items-center gap-1.5 cursor-pointer"
               >
                 <ScrollText className="w-3.5 h-3.5 text-[#c9963a]" />
-                <span>Skrip</span>
+                <span>{isEn ? 'Script' : 'Skrip'}</span>
               </button>
 
               {onVelvetColourChange && (
@@ -834,7 +842,7 @@ export default function GrimoireBoard({
               <button
                 type="button"
                 onClick={() => setSpyStealth((prev) => !prev)}
-                title={spyStealth ? 'Matikan mode stealth' : 'Sembunyikan reminder & rahasia Drunk'}
+                title={spyStealth ? (isEn ? 'Disable stealth mode' : 'Matikan mode stealth') : (isEn ? 'Hide reminders & Drunk secret' : 'Sembunyikan reminder & rahasia Drunk')}
                 className={`min-h-[36px] sm:min-h-[38px] lg:min-h-[34px] px-2 lg:p-1.5 rounded-xl cursor-pointer transition-colors items-center gap-1 text-xs font-bold ${
                   spyStealth
                     ? 'flex bg-emerald-600 text-white'
@@ -854,13 +862,17 @@ export default function GrimoireBoard({
             {swapSourceSeatIdx !== null && (
               <div className="absolute top-14 sm:top-16 left-1/2 -translate-x-1/2 z-30 max-w-[calc(100%-24px)] px-3.5 py-1.5 rounded-full bg-[#c9963a] text-[#2a2018] text-xs font-bold flex items-center gap-2 shadow-xl text-center">
                 <ArrowLeftRight className="w-3.5 h-3.5" />
-                <span>Klik kursi tujuan untuk tukar posisi dengan Kursi #{swapSourceSeatIdx + 1}</span>
+                <span>
+                  {isEn
+                    ? `Click destination seat to swap position with Seat #${swapSourceSeatIdx + 1}`
+                    : `Klik kursi tujuan untuk tukar posisi dengan Kursi #${swapSourceSeatIdx + 1}`}
+                </span>
                 <button
                   type="button"
                   onClick={() => setSwapSourceSeatIdx(null)}
                   className="underline ml-1 cursor-pointer"
                 >
-                  Batal
+                  {isEn ? 'Cancel' : 'Batal'}
                 </button>
               </div>
             )}
@@ -950,7 +962,7 @@ export default function GrimoireBoard({
                       className="w-11 h-11 sm:w-14 sm:h-14 object-contain drop-shadow"
                     />
                     <div className="text-[11px] font-mono uppercase tracking-[0.14em] text-[#efe6d2]">
-                      {players.length} Pemain · {voteStats.aliveCount} Hidup
+                      {players.length} {isEn ? 'Players' : 'Pemain'} · {voteStats.aliveCount} {isEn ? 'Alive' : 'Hidup'}
                     </div>
                     {phase === 'day' && onCancelNomination && (
                       <DayNominationsSummary
@@ -967,7 +979,7 @@ export default function GrimoireBoard({
                         className="mt-0.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 border border-[#c9963a]/50 text-[11px] font-bold text-[#c9963a] flex items-center gap-1.5 cursor-pointer shadow"
                       >
                         <Gavel className="w-3.5 h-3.5" />
-                        <span>Mulai Nominasi (Butuh {thresholds.execute})</span>
+                        <span>{isEn ? `Start Nomination (${thresholds.execute} Needed)` : `Mulai Nominasi (Butuh ${thresholds.execute})`}</span>
                       </button>
                     )}
                   </div>
@@ -1213,7 +1225,7 @@ export default function GrimoireBoard({
                       <button
                         type="button"
                         onClick={() => setBluffMenuOpen(false)}
-                        aria-label="Tutup panel bluff"
+                        aria-label={isEn ? "Close bluff panel" : "Tutup panel bluff"}
                         className="p-1 rounded-lg text-[#a89f8c] hover:text-[#efe6d2] hover:bg-white/10 cursor-pointer"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -1222,7 +1234,9 @@ export default function GrimoireBoard({
 
                     {spyStealth ? (
                       <div className="px-2.5 py-2 rounded-xl bg-white/5 text-[11px] text-[#a89f8c]">
-                        Mode Stealth aktif — Bluff disembunyikan agar aman dari intipan.
+                        {isEn
+                          ? 'Stealth mode active — Bluffs hidden from players.'
+                          : 'Mode Stealth aktif — Bluff disembunyikan agar aman dari intipan.'}
                       </div>
                     ) : (
                       <div className="space-y-1.5">
@@ -1243,11 +1257,11 @@ export default function GrimoireBoard({
                               )}
                               <div className="min-w-0 flex-1">
                                 <div className="text-xs font-bold text-[#efe6d2] truncate">
-                                  {role ? role.name : `Slot Bluff #${slot + 1}`}
+                                  {role ? getRoleName(role, language) : (isEn ? `Bluff Slot #${slot + 1}` : `Slot Bluff #${slot + 1}`)}
                                 </div>
                                 {role && (
                                   <div className="text-[10px] text-[#a89f8c] truncate">
-                                    {role.indonesianName}
+                                    {isEn ? role.team.toUpperCase() : (role.indonesianName || role.name)}
                                   </div>
                                 )}
                               </div>
@@ -1268,7 +1282,7 @@ export default function GrimoireBoard({
                         className="min-h-[36px] px-2.5 py-1.5 rounded-xl bg-[#c9963a] hover:bg-[#e0b254] text-[#2a2018] text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5" />
-                        <span>Tunjuk</span>
+                        <span>{isEn ? 'Show' : 'Tunjuk'}</span>
                       </button>
                       <button
                         type="button"
@@ -1279,7 +1293,7 @@ export default function GrimoireBoard({
                         }}
                         className="min-h-[36px] px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed text-[#efe6d2] text-xs font-bold flex items-center justify-center cursor-pointer"
                       >
-                        Ganti Bluff
+                        {isEn ? 'Edit Bluffs' : 'Ganti Bluff'}
                       </button>
                     </div>
                   </div>
@@ -1300,7 +1314,7 @@ export default function GrimoireBoard({
                     }}
                     className="text-[11px] font-bold text-[#efe6d2] hover:underline text-left cursor-pointer"
                   >
-                    Tunjuk Bluff
+                    {isEn ? 'Show Bluffs' : 'Tunjuk Bluff'}
                   </button>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -1312,7 +1326,7 @@ export default function GrimoireBoard({
                         key={slot}
                         type="button"
                         onClick={() => !spyStealth && setBluffEditorOpen(true)}
-                        title={role && !spyStealth ? `Bluff: ${role.name}` : 'Atur Bluff'}
+                        title={role && !spyStealth ? `Bluff: ${getRoleName(role, language)}` : (isEn ? 'Configure Bluff' : 'Atur Bluff')}
                         className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-105"
                         style={{
                           backgroundColor: BOARD_CHROME.wellBg,
@@ -1351,7 +1365,7 @@ export default function GrimoireBoard({
                   {phaseLabel}
                 </div>
                 <div className="text-[10px] font-mono text-[#a89f8c] tabular-nums">
-                  {voteStats.aliveCount}H · {voteStats.votesNeeded} Mayoritas
+                  {voteStats.aliveCount} {isEn ? 'Alive' : 'Hidup'} · {voteStats.votesNeeded} {isEn ? 'Majority' : 'Mayoritas'}
                 </div>
               </div>
 
@@ -1387,7 +1401,7 @@ export default function GrimoireBoard({
                   <button
                     type="button"
                     onClick={() => onSetWinnerManual('good')}
-                    title="Tandai Tim Good Menang"
+                    title={isEn ? "Mark Good Team as Winner" : "Tandai Tim Good Menang"}
                     className="px-2 py-1 rounded-lg bg-[#0064ac]/35 hover:bg-[#0064ac]/60 text-[#efe6d2] text-[10px] font-bold cursor-pointer"
                   >
                     Good
@@ -1395,7 +1409,7 @@ export default function GrimoireBoard({
                   <button
                     type="button"
                     onClick={() => onSetWinnerManual('evil')}
-                    title="Tandai Tim Evil Menang"
+                    title={isEn ? "Mark Evil Team as Winner" : "Tandai Tim Evil Menang"}
                     className="px-2 py-1 rounded-lg bg-[#760a0d]/45 hover:bg-[#760a0d]/70 text-[#efe6d2] text-[10px] font-bold cursor-pointer"
                   >
                     Evil
@@ -1428,12 +1442,12 @@ export default function GrimoireBoard({
                     className="font-display text-2xl font-bold tracking-wide"
                     style={{ color: winner === 'good' ? '#7ec3ff' : '#ffa299' }}
                   >
-                    {winner === 'good' ? 'TIM GOOD MENANG' : 'TIM EVIL MENANG'}
+                    {winner === 'good' ? (isEn ? 'GOOD TEAM WINS' : 'TIM GOOD MENANG') : (isEn ? 'EVIL TEAM WINS' : 'TIM EVIL MENANG')}
                   </h3>
                   <p className="text-[11px] text-[#a89f8c]">
                     {winner === 'good'
-                      ? 'Demon berhasil dieksekusi di Ravenswood Bluff.'
-                      : 'Kegelapan menguasai Ravenswood Bluff.'}
+                      ? (isEn ? 'The Demon has been executed in Ravenswood Bluff.' : 'Demon berhasil dieksekusi di Ravenswood Bluff.')
+                      : (isEn ? 'Darkness has consumed Ravenswood Bluff.' : 'Kegelapan menguasai Ravenswood Bluff.')}
                   </p>
                   {onSetWinnerManual && (
                     <button
@@ -1441,7 +1455,7 @@ export default function GrimoireBoard({
                       onClick={() => onSetWinnerManual(null)}
                       className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-[10px] font-mono uppercase tracking-wider text-[#efe6d2] cursor-pointer"
                     >
-                      Bersihkan Status
+                      {isEn ? 'Clear Status' : 'Bersihkan Status'}
                     </button>
                   )}
                 </div>
@@ -1526,11 +1540,12 @@ export default function GrimoireBoard({
                 }}
                 onShowSeatToken={() =>
                   onShowSilentCard({
-                    heading: 'PERAN ANDA ADALAH',
+                    heading: isEn ? 'YOUR ROLE IS' : 'PERAN ANDA ADALAH',
                     roleIds: [menuSeat.perceivedRoleId],
                     requireTapToReveal: true,
-                    footerNote:
-                      'Ketuk di atas jika siap melihat peran, lalu tekan Tutup sebelum mengembalikan perangkat.',
+                    footerNote: isEn
+                      ? 'Tap above when ready to see your role, then press Close before returning the device.'
+                      : 'Ketuk di atas jika siap melihat peran, lalu tekan Tutup sebelum mengembalikan perangkat.',
                   })
                 }
                 onRemoveSeat={() => onRemoveSeat?.(menuSeat.id)}
@@ -1570,7 +1585,7 @@ export default function GrimoireBoard({
           <div className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
             <ParchmentSurface className="rounded-2xl p-4 space-y-3">
               <h4 className="font-display text-lg font-bold text-[#2a2018]">
-                Ubah Catatan Pengingat
+                {isEn ? 'Edit Reminder Note' : 'Ubah Catatan Pengingat'}
               </h4>
               <input
                 type="text"
@@ -1589,7 +1604,7 @@ export default function GrimoireBoard({
                   }}
                   className="px-3 py-1.5 rounded-xl bg-[#760a0d] text-[#efe6d2] text-xs font-bold cursor-pointer"
                 >
-                  Hapus Chip
+                  {isEn ? 'Delete Chit' : 'Hapus Chip'}
                 </button>
                 <div className="flex gap-2">
                   <button
@@ -1597,7 +1612,7 @@ export default function GrimoireBoard({
                     onClick={() => setEditingNote(null)}
                     className="px-3 py-1.5 rounded-xl border border-[#655342]/30 text-xs font-semibold text-[#5c4a37] cursor-pointer"
                   >
-                    Batal
+                    {isEn ? 'Cancel' : 'Batal'}
                   </button>
                   <button
                     type="button"
@@ -1613,7 +1628,7 @@ export default function GrimoireBoard({
                     }}
                     className="px-4 py-1.5 rounded-xl bg-[#2a2018] text-[#efe6d2] text-xs font-bold cursor-pointer"
                   >
-                    Simpan
+                    {isEn ? 'Save' : 'Simpan'}
                   </button>
                 </div>
               </div>
@@ -1635,10 +1650,12 @@ export default function GrimoireBoard({
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <h4 className="font-display text-base sm:text-lg font-bold text-[#2a2018]">
-                    Pilih 3 Peran Bluff Demon
+                    {isEn ? 'Select 3 Demon Bluffs' : 'Pilih 3 Peran Bluff Demon'}
                   </h4>
                   <p className="text-[11px] text-[#5c4a37]">
-                    Karakter Townsfolk/Outsider yang tidak dimainkan ({demonBluffIds.length}/3 dipilih).
+                    {isEn
+                      ? `Townsfolk/Outsider characters not in play (${demonBluffIds.length}/3 selected).`
+                      : `Karakter Townsfolk/Outsider yang tidak dimainkan (${demonBluffIds.length}/3 dipilih).`}
                   </p>
                 </div>
                 <button
@@ -1646,7 +1663,7 @@ export default function GrimoireBoard({
                   onClick={() => setBluffEditorOpen(false)}
                   className="px-3 py-1.5 rounded-xl bg-[#2a2018] text-[#efe6d2] text-xs font-bold cursor-pointer shrink-0"
                 >
-                  Selesai
+                  {isEn ? 'Done' : 'Selesai'}
                 </button>
               </div>
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
@@ -1676,7 +1693,7 @@ export default function GrimoireBoard({
                       >
                         <CharacterTokenFront role={role} size={36} showSetupLeaf={false} />
                         <span className="text-[10px] font-bold text-[#2a2018] truncate w-full leading-tight">
-                          {role.name}
+                          {getRoleName(role, language)}
                         </span>
                       </button>
                     );

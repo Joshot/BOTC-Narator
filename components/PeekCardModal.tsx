@@ -13,10 +13,11 @@ import {
   X,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { REMINDER_MAP, ROLE_MAP } from '@/lib/botc-data';
+import { REMINDER_MAP, ROLE_MAP, getRoleName, getRoleAbility, getTeamName } from '@/lib/botc-data';
 import { PlayerSeat } from '@/lib/botc-engine';
 import { CharacterToken, RoleGlyph } from './TokenArtwork';
 import { useLockBodyScroll } from './grimoire/useLockBodyScroll';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface PeekCardModalProps {
   isOpen: boolean;
@@ -33,6 +34,8 @@ export default function PeekCardModal({
   demonBluffIds,
   onClose,
 }: PeekCardModalProps) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [currentIndex, setCurrentIndex] = useState(initialPlayerIndex);
   const [activeTab, setActiveTab] = useState<'player_view' | 'storyteller_view'>('player_view');
   const [showPlayerName, setShowPlayerName] = useState(false);
@@ -117,7 +120,7 @@ export default function PeekCardModal({
             }`}
           >
             <Eye className="w-3.5 h-3.5" />
-            <span>Tunjukkan ke Pemain</span>
+            <span>{isEn ? 'Show to Player' : 'Tunjukkan ke Pemain'}</span>
           </button>
 
           <button
@@ -130,7 +133,7 @@ export default function PeekCardModal({
             }`}
           >
             <Info className="w-3.5 h-3.5" />
-            <span>Catatan Storyteller</span>
+            <span>{isEn ? 'Storyteller Notes' : 'Catatan Storyteller'}</span>
           </button>
         </div>
 
@@ -142,7 +145,7 @@ export default function PeekCardModal({
             className="px-3 py-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-[#1E1E28] dark:hover:bg-[#282838] text-xs font-semibold text-purple-900 dark:text-[#EDEAF0] flex items-center gap-1 cursor-pointer transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Sebelumnya</span>
+            <span className="hidden sm:inline">{isEn ? 'Previous' : 'Sebelumnya'}</span>
           </button>
 
           <div className="text-center min-w-0 px-2 flex flex-col items-center">
@@ -152,12 +155,14 @@ export default function PeekCardModal({
                   {player.name}
                 </h2>
                 <p className="text-[11px] text-slate-500 dark:text-[#8E8A9E]">
-                  Kursi {player.seatIndex + 1} · {player.isAlive ? 'Status: Hidup' : 'Status: Telah Mati'}
+                  {isEn
+                    ? `Seat ${player.seatIndex + 1} · ${player.isAlive ? 'Status: Alive' : 'Status: Dead'}`
+                    : `Kursi ${player.seatIndex + 1} · ${player.isAlive ? 'Status: Hidup' : 'Status: Telah Mati'}`}
                 </p>
               </>
             ) : (
               <div className="text-xs font-bold text-slate-900 dark:text-[#EDEAF0]">
-                Tampilan Pribadi Pemain (Nama &amp; Kursi Disembunyikan)
+                {isEn ? 'Private Player View (Name & Seat Hidden)' : 'Tampilan Pribadi Pemain (Nama & Kursi Disembunyikan)'}
               </div>
             )}
           </div>
@@ -167,7 +172,7 @@ export default function PeekCardModal({
             onClick={handleNext}
             className="px-3 py-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-[#1E1E28] dark:hover:bg-[#282838] text-xs font-semibold text-purple-900 dark:text-[#EDEAF0] flex items-center gap-1 cursor-pointer transition-colors"
           >
-            <span className="hidden sm:inline">Berikutnya</span>
+            <span className="hidden sm:inline">{isEn ? 'Next' : 'Berikutnya'}</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
@@ -195,21 +200,21 @@ export default function PeekCardModal({
 
                 <div className="space-y-0.5">
                   <span className="text-[10px] uppercase tracking-widest font-mono font-bold text-amber-800 dark:text-[#D4AF37]">
-                    Karakter Peran Anda
+                    {isEn ? 'Your Secret Character' : 'Karakter Peran Anda'}
                   </span>
                   <h3 className="font-display text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight">
-                    {perceivedRole?.name}
+                    {isEn ? perceivedRole?.name : (perceivedRole?.indonesianName || perceivedRole?.name)}
                   </h3>
-                  <p className="text-xs font-semibold text-slate-600 dark:text-[#8E8A9E]">
-                    {perceivedRole?.indonesianName} ({perceivedRole?.team === 'townsfolk' ? 'Warga Baik / Townsfolk' : perceivedRole?.team === 'outsider' ? 'Warga Luar / Outsider' : perceivedRole?.team === 'minion' ? 'Anak Buah Jahat / Minion' : 'Iblis Utama / Demon'})
+                  <p className="text-xs font-semibold text-slate-600 dark:text-[#8E8A9E] uppercase tracking-wider">
+                    {getTeamName(perceivedRole?.team, language)}
                   </p>
                 </div>
 
                 <div className="max-w-lg w-full p-3 rounded-xl bg-white dark:bg-[#0C0C10] border border-purple-200 dark:border-white/[0.08] text-xs text-slate-800 dark:text-[#EDEAF0] leading-snug text-left shadow-xs">
                   <div className="font-bold text-amber-800 dark:text-[#D4AF37] mb-1 text-[10px] uppercase tracking-wider font-mono">
-                    Kemampuan Karakter:
+                    {isEn ? 'Character Ability:' : 'Kemampuan Karakter:'}
                   </div>
-                  <p>{perceivedRole?.ability}</p>
+                  <p>{isEn ? (perceivedRole?.abilityEn || perceivedRole?.ability) : perceivedRole?.ability}</p>
                 </div>
               </div>
 
@@ -219,18 +224,20 @@ export default function PeekCardModal({
                   <div className="flex items-center justify-between gap-2 text-xs font-bold text-red-900 dark:text-[#FECACA]">
                     <span className="flex items-center gap-1.5">
                       <Swords className="w-3.5 h-3.5 text-red-600 dark:text-[#EF4444]" />
-                      Informasi Rahasia Tim Evil (Demon)
+                      {isEn ? 'Evil Team Secret Info (Demon)' : 'Informasi Rahasia Tim Evil (Demon)'}
                     </span>
                     {!isUnder7 && minionPlayers.length > 0 && (
                       <span className="text-[11px] font-normal">
-                        Minion: {minionPlayers.map((m) => ROLE_MAP[m.trueRoleId]?.name).join(', ')}
+                        Minions: {minionPlayers.map((m) => isEn ? ROLE_MAP[m.trueRoleId]?.name : (ROLE_MAP[m.trueRoleId]?.indonesianName || ROLE_MAP[m.trueRoleId]?.name)).join(', ')}
                       </span>
                     )}
                   </div>
 
                   {isUnder7 && (
                     <p className="text-[11px] text-red-700 dark:text-[#FCA5A5] italic">
-                      Aturan Under 7 (Teensyville): Minion tidak ditampilkan ke Demon.
+                      {isEn
+                        ? 'Under 7 Rules (Teensyville): Minions not revealed to Demon.'
+                        : 'Aturan Under 7 (Teensyville): Minion tidak ditampilkan ke Demon.'}
                     </p>
                   )}
 
@@ -246,10 +253,10 @@ export default function PeekCardModal({
                           <CharacterToken roleId={bid} size="sm" />
                           <div className="min-w-0 text-left">
                             <div className="text-[11px] font-bold text-slate-900 dark:text-white truncate">
-                              {bRole.name}
+                              {isEn ? bRole.name : (bRole.indonesianName || bRole.name)}
                             </div>
                             <div className="text-[9px] text-slate-600 dark:text-[#8E8A9E] truncate">
-                              {bRole.indonesianName}
+                              {getTeamName(bRole.team, language)}
                             </div>
                           </div>
                         </div>
@@ -264,19 +271,21 @@ export default function PeekCardModal({
                 <div className="p-3 rounded-2xl bg-red-50 dark:bg-[#1C1318] border border-red-200 dark:border-[#DC2626]/40 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-red-900 dark:text-[#FECACA]">
                     <Swords className="w-3.5 h-3.5 text-red-600 dark:text-[#EF4444]" />
-                    <span>Demon Anda:</span>
+                    <span>{isEn ? 'Your Demon:' : 'Demon Anda:'}</span>
                   </div>
                   {!isUnder7 ? (
                     demonPlayer ? (
                       <span className="px-2.5 py-1 rounded-lg bg-red-100 text-xs font-bold text-red-950 border border-red-300 dark:bg-[#3F1B20] dark:text-[#FED7D7] dark:border-[#7F1D1D]">
-                        {ROLE_MAP[demonPlayer.trueRoleId]?.name}
+                        {isEn ? ROLE_MAP[demonPlayer.trueRoleId]?.name : (ROLE_MAP[demonPlayer.trueRoleId]?.indonesianName || ROLE_MAP[demonPlayer.trueRoleId]?.name)}
                       </span>
                     ) : (
-                      <span className="text-xs text-slate-600 dark:text-[#E2C4C6]">Belum terdaftar</span>
+                      <span className="text-xs text-slate-600 dark:text-[#E2C4C6]">
+                        {isEn ? 'Not assigned yet' : 'Belum terdaftar'}
+                      </span>
                     )
                   ) : (
                     <span className="text-[11px] text-red-700 dark:text-[#FCA5A5] italic">
-                      Teensyville (Under 7): Tersembunyi.
+                      {isEn ? 'Teensyville (Under 7): Hidden.' : 'Teensyville (Under 7): Tersembunyi.'}
                     </span>
                   )}
                 </div>
@@ -287,7 +296,7 @@ export default function PeekCardModal({
                 onClick={onClose}
                 className="brass-sheen-btn w-full py-2.5 rounded-2xl bg-[#D4AF37] hover:bg-[#E5C365] text-xs sm:text-sm font-extrabold text-[#121016] border border-[#F59E0B] cursor-pointer transition-colors shadow-md"
               >
-                Selesai & Sembunyikan Layar
+                {isEn ? 'Done & Hide Screen' : 'Selesai & Sembunyikan Layar'}
               </button>
             </div>
           ) : (
@@ -295,33 +304,43 @@ export default function PeekCardModal({
             <div className="space-y-3">
               <div className="p-3.5 rounded-2xl bg-purple-50/50 dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] space-y-2.5">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-[#D4AF37] font-mono">
-                  Identitas Asli Pemain: {player.name} (Kursi {player.seatIndex + 1})
+                  {isEn
+                    ? `Player Secret Dossier: ${player.name} (Seat #${player.seatIndex + 1})`
+                    : `Identitas Asli Pemain: ${player.name} (Kursi ${player.seatIndex + 1})`}
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="p-2.5 rounded-xl bg-white dark:bg-[#0C0C10] border border-purple-200 dark:border-white/[0.08] shadow-xs">
-                    <span className="text-[10px] text-slate-600 dark:text-[#8E8A9E] block font-medium">Peran Sebenarnya:</span>
+                    <span className="text-[10px] text-slate-600 dark:text-[#8E8A9E] block font-medium">
+                      {isEn ? 'True Role:' : 'Peran Sebenarnya:'}
+                    </span>
                     <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5">
-                      {trueRole?.name} ({trueRole?.indonesianName})
+                      {isEn ? trueRole?.name : (trueRole?.indonesianName || trueRole?.name)}
                     </div>
                     <span className="text-[10px] font-bold text-amber-800 dark:text-[#D4AF37] uppercase">
-                      Tim: {trueRole?.team}
+                      {isEn ? `Team: ${getTeamName(trueRole?.team, language)}` : `Tim: ${getTeamName(trueRole?.team, language)}`}
                     </span>
                   </div>
 
                   <div className="p-2.5 rounded-xl bg-white dark:bg-[#0C0C10] border border-purple-200 dark:border-white/[0.08] shadow-xs">
-                    <span className="text-[10px] text-slate-600 dark:text-[#8E8A9E] block font-medium">Peran Diketahui Pemain:</span>
+                    <span className="text-[10px] text-slate-600 dark:text-[#8E8A9E] block font-medium">
+                      {isEn ? 'Role Known to Player:' : 'Peran Diketahui Pemain:'}
+                    </span>
                     <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5">
-                      {perceivedRole?.name} ({perceivedRole?.indonesianName})
+                      {isEn ? perceivedRole?.name : (perceivedRole?.indonesianName || perceivedRole?.name)}
                     </div>
                     <span className="text-[10px] font-bold text-blue-700 dark:text-[#93C5FD]">
-                      {isDrunk ? 'Mengira Townsfolk!' : 'Sama dengan peran asli'}
+                      {isDrunk
+                        ? (isEn ? 'Thinks they are Townsfolk!' : 'Mengira Townsfolk!')
+                        : (isEn ? 'Matches true role' : 'Sama dengan peran asli')}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-purple-200 dark:border-white/[0.08] text-xs">
-                  <span className="text-slate-600 dark:text-[#8E8A9E] font-medium">Status:</span>
+                  <span className="text-slate-600 dark:text-[#8E8A9E] font-medium">
+                    {isEn ? 'Status:' : 'Status:'}
+                  </span>
                   <span
                     className={`px-2 py-0.5 rounded font-bold ${
                       player.isAlive
@@ -329,12 +348,17 @@ export default function PeekCardModal({
                         : 'bg-red-100 dark:bg-[#EF4444]/20 text-red-900 dark:text-[#FECACA] border border-red-400 dark:border-[#EF4444]/40'
                     }`}
                   >
-                    {player.isAlive ? 'Hidup' : 'Mati'}
+                    {player.isAlive ? (isEn ? 'Alive' : 'Hidup') : (isEn ? 'Dead' : 'Mati')}
                   </span>
 
                   {!player.isAlive && (
                     <span className="text-slate-600 dark:text-[#8E8A9E] ml-2">
-                      Suara Hantu: <strong className="text-slate-900 dark:text-[#EDEAF0]">{player.hasGhostVote ? 'Masih Ada' : 'Sudah Habis'}</strong>
+                      {isEn ? 'Ghost Vote: ' : 'Suara Hantu: '}
+                      <strong className="text-slate-900 dark:text-[#EDEAF0]">
+                        {player.hasGhostVote
+                          ? (isEn ? 'Available' : 'Masih Ada')
+                          : (isEn ? 'Spent' : 'Sudah Habis')}
+                      </strong>
                     </span>
                   )}
                 </div>
@@ -344,7 +368,11 @@ export default function PeekCardModal({
                 <div className="p-3 rounded-2xl bg-amber-50 dark:bg-[#281D12] border border-amber-400 dark:border-[#D97706]/60 flex items-center gap-2.5">
                   <Beer className="w-4 h-4 text-amber-700 dark:text-[#F59E0B] shrink-0" />
                   <p className="text-xs text-amber-950 dark:text-[#FDE68A]">
-                    <strong>THE DRUNK!</strong> Mengira <strong>{perceivedRole?.name}</strong>. Kemampuan tidak aktif.
+                    {isEn ? (
+                      <><strong>THE DRUNK!</strong> Thinks they are <strong>{perceivedRole?.name}</strong>. Ability is inactive.</>
+                    ) : (
+                      <><strong>THE DRUNK!</strong> Mengira <strong>{perceivedRole?.indonesianName || perceivedRole?.name}</strong>. Kemampuan tidak aktif.</>
+                    )}
                   </p>
                 </div>
               )}
@@ -353,7 +381,11 @@ export default function PeekCardModal({
                 <div className="p-3 rounded-2xl bg-red-50 dark:bg-[#2B1317] border border-red-400 dark:border-[#EF4444]/60 flex items-center gap-2.5">
                   <ShieldAlert className="w-4 h-4 text-red-700 dark:text-[#EF4444] shrink-0" />
                   <p className="text-xs text-red-950 dark:text-[#FCA5A5]">
-                    <strong>POISONED!</strong> Kemampuan nonaktif — berikan info palsu malam ini.
+                    {isEn ? (
+                      <><strong>POISONED!</strong> Ability disabled — provide false information tonight.</>
+                    ) : (
+                      <><strong>POISONED!</strong> Kemampuan nonaktif — berikan info palsu malam ini.</>
+                    )}
                   </p>
                 </div>
               )}
@@ -361,21 +393,24 @@ export default function PeekCardModal({
               {/* Active Reminders on this Player */}
               <div className="p-3 rounded-2xl bg-purple-50/50 dark:bg-[#14141B] border border-purple-200 dark:border-white/[0.08] space-y-2">
                 <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-[#D4AF37] font-mono">
-                  Token Pengingat Menempel ({player.reminders.length}):
+                  {isEn ? `Attached Reminder Tokens (${player.reminders.length}):` : `Token Pengingat Menempel (${player.reminders.length}):`}
                 </h4>
                 {player.reminders.length === 0 ? (
-                  <p className="text-xs text-slate-600 dark:text-[#8E8A9E]">Tidak ada token pengingat aktif pada kursi ini.</p>
+                  <p className="text-xs text-slate-600 dark:text-[#8E8A9E]">
+                    {isEn ? 'No active reminder tokens on this seat.' : 'Tidak ada token pengingat aktif pada kursi ini.'}
+                  </p>
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
                     {player.reminders.map((r) => {
                       const def = REMINDER_MAP[r.reminderId];
+                      const label = r.customNote || (isEn ? def?.label : (def?.indonesianLabel || def?.label));
                       return (
                         <div
                           key={r.instanceId}
                           className="px-2.5 py-1 rounded-xl bg-white dark:bg-[#1E1E28] border border-purple-200 dark:border-white/[0.08] flex items-center gap-1.5 text-xs shadow-xs"
                         >
                           <RoleGlyph roleId={def?.roleId ?? 'imp'} className="w-3.5 h-3.5 text-amber-700 dark:text-[#D4AF37] shrink-0" />
-                          <span className="font-bold text-slate-900 dark:text-white">{r.customNote || def?.indonesianLabel || def?.label}</span>
+                          <span className="font-bold text-slate-900 dark:text-white">{label}</span>
                         </div>
                       );
                     })}

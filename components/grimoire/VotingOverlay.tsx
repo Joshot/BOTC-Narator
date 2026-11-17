@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Check, Gavel, RotateCcw, Scale, ShieldAlert, X } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   DayNomination,
   PlayerSeat,
@@ -132,6 +133,7 @@ export function DayNominationsSummary({
   onReopenNomination: (nominationId: string) => void;
   onCancelNomination: (nominationId: string) => void;
 }) {
+  const { language } = useLanguage();
   const validNominations = nominationsToday.filter((n) => !n.cancelled);
   if (validNominations.length === 0) return null;
 
@@ -156,15 +158,21 @@ export function DayNominationsSummary({
     >
       {tieStatus.isTie ? (
         <div className="px-2 py-1 rounded-xl bg-red-950/60 border border-red-400/50 text-red-200 text-[10px] font-bold leading-snug">
-          SERI ({tieStatus.highestVotes} suara): {tiedNames || '2+ pemain'} — Tidak ada eksekusi
+          {language === 'en'
+            ? `TIE (${tieStatus.highestVotes} votes): ${tiedNames || '2+ players'} — No execution`
+            : `SERI (${tieStatus.highestVotes} suara): ${tiedNames || '2+ pemain'} — Tidak ada eksekusi`}
         </div>
       ) : onBlockPlayer && tieStatus.onBlockNomination ? (
         <div className="px-2 py-1 rounded-xl bg-[#b03a2e]/25 border border-[#e0574b]/50 text-[#f8d7d3] text-[10px] font-bold leading-snug">
-          Terancam Eksekusi: {onBlockPlayer.name} ({tieStatus.onBlockNomination.voteTotal} suara)
+          {language === 'en'
+            ? `On the Block: ${onBlockPlayer.name} (${tieStatus.onBlockNomination.voteTotal} votes)`
+            : `Terancam Eksekusi: ${onBlockPlayer.name} (${tieStatus.onBlockNomination.voteTotal} suara)`}
         </div>
       ) : (
         <div className="text-[10px] font-mono text-[#a89f8c]">
-          {validNominations.length} nominasi tercatat · Belum ada calon di blok
+          {language === 'en'
+            ? `${validNominations.length} nominations recorded · Nobody on the block yet`
+            : `${validNominations.length} nominasi tercatat · Belum ada calon di blok`}
         </div>
       )}
 
@@ -186,7 +194,7 @@ export function DayNominationsSummary({
               <button
                 type="button"
                 onClick={() => onReopenNomination(nom.id)}
-                title="Buka ulang rincian suara nominasi ini"
+                title={language === 'en' ? 'Reopen vote details for this nomination' : 'Buka ulang rincian suara nominasi ini'}
                 className="px-1.5 py-0.5 font-semibold hover:bg-white/10 cursor-pointer tabular-nums"
               >
                 {nominee?.name.slice(0, 8) || '?'} ({nom.voteTotal})
@@ -194,8 +202,8 @@ export function DayNominationsSummary({
               <button
                 type="button"
                 onClick={() => onCancelNomination(nom.id)}
-                title="Batalkan nominasi & kembalikan Ghost Vote"
-                aria-label={`Batalkan nominasi ${nominee?.name || ''}`}
+                title={language === 'en' ? 'Cancel nomination & refund Ghost Vote' : 'Batalkan nominasi & kembalikan Ghost Vote'}
+                aria-label={language === 'en' ? `Cancel nomination for ${nominee?.name || ''}` : `Batalkan nominasi ${nominee?.name || ''}`}
                 className="px-1 py-0.5 text-[#a89f8c] hover:text-white hover:bg-white/10 cursor-pointer"
               >
                 <X className="w-2.5 h-2.5" />
@@ -224,6 +232,7 @@ export function DayNominationControls({
   onDone,
   onCancelNomination,
 }: DayNominationControlsProps) {
+  const { language } = useLanguage();
   const [chosenNominatorId, setChosenNominatorId] = useState<string>('');
   const thresholds = calculateNominationThresholds(
     players,
@@ -258,12 +267,12 @@ export function DayNominationControls({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 font-bold text-[#c9963a]">
             <Gavel className="w-3.5 h-3.5" />
-            <span>Nominasi Siang</span>
+            <span>{language === 'en' ? 'Day Nomination' : 'Nominasi Siang'}</span>
           </div>
           <button
             type="button"
             onClick={() => onSelectNomineeForSetup(null)}
-            aria-label="Batal"
+            aria-label={language === 'en' ? 'Cancel' : 'Batal'}
             className="text-[#a89f8c] hover:text-white cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
@@ -272,7 +281,7 @@ export function DayNominationControls({
 
         <div className="text-[11px] text-[#efe6d2] flex items-center justify-between gap-2">
           <span>
-            Terdakwa: <strong className="text-[#c9963a]">{nominee?.name}</strong>
+            {language === 'en' ? 'Accused: ' : 'Terdakwa: '}<strong className="text-[#c9963a]">{nominee?.name}</strong>
           </span>
         </div>
 
@@ -280,19 +289,22 @@ export function DayNominationControls({
           <div className="px-2 py-1.5 rounded-xl bg-amber-950/60 border border-amber-400/50 text-amber-200 text-[10px] leading-snug flex items-start gap-1.5 text-left">
             <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
             <span>
-              <strong>Pengingat Virgin:</strong> Nominasi pertama — jika penominasi adalah Townsfolk (bukan Mabuk/Racun), penominasi langsung dieksekusi!
+              <strong>{language === 'en' ? 'Virgin Reminder:' : 'Pengingat Virgin:'}</strong>{' '}
+              {language === 'en'
+                ? 'First nomination — if the nominator is a Townsfolk (not Drunk/Poisoned), the nominator is executed immediately!'
+                : 'Nominasi pertama — jika penominasi adalah Townsfolk (bukan Mabuk/Racun), penominasi langsung dieksekusi!'}
             </span>
           </div>
         )}
 
         <div className="space-y-1 text-left">
           <label className="text-[10px] font-mono uppercase tracking-wider text-[#a89f8c] block">
-            Pilih Terdakwa &amp; Penominasi:
+            {language === 'en' ? 'Select Accused & Nominator:' : 'Pilih Terdakwa & Penominasi:'}
           </label>
           <select
             value={pendingNomineeId}
             onChange={(e) => onSelectNomineeForSetup(e.target.value)}
-            aria-label="Pilih terdakwa"
+            aria-label={language === 'en' ? 'Select accused' : 'Pilih terdakwa'}
             className="w-full rounded-lg bg-[#121614] border border-white/15 px-2 py-1.5 text-xs text-[#efe6d2]"
           >
             {players.map((p) => {
@@ -301,9 +313,9 @@ export function DayNominationControls({
               );
               return (
                 <option key={p.id} value={p.id}>
-                  Terdakwa: #{p.seatIndex + 1} {p.name}
-                  {!p.isAlive ? ' (Mati)' : ''}
-                  {alreadyNominated ? ' [Sudah Dinominasi]' : ''}
+                  {language === 'en' ? 'Accused' : 'Terdakwa'}: #{p.seatIndex + 1} {p.name}
+                  {!p.isAlive ? (language === 'en' ? ' (Dead)' : ' (Mati)') : ''}
+                  {alreadyNominated ? (language === 'en' ? ' [Already Nominated]' : ' [Sudah Dinominasi]') : ''}
                 </option>
               );
             })}
@@ -312,15 +324,15 @@ export function DayNominationControls({
           <select
             value={pickedNominator}
             onChange={(e) => setChosenNominatorId(e.target.value)}
-            aria-label="Pilih penominasi"
+            aria-label={language === 'en' ? 'Select nominator' : 'Pilih penominasi'}
             className="w-full rounded-lg bg-[#121614] border border-[#c9963a]/40 px-2 py-1.5 text-xs text-[#efe6d2]"
           >
             {eligibleNominators.length === 0 ? (
-              <option value="">Tidak ada penominasi yang memenuhi syarat</option>
+              <option value="">{language === 'en' ? 'No eligible nominators' : 'Tidak ada penominasi yang memenuhi syarat'}</option>
             ) : (
               eligibleNominators.map((p) => (
                 <option key={p.id} value={p.id}>
-                  Penominasi: #{p.seatIndex + 1} {p.name}
+                  {language === 'en' ? 'Nominator' : 'Penominasi'}: #{p.seatIndex + 1} {p.name}
                 </option>
               ))
             )}
@@ -337,7 +349,7 @@ export function DayNominationControls({
           }}
           className="w-full py-2 rounded-xl bg-[#c9963a] hover:bg-[#d8a74c] disabled:opacity-40 text-[#2a2018] font-bold text-xs cursor-pointer transition-colors"
         >
-          Mulai Hitung Suara
+          {language === 'en' ? 'Start Vote Tally' : 'Mulai Hitung Suara'}
         </button>
       </div>
     );
@@ -373,20 +385,20 @@ export function DayNominationControls({
         <div className="min-w-0">
           <div className="text-[10px] font-mono uppercase tracking-wider text-[#c9963a] flex items-center gap-1">
             <Scale className="w-3 h-3 shrink-0" />
-            <span>Sidang Eksekusi</span>
+            <span>{language === 'en' ? 'Execution Vote' : 'Sidang Eksekusi'}</span>
           </div>
           <div className="font-display text-sm font-bold text-[#efe6d2] mt-0.5 truncate">
             {nominee?.name}{' '}
             <span className="font-sans text-[11px] font-normal text-[#a89f8c]">
-              oleh {nominator?.name}
+              {language === 'en' ? 'by' : 'oleh'} {nominator?.name}
             </span>
           </div>
         </div>
         <button
           type="button"
           onClick={() => onCancelNomination(activeNomination.id)}
-          title="Batalkan nominasi & kembalikan suara hantu"
-          aria-label="Batalkan nominasi"
+          title={language === 'en' ? 'Cancel nomination & refund ghost vote' : 'Batalkan nominasi & kembalikan suara hantu'}
+          aria-label={language === 'en' ? 'Cancel nomination' : 'Batalkan nominasi'}
           className="p-1 rounded-lg hover:bg-white/10 text-[#a89f8c] hover:text-white cursor-pointer shrink-0"
         >
           <X className="w-3.5 h-3.5" />
@@ -395,20 +407,22 @@ export function DayNominationControls({
 
       {isVirginFirstNom && (
         <div className="px-2 py-1 rounded-xl bg-amber-950/60 border border-amber-400/50 text-amber-200 text-[10px] leading-snug text-left">
-          Virgin pertama dinominasikan — cek pemicu Townsfolk sebelum voting!
+          {language === 'en'
+            ? 'First Virgin nomination — check Townsfolk trigger before voting!'
+            : 'Virgin pertama dinominasikan — cek pemicu Townsfolk sebelum voting!'}
         </div>
       )}
 
       {/* Live Tally vs Needed */}
       <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 font-mono tabular-nums">
         <span>
-          Suara:{' '}
+          {language === 'en' ? 'Votes: ' : 'Suara: '}
           <strong className={metThreshold ? 'text-[#e0574b]' : 'text-[#c9963a]'}>
             {activeNomination.voteTotal}
           </strong>
         </span>
         <span className="text-[#a89f8c] text-[11px]">
-          Butuh {thresholds.execute}
+          {language === 'en' ? `Needs ${thresholds.execute}` : `Butuh ${thresholds.execute}`}
           {thresholds.tie !== undefined ? ` (Tie ${thresholds.tie})` : ''}
         </span>
       </div>
@@ -416,11 +430,15 @@ export function DayNominationControls({
       {/* Tie / On-Block Feedback */}
       {isThisTied ? (
         <div className="px-2 py-1 rounded-xl bg-red-950/65 border border-red-400/50 text-red-200 text-[10px] font-bold">
-          SERI (TIE) di {tieStatus.highestVotes} suara — blok eksekusi kosong!
+          {language === 'en'
+            ? `TIE at ${tieStatus.highestVotes} votes — execution block is empty!`
+            : `SERI (TIE) di ${tieStatus.highestVotes} suara — blok eksekusi kosong!`}
         </div>
       ) : onBlockPlayer && tieStatus.onBlockNomination ? (
         <div className="px-2 py-1 rounded-xl bg-[#b03a2e]/20 border border-[#e0574b]/40 text-[#f7cbc6] text-[10px] font-semibold">
-          Di atas blok: {onBlockPlayer.name} ({tieStatus.onBlockNomination.voteTotal})
+          {language === 'en'
+            ? `On the block: ${onBlockPlayer.name} (${tieStatus.onBlockNomination.voteTotal})`
+            : `Di atas blok: ${onBlockPlayer.name} (${tieStatus.onBlockNomination.voteTotal})`}
         </div>
       ) : null}
 
@@ -437,7 +455,17 @@ export function DayNominationControls({
               type="button"
               disabled={!canVote}
               onClick={() => onToggleVoter(activeNomination.id, p.id)}
-              title={`${p.name}${!p.isAlive ? (p.hasGhostVote || voted ? ' (Suara Hantu)' : ' (Suara Habis)') : ''}`}
+              title={`${p.name}${
+                !p.isAlive
+                  ? p.hasGhostVote || voted
+                    ? language === 'en'
+                      ? ' (Ghost Vote)'
+                      : ' (Suara Hantu)'
+                    : language === 'en'
+                    ? ' (Vote Spent)'
+                    : ' (Suara Habis)'
+                  : ''
+              }`}
               className={`px-1.5 py-1 rounded-md text-[10px] font-medium cursor-pointer transition-colors truncate ${
                 voted
                   ? 'bg-[#c9963a] text-[#2a2018] font-bold'
@@ -459,8 +487,8 @@ export function DayNominationControls({
           type="button"
           disabled={activeNomination.voterIds.length === 0}
           onClick={() => onResetVotes(activeNomination.id)}
-          title="Reset semua suara"
-          aria-label="Reset semua suara"
+          title={language === 'en' ? 'Reset all votes' : 'Reset semua suara'}
+          aria-label={language === 'en' ? 'Reset all votes' : 'Reset semua suara'}
           className="p-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/15 disabled:opacity-35 disabled:cursor-not-allowed text-[#efe6d2] cursor-pointer shrink-0"
         >
           <RotateCcw className="w-3.5 h-3.5" />
@@ -479,17 +507,23 @@ export function DayNominationControls({
               : 'bg-white/10 text-[#efe6d2] hover:bg-white/20'
           }`}
         >
-          {activeNomination.markedForExecution ? 'Di Blok (Batal)' : 'Tandai Eksekusi'}
+          {activeNomination.markedForExecution
+            ? language === 'en'
+              ? 'On the Block (Cancel)'
+              : 'Di Blok (Batal)'
+            : language === 'en'
+            ? 'Mark Execution'
+            : 'Tandai Eksekusi'}
         </button>
         {onDone && (
           <button
             type="button"
             onClick={() => onDone(activeNomination.id)}
-            title="Selesaikan perhitungan suara nominasi ini"
+            title={language === 'en' ? 'Complete vote tally for this nomination' : 'Selesaikan perhitungan suara nominasi ini'}
             className="py-1.5 px-2.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer shrink-0"
           >
             <Check className="w-3.5 h-3.5" />
-            <span>Selesai</span>
+            <span>{language === 'en' ? 'Done' : 'Selesai'}</span>
           </button>
         )}
       </div>

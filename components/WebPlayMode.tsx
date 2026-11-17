@@ -20,7 +20,11 @@ import {
   ROLE_MAP,
   ROLES,
   calculateBalancedBag,
+  getRoleAbility,
+  getRoleName,
+  getTeamName,
 } from '@/lib/botc-data';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   PlayerSeat,
   clampPlayerCount,
@@ -78,6 +82,9 @@ export default function WebPlayMode({
   onCancelToDashboard,
   onCompleteWebPlay,
 }: WebPlayModeProps) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
+
   // === Step 1: Role Bag Config (Strictly 0 selected & Drunk OFF by default!) ===
   const [subStep, setSubStep] = useState<BagSubStep>('setup');
   const [playerCount, setPlayerCount] = useState<number>(8);
@@ -375,7 +382,7 @@ export default function WebPlayMode({
     <div
       className={
         isDesktop
-          ? 'max-w-5xl w-full mx-auto flex-1 min-h-0 flex flex-col overflow-y-auto pr-1'
+          ? 'w-full max-w-7xl mx-auto flex-1 min-h-0 flex flex-col overflow-y-auto pr-1'
           : 'max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6'
       }
     >
@@ -387,10 +394,10 @@ export default function WebPlayMode({
               <img src={ART_ASSETS.editionTb} alt="Trouble Brewing" className="w-11 h-11 object-contain" />
               <div>
                 <p className="text-[10px] font-mono uppercase tracking-widest text-[#5c4a37]">
-                  Mode 1 · Pass-and-Play Kantong Velvet
+                  {isEn ? 'Mode 1 · Velvet Bag Pass-and-Play' : 'Mode 1 · Pass-and-Play Kantong Velvet'}
                 </p>
                 <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#2a2018]">
-                  Siapkan Isi Kantong Token
+                  {isEn ? 'Prepare Character Bag Tokens' : 'Siapkan Isi Kantong Token'}
                 </h1>
               </div>
             </div>
@@ -400,7 +407,7 @@ export default function WebPlayMode({
               className="px-4 py-2 rounded-xl border border-[#655342]/30 text-xs font-bold text-[#5c4a37] hover:bg-[#66533f]/10 flex items-center gap-1.5 cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Beranda</span>
+              <span>{isEn ? 'Dashboard' : 'Beranda'}</span>
             </button>
           </div>
 
@@ -408,7 +415,7 @@ export default function WebPlayMode({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
             <div className="lg:col-span-7 space-y-2">
               <label className="text-[11px] font-mono uppercase tracking-wider font-bold text-[#5c4a37]">
-                1. Pilih Jumlah Pemain (5 – 15)
+                {isEn ? '1. Select Player Count (5 – 15)' : '1. Pilih Jumlah Pemain (5 – 15)'}
               </label>
               <div className="flex flex-wrap gap-1.5">
                 {Array.from({ length: 11 }, (_, i) => i + 5).map((cnt) => {
@@ -430,12 +437,12 @@ export default function WebPlayMode({
                 })}
               </div>
               <p className="text-xs text-[#5c4a37]">
-                Target Resmi {playerCount} Pemain:{' '}
+                {isEn ? `Official Target for ${playerCount} Players: ` : `Target Resmi ${playerCount} Pemain: `}
                 <strong className="text-[#2a2018]">
-                  {baseCounts.townsfolk} Townsfolk · {baseCounts.outsiders} Outsider ·{' '}
+                  {baseCounts.townsfolk} {isEn ? 'Townsfolk' : 'Warga'} · {baseCounts.outsiders} {isEn ? 'Outsiders' : 'Luar'} ·{' '}
                   {baseCounts.minions} Minion · {baseCounts.demons} Demon
                 </strong>
-                {selectedRoleIds.includes('baron') && ' (+2 Outsider / -2 Townsfolk dari Baron)'}
+                {selectedRoleIds.includes('baron') && (isEn ? ' (+2 Outsiders / -2 Townsfolk from Baron)' : ' (+2 Outsider / -2 Townsfolk dari Baron)')}
               </p>
             </div>
 
@@ -453,7 +460,7 @@ export default function WebPlayMode({
                 }`}
               >
                 <Beer className="w-4 h-4" />
-                <span>The Drunk: {isDrunkActive ? 'AKTIF' : 'Nonaktif'}</span>
+                <span>The Drunk: {isDrunkActive ? (isEn ? 'ACTIVE' : 'AKTIF') : (isEn ? 'Inactive' : 'Nonaktif')}</span>
               </button>
 
               <button
@@ -462,17 +469,17 @@ export default function WebPlayMode({
                 className="px-4 py-2.5 rounded-xl bg-[#2a2018] hover:bg-[#3e2f23] text-[#efe6d2] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow"
               >
                 <Shuffle className="w-4 h-4 text-[#c9963a]" />
-                <span>Acak + Formula</span>
+                <span>{isEn ? 'Randomize + Formula' : 'Acak + Formula'}</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleClearBag}
                 className="px-3 py-2.5 rounded-xl border border-[#655342]/30 text-xs font-bold text-[#5c4a37] hover:bg-[#66533f]/10 flex items-center gap-1 cursor-pointer"
-                title="Reset pilihan ke 0"
+                title={isEn ? "Reset selection to 0" : "Reset pilihan ke 0"}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset 0</span>
+                <span>{isEn ? 'Clear All' : 'Reset 0'}</span>
               </button>
             </div>
           </div>
@@ -517,14 +524,7 @@ export default function WebPlayMode({
           <div className="space-y-5">
             {(['townsfolk', 'outsider', 'minion', 'demon'] as const).map((teamKey) => {
               const teamRoles = ROLES.filter((r) => r.team === teamKey);
-              const heading =
-                teamKey === 'townsfolk'
-                  ? 'Townsfolk'
-                  : teamKey === 'outsider'
-                  ? 'Outsiders'
-                  : teamKey === 'minion'
-                  ? 'Minions'
-                  : 'Demon';
+              const heading = getTeamName(teamKey, language);
 
               return (
                 <div key={teamKey} className="space-y-2">
@@ -554,7 +554,7 @@ export default function WebPlayMode({
                               handleToggleRole(role.id);
                             }
                           }}
-                          title={role.ability}
+                          title={getRoleAbility(role, language)}
                           className={`relative flex flex-col items-center gap-1 p-2 rounded-2xl border transition-all cursor-pointer ${
                             picked || (isDrunkCard && isDrunkActive)
                               ? 'border-[#c9963a] bg-[#c9963a]/25 ring-2 ring-[#c9963a]/50 shadow-sm scale-[1.02]'
@@ -563,7 +563,7 @@ export default function WebPlayMode({
                         >
                           <CharacterTokenFront role={role} size={52} showSetupLeaf />
                           <span className="text-[11px] font-bold text-[#2a2018] leading-tight text-center truncate w-full">
-                            {role.name}
+                            {getRoleName(role, language)}
                           </span>
                           {(picked || (isDrunkCard && isDrunkActive)) && (
                             <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#2a2018] text-[#c9963a] flex items-center justify-center">
@@ -593,7 +593,7 @@ export default function WebPlayMode({
               className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-[#2a2018] hover:bg-[#3f3125] text-[#efe6d2] font-bold text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg"
             >
               <Sparkles className="w-4 h-4 text-[#c9963a]" />
-              <span>Masukkan ke Kantong Velvet &amp; Mulai Ambil ({playerCount} Pemain)</span>
+              <span>{isEn ? `Put into Velvet Bag & Start Picking (${playerCount} Players)` : `Masukkan ke Kantong Velvet & Mulai Ambil (${playerCount} Pemain)`}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -610,10 +610,10 @@ export default function WebPlayMode({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#c9963a]">
-                Kantong Velvet Tertutup · Pemain #{assignedSeats.length + 1} dari {playerCount}
+                {isEn ? `Closed Velvet Bag · Player #${assignedSeats.length + 1} of ${playerCount}` : `Kantong Velvet Tertutup · Pemain #${assignedSeats.length + 1} dari ${playerCount}`}
               </span>
               <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#efe6d2]">
-                Aduk Kantong &amp; Ketuk 1 Token untuk Mengambil
+                {isEn ? 'Stir the Bag & Tap 1 Token to Pick' : 'Aduk Kantong & Ketuk 1 Token untuk Mengambil'}
               </h2>
             </div>
 
@@ -628,20 +628,22 @@ export default function WebPlayMode({
                 }`}
               >
                 {spreadMode ? <LayoutGrid className="w-3.5 h-3.5" /> : <Hand className="w-3.5 h-3.5" />}
-                <span>{spreadMode ? 'Tampilan Susun Kipas' : 'Mode Kantong Acak'}</span>
+                <span>{spreadMode ? (isEn ? 'Fan Layout' : 'Tampilan Susun Kipas') : (isEn ? 'Random Bag Mode' : 'Mode Kantong Acak')}</span>
               </button>
               <button
                 type="button"
                 onClick={() => setSubStep('setup')}
                 className="px-3 py-1.5 rounded-xl bg-black/45 border border-white/15 text-xs font-bold text-[#a89f8c] hover:text-white cursor-pointer"
               >
-                Ulangi Setup
+                {isEn ? 'Redo Setup' : 'Ulangi Setup'}
               </button>
             </div>
           </div>
 
           <p className="text-xs text-[#a89f8c]">
-            Geser jari/mouse di dalam lingkaran untuk mengaduk kepingan, lalu <strong>ketuk/klik satu token tertutup</strong> yang ingin kamu ambil ({remainingBodies.length} tersisa).
+            {isEn
+              ? `Drag your finger/mouse inside the pouch to stir the tokens, then tap/click one closed token you want to draw (${remainingBodies.length} remaining).`
+              : `Geser jari/mouse di dalam lingkaran untuk mengaduk kepingan, lalu ketuk/klik satu token tertutup yang ingin kamu ambil (${remainingBodies.length} tersisa).`}
           </p>
 
           {/* Stirring Bag Arena */}
@@ -722,7 +724,7 @@ export default function WebPlayMode({
         >
           <div className="max-w-lg mx-auto w-full flex flex-col items-center text-center gap-4">
             <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#c9963a]">
-              Token Peran Rahasia Anda
+              {isEn ? 'YOUR SECRET ROLE TOKEN' : 'TOKEN PERAN RAHASIA ANDA'}
             </span>
 
             <TokenFlip3D
@@ -734,26 +736,23 @@ export default function WebPlayMode({
 
             <div className="space-y-1">
               <div className="font-mono text-xs uppercase tracking-widest text-[#c9963a]">
-                {pickedRole.team.toUpperCase()}
+                {getTeamName(pickedRole.team, language).toUpperCase()}
               </div>
               <h2 className="font-display text-3xl sm:text-4xl font-bold text-[#efe6d2]">
-                {pickedRole.name}{' '}
-                <span className="text-lg font-normal text-[#a89f8c]">
-                  ({pickedRole.indonesianName})
-                </span>
+                {getRoleName(pickedRole, language)}
               </h2>
             </div>
 
             <ParchmentSurface className="w-full rounded-2xl p-4 text-left">
               <p className="text-xs sm:text-sm leading-relaxed text-[#2a2018]">
-                {renderAbilitySegments(pickedRole.ability)}
+                {renderAbilitySegments(getRoleAbility(pickedRole, language))}
               </p>
             </ParchmentSurface>
 
             <form onSubmit={handleConfirmPlayerAndHide} className="w-full space-y-3">
               <div className="text-left space-y-1">
                 <label className="text-xs font-semibold text-[#efe6d2]">
-                  Tulis Nama Kamu (untuk Grimoire Storyteller):
+                  {isEn ? 'Enter Your Name (for Storyteller Grimoire):' : 'Tulis Nama Kamu (untuk Grimoire Storyteller):'}
                 </label>
                 <input
                   type="text"
@@ -764,7 +763,7 @@ export default function WebPlayMode({
                     setPlayerNameInput(e.target.value);
                     setPickError(null);
                   }}
-                  placeholder={`Misal: ${DEFAULT_INDONESIAN_NAMES[assignedSeats.length] || 'Pemain'}`}
+                  placeholder={isEn ? `e.g. Player #${assignedSeats.length + 1}` : `Misal: ${DEFAULT_INDONESIAN_NAMES[assignedSeats.length] || 'Pemain'}`}
                   className="w-full px-4 py-3 rounded-2xl bg-black/55 border border-[#c9963a]/50 text-base font-bold text-[#efe6d2] placeholder:text-[#a89f8c]/55 focus:outline-none focus:ring-2 focus:ring-[#c9963a]"
                 />
               </div>
@@ -780,8 +779,8 @@ export default function WebPlayMode({
                 <EyeOff className="w-4 h-4" />
                 <span>
                   {assignedSeats.length + 1 >= playerCount
-                    ? 'Sembunyikan & Selesaikan Pembagian'
-                    : 'Sembunyikan Peran & Oper ke Pemain Berikutnya'}
+                    ? (isEn ? 'Hide & Finish Distribution' : 'Sembunyikan & Selesaikan Pembagian')
+                    : (isEn ? 'Hide Role & Pass to Next Player' : 'Sembunyikan Peran & Oper ke Pemain Berikutnya')}
                 </span>
               </button>
             </form>
@@ -804,13 +803,15 @@ export default function WebPlayMode({
             />
             <div className="space-y-1.5">
               <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#c9963a]">
-                Privasi Terjaga
+                {isEn ? 'PRIVACY PROTECTED' : 'PRIVASI TERJAGA'}
               </p>
               <h2 className="font-display text-3xl font-bold text-[#efe6d2]">
-                Serahkan ke Pemain #{assignedSeats.length + 1}
+                {isEn ? `Pass to Player #${assignedSeats.length + 1}` : `Serahkan ke Pemain #${assignedSeats.length + 1}`}
               </h2>
               <p className="text-xs sm:text-sm text-[#a89f8c]">
-                Pastikan pemain sebelumnya sudah selesai, lalu buka kembali kantong velvet di bawah.
+                {isEn
+                  ? 'Make sure the previous player is done, then open the velvet bag below.'
+                  : 'Pastikan pemain sebelumnya sudah selesai, lalu buka kembali kantong velvet di bawah.'}
               </p>
             </div>
             <button
@@ -818,7 +819,9 @@ export default function WebPlayMode({
               onClick={() => setSubStep('bag')}
               className="px-7 py-3.5 rounded-full bg-[#c9963a] hover:bg-[#d8a74c] text-[#2a2018] font-bold text-sm cursor-pointer shadow-xl"
             >
-              Saya Pemain #{assignedSeats.length + 1} — Buka Kantong
+              {isEn
+                ? `I am Player #${assignedSeats.length + 1} — Open Bag`
+                : `Saya Pemain #${assignedSeats.length + 1} — Buka Kantong`}
             </button>
           </div>
         </VelvetBackdrop>
@@ -831,10 +834,10 @@ export default function WebPlayMode({
             <Beer className="w-6 h-6 text-[#c9963a]" />
             <div>
               <p className="text-[10px] font-mono uppercase tracking-widest text-[#5c4a37]">
-                Layar Storyteller Saja
+                {isEn ? 'Storyteller Screen Only' : 'Layar Storyteller Saja'}
               </p>
               <h2 className="font-display text-2xl font-bold text-[#2a2018]">
-                Pilih Siapa yang Diam-Diam Menjadi The Drunk
+                {isEn ? 'Choose Who is Secretly The Drunk' : 'Pilih Siapa yang Diam-Diam Menjadi The Drunk'}
               </h2>
             </div>
           </div>
@@ -861,7 +864,9 @@ export default function WebPlayMode({
                       <div className="font-display text-base font-bold text-[#2a2018]">
                         #{s.seatIndex + 1} {s.name}
                       </div>
-                      <div className="text-xs text-[#5c4a37]">Mengira dirinya: {role?.name}</div>
+                      <div className="text-xs text-[#5c4a37]">
+                        {isEn ? `Thinks they are: ${getRoleName(role, language)}` : `Mengira dirinya: ${getRoleName(role, language)}`}
+                      </div>
                     </div>
                   </button>
                 );
@@ -875,7 +880,7 @@ export default function WebPlayMode({
               onClick={() => setSubStep('ready')}
               className="px-6 py-3 rounded-2xl bg-[#2a2018] disabled:opacity-40 text-[#efe6d2] font-bold text-sm cursor-pointer"
             >
-              Simpan Pilihan &amp; Siapkan Meja Grimoire
+              {isEn ? 'Save Choice & Prepare Grimoire Table' : 'Simpan Pilihan & Siapkan Meja Grimoire'}
             </button>
           </div>
         </ParchmentSurface>
@@ -896,10 +901,12 @@ export default function WebPlayMode({
             <ShieldCheck className="w-12 h-12 text-[#c9963a] mx-auto" />
             <div className="space-y-1.5">
               <h2 className="font-display text-3xl font-bold text-[#efe6d2]">
-                Semua {playerCount} Token Sudah Terbagikan
+                {isEn ? `All ${playerCount} Tokens Have Been Distributed` : `Semua ${playerCount} Token Sudah Terbagikan`}
               </h2>
               <p className="text-xs sm:text-sm text-[#a89f8c]">
-                Ambil kembali perangkat ke Storyteller, lalu buka Meja Grimoire untuk memandu Malam Pertama.
+                {isEn
+                  ? 'Hand the device back to the Storyteller, then open the Grimoire to guide the First Night.'
+                  : 'Ambil kembali perangkat ke Storyteller, lalu buka Meja Grimoire untuk memandu Malam Pertama.'}
               </p>
             </div>
             <div className="flex flex-wrap justify-center gap-2 py-2">
@@ -918,7 +925,7 @@ export default function WebPlayMode({
               className="px-8 py-4 rounded-full bg-[#c9963a] hover:bg-[#d8a74c] text-[#2a2018] font-bold text-base flex items-center gap-2 mx-auto cursor-pointer shadow-xl"
             >
               <Swords className="w-5 h-5" />
-              <span>Buka Meja Grimoire Storyteller</span>
+              <span>{isEn ? 'Open Storyteller Grimoire' : 'Buka Meja Grimoire Storyteller'}</span>
             </button>
           </div>
         </VelvetBackdrop>
